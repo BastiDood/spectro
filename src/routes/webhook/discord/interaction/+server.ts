@@ -18,6 +18,7 @@ import { verifyAsync } from '@noble/ed25519';
 import type { Database } from '$lib/server/database/index';
 import { handleConfess } from './confess';
 import { handleLockdown } from './lockdown';
+import { handleSetup } from './setup';
 
 async function handleInteraction(
     db: Database,
@@ -42,6 +43,25 @@ async function handleInteraction(
                                 db,
                                 timestamp,
                                 interaction.channel_id,
+                                interaction.member.user.id,
+                                interaction.data.options,
+                            ),
+                        },
+                    };
+                case 'setup':
+                    assert(typeof interaction.guild !== 'undefined');
+                    assert(typeof interaction.channel_id !== 'undefined');
+                    assert(typeof interaction.member?.user !== 'undefined');
+                    assert(typeof interaction.data.options !== 'undefined');
+                    return {
+                        type: InteractionCallbackType.ChannelMessageWithSource,
+                        data: {
+                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            content: await handleSetup(
+                                db,
+                                interaction.guild.id,
+                                interaction.channel_id,
+                                interaction.guild.owner_id,
                                 interaction.member.user.id,
                                 interaction.data.options,
                             ),
