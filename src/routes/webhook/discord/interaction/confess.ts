@@ -1,9 +1,10 @@
 import type { Database } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { type NewConfession, confession } from '$lib/server/database/models';
+import { type NewConfession, confession, guild } from '$lib/server/database/models';
 import assert, { strictEqual } from 'node:assert/strict';
 import { dispatchConfessionViaWebhook } from '$lib/server/api/discord';
+import { eq, sql } from 'drizzle-orm';
 
 export class ConfessUnknownChannelError extends Error {
     constructor(public channelId: Snowflake) {
@@ -33,6 +34,14 @@ export class ConfessWebhookDeliveryError extends Error {
     }
 }
 
+const CONFESSION_CREATED_AT = sql.raw(confession.createdAt.name);
+const CONFESSION_CHANNEL_ID = sql.raw(confession.channelId.name);
+const CONFESSION_AUTHOR_ID = sql.raw(confession.authorId.name);
+const CONFESSION_CONFESSION_ID = sql.raw(confession.confessionId.name);
+const CONFESSION_CONTENT = sql.raw(confession.content.name);
+const CONFESSION_APPROVED_AT = sql.raw(confession.approvedAt.name);
+const GUILD_LAST_CONFESSION_ID = sql.raw(guild.lastConfessionId.name);
+
 /**
  * @throws {ConfessUnknownChannelError}
  * @throws {ConfessDisabledChannelError}
@@ -46,38 +55,38 @@ export async function submitConfession(
     authorId: Snowflake,
     content: string,
 ) {
-    await db.transaction(
-        async tx => {
-            const channel = await tx.query.channel.findFirst({
-                with: { webhook: true },
-                columns: { disabledAt: true, isApprovalRequired: true, label: true },
-                where({ id }, { eq }) {
-                    return eq(id, channelId);
-                },
-            });
-
-            if (typeof channel === 'undefined') throw new ConfessUnknownChannelError(channelId);
-            const { disabledAt, label, isApprovalRequired, webhook } = channel;
-
-            if (disabledAt !== null) throw new ConfessDisabledChannelError(disabledAt);
-
-            if (webhook === null) throw new ConfessMissingWebhookError();
-            const { id, token } = webhook;
-
-            const newConfession: NewConfession = { createdAt, channelId, authorId, content };
-            if (isApprovalRequired) newConfession.approvedAt = null;
-
-            const [result, ...otherResults] = await tx
-                .insert(confession)
-                .values(newConfession)
-                .returning({ confessionId: confession.confessionId });
-            strictEqual(otherResults.length, 0);
-            assert(typeof result !== 'undefined');
-
-            // TODO: Assign the correct confession IDs.
-            if (await dispatchConfessionViaWebhook(id, token, result.confessionId, label, createdAt, content)) return;
-            throw new ConfessWebhookDeliveryError();
+    const channel = await db.query.channel.findFirst({
+        with: { webhook: true },
+        columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true },
+        where({ id }, { eq }) {
+            return eq(id, channelId);
         },
-        { isolationLevel: 'read committed' },
+    });
+
+    if (typeof channel === 'undefined') throw new ConfessUnknownChannelError(channelId);
+    const { guildId, disabledAt, label, isApprovalRequired, webhook } = channel;
+
+    if (disabledAt !== null) throw new ConfessDisabledChannelError(disabledAt);
+
+    if (webhook === null) throw new ConfessMissingWebhookError();
+    const { id, token } = webhook;
+
+    const updateLastConfession = db
+        .update(guild)
+        .set({ lastConfessionId: sql`${guild.lastConfessionId} + 1` })
+        .where(eq(guild.id, guildId))
+        .returning({ confessionId: guild.lastConfessionId });
+
+    const approvedAt = isApprovalRequired ? sql`NULL` : sql`DEFAULT`;
+    const {
+        rows: [result, ...otherResults],
+    } = await db.execute(
+        sql`WITH _guild AS ${updateLastConfession} INSERT INTO ${confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}) VALUES (${createdAt}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${content}, ${approvedAt}) RETURNING ${confession.confessionId}`,
     );
+
+    strictEqual(otherResults.length, 0);
+    assert(typeof result?.confessionId === 'bigint');
+
+    if (await dispatchConfessionViaWebhook(id, token, result.confessionId, label, createdAt, content)) return;
+    throw new ConfessWebhookDeliveryError();
 }

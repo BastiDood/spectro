@@ -38,7 +38,7 @@ export const permission = app.table(
             .references(() => user.id, { onDelete: 'cascade' }),
         isAdmin: boolean('is_admin').notNull(),
     },
-    table => [uniqueIndex('user_to_guild_unique_idx').on(table.userId, table.guildId)],
+    ({ userId, guildId }) => [uniqueIndex('user_to_guild_unique_idx').on(userId, guildId)],
 );
 
 export type Permission = typeof permission.$inferSelect;
@@ -64,7 +64,7 @@ export const channel = app.table(
         isApprovalRequired: boolean('is_approval_required').notNull().default(false),
         label: text('label').notNull().default('Confession'),
     },
-    table => [uniqueIndex('guild_to_channel_unique_idx').on(table.guildId, table.id)],
+    ({ guildId, id }) => [uniqueIndex('guild_to_channel_unique_idx').on(guildId, id)],
 );
 
 export const channelRelations = relations(channel, ({ one }) => ({
