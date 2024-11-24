@@ -13,8 +13,9 @@ import {
     union,
     variant,
 } from 'valibot';
-import { type RawSnowflake, Snowflake } from '$lib/server/models/discord/snowflake';
-import { GuildMember } from '$lib/server/models/discord/member';
+import { type RawSnowflake, Snowflake } from './snowflake';
+import { Guild } from './guild';
+import { GuildMember } from './member';
 
 export const enum InteractionType {
     Ping = 1,
@@ -29,6 +30,8 @@ export const BaseInteraction = object({
     id: Snowflake,
     application_id: Snowflake,
     guild_id: optional(Snowflake),
+    guild: optional(Guild),
+    channel_id: optional(Snowflake),
     token: string(),
     member: optional(GuildMember),
 });
@@ -364,10 +367,10 @@ interface InteractionCallbackMessageData {
 
 interface InteractionCallbackMessage {
     type:
-        | InteractionCallbackType.ChannelMessageWithSource
-        | InteractionCallbackType.DeferredChannelMessageWithSource
-        | InteractionCallbackType.DeferredUpdateMessage
-        | InteractionCallbackType.UpdateMessage;
+    | InteractionCallbackType.ChannelMessageWithSource
+    | InteractionCallbackType.DeferredChannelMessageWithSource
+    | InteractionCallbackType.DeferredUpdateMessage
+    | InteractionCallbackType.UpdateMessage;
     data: Partial<InteractionCallbackMessageData>;
 }
 
