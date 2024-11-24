@@ -1,5 +1,4 @@
 import { bigint, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
 
@@ -44,14 +43,6 @@ export const permission = app.table(
 export type Permission = typeof permission.$inferSelect;
 export type NewPermission = typeof permission.$inferInsert;
 
-export const webhook = app.table('webhook', {
-    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-    token: text('token').notNull(),
-});
-
-export type Webhook = typeof webhook.$inferSelect;
-export type NewWebhook = typeof webhook.$inferInsert;
-
 export const channel = app.table(
     'channel',
     {
@@ -59,17 +50,12 @@ export const channel = app.table(
         guildId: bigint('guild_id', { mode: 'bigint' })
             .notNull()
             .references(() => guild.id, { onDelete: 'cascade' }),
-        webhookId: bigint('webhook_id', { mode: 'bigint' }).references(() => webhook.id, { onDelete: 'set null' }),
         disabledAt: timestamp('disabled_at', { withTimezone: true }),
         isApprovalRequired: boolean('is_approval_required').notNull().default(false),
         label: text('label').notNull().default('Confession'),
     },
     ({ guildId, id }) => [uniqueIndex('guild_to_channel_unique_idx').on(guildId, id)],
 );
-
-export const channelRelations = relations(channel, ({ one }) => ({
-    webhook: one(webhook, { fields: [channel.webhookId], references: [webhook.id] }),
-}));
 
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;

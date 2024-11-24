@@ -1,36 +1,36 @@
+import {
+    type ApplicationCommandDataOption,
+    ApplicationCommandDataOptionType,
+} from '$lib/server/models/discord/interaction';
 import type { Database } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { type NewConfession, confession, guild } from '$lib/server/database/models';
 import assert, { strictEqual } from 'node:assert/strict';
-import { dispatchConfessionViaWebhook } from '$lib/server/api/discord';
+import { confession, guild } from '$lib/server/database/models';
 import { eq, sql } from 'drizzle-orm';
+import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
-export class ConfessUnknownChannelError extends Error {
+abstract class ConfessionError extends Error {}
+
+class UnknownChannelError extends ConfessionError {
     constructor(public channelId: Snowflake) {
-        super(`unknown channel id ${channelId}`);
-        this.name = 'ConfessUnknownChannelError';
+        super(`Channel <#${channelId}> does not exist.`);
+        this.name = 'UnknownChannelError';
     }
 }
 
-export class ConfessDisabledChannelError extends Error {
+class DisabledChannelError extends ConfessionError {
     constructor(public disabledAt: Date) {
-        super(`confession channel is disabled ${disabledAt.toISOString()}`);
-        this.name = 'ConfessDisabledChannelError';
+        const timestamp = Math.floor(disabledAt.valueOf() / 1000);
+        super(`This channel has temporarily disabled confessions since <t:${timestamp}:R>.`);
+        this.name = 'DisabledChannelError';
     }
 }
 
-export class ConfessMissingWebhookError extends Error {
+class MessageDeliveryError extends ConfessionError {
     constructor() {
-        super('missing confession webhook');
-        this.name = 'ConfessMissingWebhookError';
-    }
-}
-
-export class ConfessWebhookDeliveryError extends Error {
-    constructor() {
-        super('failed to deliver the webhook');
-        this.name = 'ConfessWebhookDeliveryError';
+        super('The confession message could not be delivered.');
+        this.name = 'WebhookDeliveryError';
     }
 }
 
@@ -43,12 +43,11 @@ const CONFESSION_APPROVED_AT = sql.raw(confession.approvedAt.name);
 const GUILD_LAST_CONFESSION_ID = sql.raw(guild.lastConfessionId.name);
 
 /**
- * @throws {ConfessUnknownChannelError}
- * @throws {ConfessDisabledChannelError}
- * @throws {ConfessMissingWebhookError}
- * @throws {ConfessWebhookDeliveryError}
+ * @throws {UnknownChannelError}
+ * @throws {DisabledChannelError}
+ * @throws {MessageDeliveryError}
  */
-export async function submitConfession(
+async function submitConfession(
     db: Database,
     createdAt: Date,
     channelId: Snowflake,
@@ -56,20 +55,16 @@ export async function submitConfession(
     content: string,
 ) {
     const channel = await db.query.channel.findFirst({
-        with: { webhook: true },
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true },
         where({ id }, { eq }) {
             return eq(id, channelId);
         },
     });
 
-    if (typeof channel === 'undefined') throw new ConfessUnknownChannelError(channelId);
-    const { guildId, disabledAt, label, isApprovalRequired, webhook } = channel;
+    if (typeof channel === 'undefined') throw new UnknownChannelError(channelId);
+    const { guildId, disabledAt, label, isApprovalRequired } = channel;
 
-    if (disabledAt !== null) throw new ConfessDisabledChannelError(disabledAt);
-
-    if (webhook === null) throw new ConfessMissingWebhookError();
-    const { id, token } = webhook;
+    if (disabledAt !== null) throw new DisabledChannelError(disabledAt);
 
     const updateLastConfession = db
         .update(guild)
@@ -87,6 +82,28 @@ export async function submitConfession(
     strictEqual(otherResults.length, 0);
     assert(typeof result?.confessionId === 'bigint');
 
-    if (await dispatchConfessionViaWebhook(id, token, result.confessionId, label, createdAt, content)) return;
-    throw new ConfessWebhookDeliveryError();
+    if (await dispatchConfessionViaHttp(channelId, result.confessionId, label, createdAt, content)) return;
+    throw new MessageDeliveryError();
+}
+
+export async function handleConfess(
+    db: Database,
+    createdAt: Date,
+    channelId: Snowflake,
+    authorId: Snowflake,
+    [option, ...options]: ApplicationCommandDataOption[],
+) {
+    strictEqual(options.length, 0);
+    strictEqual(option?.type, ApplicationCommandDataOptionType.String);
+    strictEqual(option.name, 'content');
+    try {
+        await submitConfession(db, createdAt, channelId, authorId, option.value);
+        return 'Your message has been submitted.';
+    } catch (err) {
+        if (err instanceof ConfessionError) {
+            console.error(err);
+            return err.message;
+        }
+        throw err;
+    }
 }

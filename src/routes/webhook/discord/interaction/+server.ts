@@ -1,7 +1,7 @@
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
+import assert, { fail } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { fail } from 'node:assert/strict';
 
 import {
     Interaction,
@@ -14,16 +14,36 @@ import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
-function handleInteraction(timestamp: Date, interaction: Interaction): InteractionCallback {
+import type { Database } from '$lib/server/database/index';
+import { handleConfess } from './confess';
+
+async function handleInteraction(
+    db: Database,
+    timestamp: Date,
+    interaction: Interaction,
+): Promise<InteractionCallback> {
     // TODO: Update the server metadata.
     switch (interaction.type) {
         case InteractionType.Ping:
-            return { type: InteractionCallbackType.Pong } as const;
+            return { type: InteractionCallbackType.Pong };
         case InteractionType.ApplicationCommand:
             switch (interaction.data.name) {
                 case 'confess':
-                    fail('to be implemented');
-                    break;
+                    assert(typeof interaction.channel_id !== 'undefined');
+                    assert(typeof interaction.member?.user !== 'undefined');
+                    assert(typeof interaction.data.options !== 'undefined');
+                    return {
+                        type: InteractionCallbackType.ChannelMessageWithSource,
+                        data: {
+                            content: await handleConfess(
+                                db,
+                                timestamp,
+                                interaction.channel_id,
+                                interaction.member.user.id,
+                                interaction.data.options,
+                            ),
+                        },
+                    };
                 default:
                     fail(`unexpected application command name ${interaction.data.name}`);
                     break;
@@ -35,7 +55,9 @@ function handleInteraction(timestamp: Date, interaction: Interaction): Interacti
     }
 }
 
-export async function POST({ request }) {
+export async function POST({ locals: { db }, request }) {
+    assert(typeof db !== 'undefined');
+
     const ed25519 = request.headers.get('X-Signature-Ed25519');
     if (ed25519 === null) error(400);
 
@@ -56,6 +78,5 @@ export async function POST({ request }) {
     if (!isVerified) error(401);
 
     const interaction = parse(Interaction, JSON.parse(text));
-    const callback = handleInteraction(datetime, interaction);
-    return json(callback);
+    return json(await handleInteraction(db, datetime, interaction));
 }
