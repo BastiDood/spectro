@@ -30,7 +30,7 @@ class DisabledChannelError extends ConfessionError {
 class MessageDeliveryError extends ConfessionError {
     constructor() {
         super('The confession message could not be delivered.');
-        this.name = 'WebhookDeliveryError';
+        this.name = 'MessageDeliveryError';
     }
 }
 

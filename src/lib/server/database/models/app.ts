@@ -1,4 +1,5 @@
 import { bigint, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
 
@@ -60,18 +61,26 @@ export const channel = app.table(
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
-export const confession = app.table('confession', {
-    channelId: bigint('channel_id', { mode: 'bigint' })
-        .notNull()
-        .references(() => channel.id),
-    confessionId: bigint('confession_id', { mode: 'bigint' }).notNull().default(0n),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-    approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
-    authorId: bigint('author_id', { mode: 'bigint' })
-        .notNull()
-        .references(() => user.id),
-    content: text('content').notNull(),
-});
+export const confession = app.table(
+    'confession',
+    {
+        channelId: bigint('channel_id', { mode: 'bigint' })
+            .notNull()
+            .references(() => channel.id),
+        confessionId: bigint('confession_id', { mode: 'bigint' }).notNull().default(0n),
+        createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+        approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
+        authorId: bigint('author_id', { mode: 'bigint' })
+            .notNull()
+            .references(() => user.id),
+        content: text('content').notNull(),
+    },
+    ({ channelId, confessionId }) => [uniqueIndex('channel_to_confession_unique_idx').on(channelId, confessionId)],
+);
 
 export type Confession = typeof confession.$inferSelect;
 export type NewConfession = typeof confession.$inferInsert;
+
+export const confessionRelations = relations(confession, ({ one }) => ({
+    channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
+}));
