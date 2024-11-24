@@ -1,4 +1,4 @@
-import { bigint, boolean, pgSchema, smallint, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigint, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const app = pgSchema('app');
 
@@ -7,8 +7,6 @@ export const user = app.table('user', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     name: text('name').notNull(),
     avatarHash: text('avatar_hash'),
-    bannerHash: text('banner_hash'),
-    accentColor: smallint('accent_color'),
 });
 
 export type User = typeof user.$inferSelect;
