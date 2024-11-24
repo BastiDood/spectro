@@ -39,6 +39,12 @@ class ChannelNotSetupError extends LockdownError {
     }
 }
 
+/**
+ * @throws {InsufficientPermissionError}
+ * @throws {MissingRowCountError}
+ * @throws {UnexpectedRowCountError}
+ * @throws {ChannelNotSetupError}
+ */
 async function disableConfessions(
     db: Database,
     disabledAt: Date,

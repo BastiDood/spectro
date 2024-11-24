@@ -39,6 +39,11 @@ class UnexpectedRowCountError extends SetupError {
     }
 }
 
+/**
+ * @throws {InsufficientPermissionError}
+ * @throws {MissingRowCountError}
+ * @throws {UnexpectedRowCountError}
+ */
 async function enableConfessions(
     db: Database,
     guildId: Snowflake,
