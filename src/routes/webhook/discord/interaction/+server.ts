@@ -95,9 +95,10 @@ export async function POST({ locals: { db }, request }) {
     const message = Buffer.from(timestamp + text);
     const signature = Buffer.from(ed25519, 'hex');
 
-    const isVerified = await verifyAsync(signature, message, DISCORD_PUBLIC_KEY);
-    if (!isVerified) error(401);
+    if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
+        const interaction = parse(Interaction, JSON.parse(text));
+        return json(await handleInteraction(db, datetime, interaction));
+    }
 
-    const interaction = parse(Interaction, JSON.parse(text));
-    return json(await handleInteraction(db, datetime, interaction));
+    error(401);
 }
