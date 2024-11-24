@@ -18,8 +18,10 @@
         "lint:svelte": "svelte-check --tsconfig ./tsconfig.json"
     },
     "dependencies": {
+        "@noble/ed25519": "^2.1.0",
         "@sveltejs/kit": "^2.8.2",
-        "svelte": "^5.2.7"
+        "svelte": "^5.2.7",
+        "valibot": "1.0.0-beta.8"
     },
     "devDependencies": {
         "@eslint/js": "^9.15.0",
@@ -27,6 +29,7 @@
         "@linthtml/linthtml-config-recommended": "^0.1.0",
         "@sveltejs/adapter-static": "^3.0.6",
         "@sveltejs/vite-plugin-svelte": "^4.0.1",
+        "@types/node": "^22.9.3",
         "autoprefixer": "^10.4.20",
         "eslint": "^9.15.0",
         "eslint-config-prettier": "^9.1.0",
