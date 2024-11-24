@@ -1,0 +1,38 @@
+name: Code Quality
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: main
+
+jobs:
+  build:
+    name: Build SvelteKit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install `pnpm` via Corepack
+        run: corepack enable pnpm
+      - name: Get `pnpm` Store Directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        name: Setup `pnpm` Cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - name: Install Dependencies
+        run: pnpm install
+      - name: Check Formatters
+        run: pnpm fmt
+      - name: Synchronize SvelteKit
+        run: pnpm sync
+      - name: Run All Lints in Parallel
+        run: pnpm lint
+      - name: Build Website
+        run: pnpm build
