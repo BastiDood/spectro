@@ -21,6 +21,7 @@
         "@noble/ed25519": "^2.1.0",
         "@sveltejs/kit": "^2.8.2",
         "drizzle-orm": "^0.36.4",
+        "pg": "^8.13.1",
         "svelte": "^5.2.7",
         "valibot": "1.0.0-beta.8"
     },
@@ -31,6 +32,7 @@
         "@sveltejs/adapter-static": "^3.0.6",
         "@sveltejs/vite-plugin-svelte": "^4.0.1",
         "@types/node": "^22.9.3",
+        "@types/pg": "^8.11.10",
         "autoprefixer": "^10.4.20",
         "eslint": "^9.15.0",
         "eslint-config-prettier": "^9.1.0",
