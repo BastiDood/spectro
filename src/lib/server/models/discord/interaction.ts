@@ -120,6 +120,8 @@ export const ApplicationCommandDataOption = variant('type', [
     // TODO: ApplicationCommandDataOptionAttachment
 ]);
 
+export type ApplicationCommandDataOption = InferOutput<typeof ApplicationCommandDataOption>;
+
 export const ApplicationCommandInteraction = object({
     type: union([literal(InteractionType.ApplicationCommand), literal(InteractionType.ApplicationCommandAutocomplete)]),
     data: object({
@@ -156,6 +158,7 @@ export const enum MessageComponentButtonStyle {
     Link,
     Premium,
 }
+
 const BaseMessageComponentInteractionDataButton = object({
     label: optional(string()),
     disabled: optional(boolean()),
@@ -291,11 +294,11 @@ export const enum InteractionCallbackType {
     LaunchActivity = 12,
 }
 
-interface InteractionCallbackPing {
+export interface InteractionCallbackPing {
     type: InteractionCallbackType.Pong;
 }
 
-const enum InteractionCallbackMessageDataFlags {
+export const enum InteractionCallbackMessageDataFlags {
     /** Do not include embeds when serializing this message. */
     SuppressEmbeds = 1 << 2,
     /** This message is only visible to the user who created this interaction. */
@@ -304,21 +307,22 @@ const enum InteractionCallbackMessageDataFlags {
     SuppressNotifications = 1 << 12,
 }
 
-const enum EmbedType {
+export const enum EmbedType {
     Rich = 'rich',
 }
 
-interface RichEmbedMedia {
+export interface RichEmbedMedia {
     url: URL;
     proxy_url?: URL;
     height?: number;
     width?: number;
 }
 
-interface RichEmbed {
+export interface RichEmbed {
     type: EmbedType.Rich;
     title?: string;
     description?: string;
+    content?: string;
     url?: URL;
     timestamp?: Date;
     color?: number;
@@ -343,20 +347,20 @@ interface RichEmbed {
     }[];
 }
 
-const enum AllowedMentionTypes {
+export const enum AllowedMentionTypes {
     Roles = 'roles',
     Users = 'users',
     Everyone = 'everyone',
 }
 
-interface AllowedMentions {
+export interface AllowedMentions {
     parse: AllowedMentionTypes;
     roles: RawSnowflake[];
     users: RawSnowflake[];
     replied_user: boolean;
 }
 
-interface InteractionCallbackMessageData {
+export interface InteractionCallbackMessageData {
     tts: boolean;
     content: string;
     embeds: RichEmbed[];
@@ -365,12 +369,12 @@ interface InteractionCallbackMessageData {
     components: MessageComponents;
 }
 
-interface InteractionCallbackMessage {
+export interface InteractionCallbackMessage {
     type:
-    | InteractionCallbackType.ChannelMessageWithSource
-    | InteractionCallbackType.DeferredChannelMessageWithSource
-    | InteractionCallbackType.DeferredUpdateMessage
-    | InteractionCallbackType.UpdateMessage;
+        | InteractionCallbackType.ChannelMessageWithSource
+        | InteractionCallbackType.DeferredChannelMessageWithSource
+        | InteractionCallbackType.DeferredUpdateMessage
+        | InteractionCallbackType.UpdateMessage;
     data: Partial<InteractionCallbackMessageData>;
 }
 
