@@ -20,6 +20,7 @@
     "dependencies": {
         "@noble/ed25519": "^2.1.0",
         "@sveltejs/kit": "^2.8.2",
+        "drizzle-orm": "^0.36.4",
         "svelte": "^5.2.7",
         "valibot": "1.0.0-beta.8"
     },
