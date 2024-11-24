@@ -6,6 +6,7 @@ import { Buffer } from 'node:buffer';
 import {
     Interaction,
     type InteractionCallback,
+    InteractionCallbackMessageDataFlags,
     InteractionCallbackType,
     InteractionType,
 } from '$lib/server/models/discord/interaction';
@@ -16,6 +17,7 @@ import { verifyAsync } from '@noble/ed25519';
 
 import type { Database } from '$lib/server/database/index';
 import { handleConfess } from './confess';
+import { handleLockdown } from './lockdown';
 
 async function handleInteraction(
     db: Database,
@@ -35,12 +37,31 @@ async function handleInteraction(
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
+                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
                             content: await handleConfess(
                                 db,
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.member.user.id,
                                 interaction.data.options,
+                            ),
+                        },
+                    };
+                case 'lockdown':
+                    assert(typeof interaction.guild !== 'undefined');
+                    assert(typeof interaction.channel_id !== 'undefined');
+                    assert(typeof interaction.member?.user !== 'undefined');
+                    return {
+                        type: InteractionCallbackType.ChannelMessageWithSource,
+                        data: {
+                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            content: await handleLockdown(
+                                db,
+                                timestamp,
+                                interaction.guild.id,
+                                interaction.channel_id,
+                                interaction.guild.owner_id,
+                                interaction.member.user.id,
                             ),
                         },
                     };
