@@ -93,7 +93,6 @@ export default tsEslint.config(
             'operator-assignment': 'error',
             'prefer-arrow-callback': 'warn',
             'prefer-const': 'error',
-            'prefer-destructuring': 'error',
             'prefer-exponentiation-operator': 'warn',
             'prefer-named-capture-group': 'error',
             'prefer-numeric-literals': 'error',
