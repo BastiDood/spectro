@@ -64,7 +64,6 @@ export const confession = app.table('confession', {
     channelId: bigint('channel_id', { mode: 'bigint' })
         .notNull()
         .references(() => channel.id),
-    // NOTE: The confession ID will be overwritten by a trigger at the database level.
     confessionId: bigint('confession_id', { mode: 'bigint' }).notNull().default(0n),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
