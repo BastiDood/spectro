@@ -4,6 +4,7 @@ import assert, { fail } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
 import {
+    AllowedMentionTypes,
     Interaction,
     type InteractionCallback,
     InteractionCallbackMessageDataFlags,
@@ -19,6 +20,7 @@ import type { Database } from '$lib/server/database/index';
 import { handleConfess } from './confess';
 import { handleLockdown } from './lockdown';
 import { handleResend } from './resend';
+import { handleSet } from './set';
 import { handleSetup } from './setup';
 
 async function handleInteraction(
@@ -83,6 +85,23 @@ async function handleInteraction(
                                 interaction.channel_id,
                                 interaction.guild.owner_id,
                                 interaction.member.user.id,
+                            ),
+                        },
+                    };
+                case 'set':
+                    assert(typeof interaction.guild_id !== 'undefined');
+                    assert(typeof interaction.member?.user !== 'undefined');
+                    assert(typeof interaction.data.options !== 'undefined');
+                    return {
+                        type: InteractionCallbackType.ChannelMessageWithSource,
+                        data: {
+                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            allowed_mentions: { parse: AllowedMentionTypes.Users },
+                            content: await handleSet(
+                                db,
+                                interaction.guild_id,
+                                interaction.member.user.id,
+                                interaction.data.options,
                             ),
                         },
                     };
