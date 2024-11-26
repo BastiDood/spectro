@@ -1,16 +1,17 @@
-import type { Database } from '$lib/server/database';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
+import type { Database } from '$lib/server/database';
 
 import { IntegrationType, Webhook, WebhookEventType, WebhookType } from '$lib/server/models/discord/event';
 import { parse } from 'valibot';
 
-import assert, { fail, strictEqual } from 'node:assert/strict';
+import assert, { strictEqual } from 'node:assert/strict';
 import { error } from '@sveltejs/kit';
 import { verifyAsync } from '@noble/ed25519';
 
 import { handleApplicationAuthorized } from './application-authorized';
 
 async function handleWebhook(webhook: Webhook, db?: Database) {
+    // eslint-disable-next-line default-case
     switch (webhook.type) {
         case WebhookType.Ping:
             break;
@@ -19,8 +20,7 @@ async function handleWebhook(webhook: Webhook, db?: Database) {
             strictEqual(webhook.data.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.data.data.integration_type, IntegrationType.Guild);
             await handleApplicationAuthorized(db, webhook.data.data.guild.id, webhook.data.data.guild.owner_id);
-        default:
-            fail(`unexpected webhook type ${webhook.type}`);
+            break;
     }
 }
 
@@ -39,9 +39,9 @@ export async function POST({ locals: { db }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        const json = JSON.parse(text);
-        console.log('webhook/discord/event', json);
-        await handleWebhook(parse(Webhook, json), db);
+        const obj = JSON.parse(text);
+        console.log('webhook/discord/event', obj);
+        await handleWebhook(parse(Webhook, obj), db);
         return new Response(null, { status: 204 });
     }
 

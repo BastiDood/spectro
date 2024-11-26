@@ -69,6 +69,8 @@ async function setGuildPermissions(
     if (typeof selfPermission === 'undefined' || !selfPermission.isAdmin) throw new SelfAdminError();
 
     const condition = and(eq(permission.guildId, guildId), eq(permission.userId, otherUserId));
+
+    // eslint-disable-next-line default-case
     switch (rank) {
         case -1:
             await db.delete(permission).where(condition);
@@ -81,8 +83,6 @@ async function setGuildPermissions(
                 .set({ isAdmin: Boolean(rank) })
                 .where(condition);
             break;
-        default:
-            fail(`unexpected rank ${rank}`);
     }
 }
 

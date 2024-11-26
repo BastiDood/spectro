@@ -158,9 +158,9 @@ export async function POST({ locals: { db }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        const json = JSON.parse(text);
-        console.log('webhook/discord/interaction', json);
-        const interaction = parse(Interaction, json);
+        const obj = JSON.parse(text);
+        console.log('webhook/discord/interaction', obj);
+        const interaction = parse(Interaction, obj);
         return json(await handleInteraction(datetime, interaction, db));
     }
 
