@@ -35,10 +35,17 @@ abstract class SetError extends Error {
     }
 }
 
+class SelfOperationError extends Error {
+    constructor() {
+        super('You cannot set your own permissions.');
+        this.name = 'SelfOperationError';
+    }
+}
+
 class SelfAdminError extends SetError {
     constructor() {
         super('Only server administrators can set permissions.');
-        this.name = 'HigherSelfPromotionError';
+        this.name = 'SelfAdminError';
     }
 }
 
@@ -49,6 +56,8 @@ async function setGuildPermissions(
     otherUserId: Snowflake,
     rank: -1 | 0 | 1,
 ) {
+    if (selfUserId === otherUserId) throw new SelfOperationError();
+
     const [selfPermission, ...selfPermissions] = await db
         .select({ isAdmin: permission.isAdmin })
         .from(permission)
