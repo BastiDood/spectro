@@ -24,9 +24,9 @@ import { handleSet } from './set';
 import { handleSetup } from './setup';
 
 async function handleInteraction(
-    db: Database,
     timestamp: Date,
     interaction: Interaction,
+    db?: Database,
 ): Promise<InteractionCallback> {
     // TODO: Update the server metadata.
     switch (interaction.type) {
@@ -35,6 +35,7 @@ async function handleInteraction(
         case InteractionType.ApplicationCommand:
             switch (interaction.data.name) {
                 case 'confess':
+                    assert(typeof db !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
@@ -52,6 +53,7 @@ async function handleInteraction(
                         },
                     };
                 case 'setup':
+                    assert(typeof db !== 'undefined');
                     assert(typeof interaction.guild !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
@@ -71,6 +73,7 @@ async function handleInteraction(
                         },
                     };
                 case 'lockdown':
+                    assert(typeof db !== 'undefined');
                     assert(typeof interaction.guild !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
@@ -89,6 +92,7 @@ async function handleInteraction(
                         },
                     };
                 case 'set':
+                    assert(typeof db !== 'undefined');
                     assert(typeof interaction.guild_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
@@ -106,6 +110,7 @@ async function handleInteraction(
                         },
                     };
                 case 'resend':
+                    assert(typeof db !== 'undefined');
                     assert(typeof interaction.guild !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
@@ -136,8 +141,6 @@ async function handleInteraction(
 }
 
 export async function POST({ locals: { db }, request }) {
-    assert(typeof db !== 'undefined');
-
     const ed25519 = request.headers.get('X-Signature-Ed25519');
     if (ed25519 === null) error(400);
 
@@ -155,8 +158,10 @@ export async function POST({ locals: { db }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        const interaction = parse(Interaction, JSON.parse(text));
-        return json(await handleInteraction(db, datetime, interaction));
+        const json = JSON.parse(text);
+        console.log('webhook/discord/interaction', json);
+        const interaction = parse(Interaction, json);
+        return json(await handleInteraction(datetime, interaction, db));
     }
 
     error(401);
