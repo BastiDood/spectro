@@ -21,7 +21,10 @@ export const guild = app.table('guild', {
     name: text('name').notNull(),
     iconHash: text('icon_hash'),
     splashHash: text('splash_hash'),
-    lastConfessionId: bigint('last_confession_id', { mode: 'bigint' }).notNull().default(0n),
+    // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
+    lastConfessionId: bigint('last_confession_id', { mode: 'bigint' })
+        .notNull()
+        .default(0 as unknown as bigint),
 });
 
 export type Guild = typeof guild.$inferSelect;
@@ -67,7 +70,10 @@ export const confession = app.table(
         channelId: bigint('channel_id', { mode: 'bigint' })
             .notNull()
             .references(() => channel.id),
-        confessionId: bigint('confession_id', { mode: 'bigint' }).notNull().default(0n),
+        // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
+        confessionId: bigint('confession_id', { mode: 'bigint' })
+            .notNull()
+            .default(0 as unknown as bigint),
         createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
         approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
         authorId: bigint('author_id', { mode: 'bigint' })
