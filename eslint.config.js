@@ -108,6 +108,6 @@ export default tsEslint.config(
             yoda: ['warn', 'never', { exceptRange: true }],
         },
     },
-    { ignores: ['.svelte-kit/**/*', 'build/**/*', 'node_modules/**/*'] },
+    { ignores: ['.svelte-kit/**/*', 'build/**/*', 'drizzle/**/*', 'node_modules/**/*'] },
     eslintPrettierConfig,
 );

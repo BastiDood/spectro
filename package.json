@@ -5,6 +5,9 @@
     "private": true,
     "packageManager": "pnpm@9.14.2+sha512.6e2baf77d06b9362294152c851c4f278ede37ab1eba3a55fda317a4a17b209f4dbb973fb250a77abc463a341fcb1f17f17cfa24091c4eb319cda0d9b84278387",
     "scripts": {
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "db:studio": "drizzle-kit studio",
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
@@ -34,6 +37,7 @@
         "@types/node": "^22.9.3",
         "@types/pg": "^8.11.10",
         "autoprefixer": "^10.4.20",
+        "drizzle-kit": "^0.28.1",
         "eslint": "^9.15.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-svelte": "^2.46.0",
