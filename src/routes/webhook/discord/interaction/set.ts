@@ -94,13 +94,13 @@ export async function handleSet(
 ) {
     strictEqual(commands.length, 0);
     strictEqual(command?.type, ApplicationCommandDataOptionType.SubCommand);
-    strictEqual(command.name, 'set');
+    const role = parseRole(command.name);
 
     const [option, ...options] = command.options;
     strictEqual(options.length, 0);
     strictEqual(option?.type, ApplicationCommandDataOptionType.User);
+    strictEqual(option.name, 'user');
 
-    const role = parseRole(option.name);
     try {
         await setGuildPermissions(db, guildId, userId, option.value, role);
         return `Successfully set <@${option.value}> to ${option.name}.`;
