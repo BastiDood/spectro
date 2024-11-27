@@ -38,6 +38,7 @@ jobs:
         run: pnpm build
         env:
           DISCORD_APPLICATION_ID: example
+          DISCORD_OAUTH_SECRET: example
           DISCORD_PUBLIC_KEY: 0123456789abcdef
           DISCORD_BOT_TOKEN: example
           POSTGRES_DATABASE_URL: postgres://example.com/spectro
