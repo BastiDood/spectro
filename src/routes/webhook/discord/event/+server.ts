@@ -17,9 +17,9 @@ async function handleWebhook(webhook: Webhook, db?: Database) {
             break;
         case WebhookType.Event:
             assert(typeof db !== 'undefined');
-            strictEqual(webhook.data.type, WebhookEventType.ApplicationAuthorized);
-            strictEqual(webhook.data.data.integration_type, IntegrationType.Guild);
-            await handleApplicationAuthorized(db, webhook.data.data.guild.id, webhook.data.data.guild.owner_id);
+            strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
+            strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
+            await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.guild.owner_id);
             break;
     }
 }
@@ -40,7 +40,7 @@ export async function POST({ locals: { db }, request }) {
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
         const obj = JSON.parse(text);
-        console.log('webhook/discord/event', obj);
+        console.dir(obj, { depth: Infinity });
         await handleWebhook(parse(Webhook, obj), db);
         return new Response(null, { status: 204 });
     }

@@ -159,7 +159,7 @@ export async function POST({ locals: { db }, request }) {
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
         const obj = JSON.parse(text);
-        console.log('webhook/discord/interaction', obj);
+        console.dir(obj, { depth: Infinity });
         const interaction = parse(Interaction, obj);
         return json(await handleInteraction(datetime, interaction, db));
     }

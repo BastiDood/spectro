@@ -39,10 +39,14 @@ export const BaseWebhookEventApplicationAuthorizedData = object({
 export const Webhook = variant('type', [
     object({
         ...BaseWebhook.entries,
+        type: literal(WebhookType.Ping),
+    }),
+    object({
+        ...BaseWebhook.entries,
         type: literal(WebhookType.Event),
-        data: variant('type', [
+        event: variant('type', [
             object({
-                ...BaseWebhook.entries,
+                ...BaseWebhookEvent.entries,
                 type: literal(WebhookEventType.ApplicationAuthorized),
                 data: variant('integration_type', [
                     object({
@@ -57,10 +61,6 @@ export const Webhook = variant('type', [
                 ]),
             }),
         ]),
-    }),
-    object({
-        ...BaseWebhook.entries,
-        type: literal(WebhookType.Ping),
     }),
 ]);
 
