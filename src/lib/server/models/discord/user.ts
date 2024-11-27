@@ -1,4 +1,4 @@
-import { type InferOutput, object, nullable, string } from 'valibot';
+import { type InferOutput, nullable, object, string } from 'valibot';
 import { Snowflake } from './snowflake';
 
 export const User = object({

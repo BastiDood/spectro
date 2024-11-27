@@ -1,4 +1,4 @@
-import type * as models from './models';
+import * as models from './models';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 export type Database = NodePgDatabase<typeof models>;
