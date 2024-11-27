@@ -1,5 +1,7 @@
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
+import { upsertGuild, upsertUser } from '$lib/server/database';
+
 import assert, { fail } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
@@ -28,7 +30,6 @@ async function handleInteraction(
     interaction: Interaction,
     db?: Database,
 ): Promise<InteractionCallback> {
-    // TODO: Update the server metadata.
     switch (interaction.type) {
         case InteractionType.Ping:
             return { type: InteractionCallbackType.Pong };
@@ -37,8 +38,13 @@ async function handleInteraction(
                 case 'confess':
                     assert(typeof db !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
+                    assert(typeof interaction.guild !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
+                    await Promise.all([
+                        upsertGuild(db, timestamp, interaction.guild),
+                        upsertUser(db, timestamp, interaction.member.user),
+                    ]);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -58,6 +64,10 @@ async function handleInteraction(
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
+                    await Promise.all([
+                        upsertGuild(db, timestamp, interaction.guild),
+                        upsertUser(db, timestamp, interaction.member.user),
+                    ]);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -77,6 +87,10 @@ async function handleInteraction(
                     assert(typeof interaction.guild !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
+                    await Promise.all([
+                        upsertGuild(db, timestamp, interaction.guild),
+                        upsertUser(db, timestamp, interaction.member.user),
+                    ]);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -93,9 +107,13 @@ async function handleInteraction(
                     };
                 case 'set':
                     assert(typeof db !== 'undefined');
-                    assert(typeof interaction.guild_id !== 'undefined');
+                    assert(typeof interaction.guild !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
+                    await Promise.all([
+                        upsertGuild(db, timestamp, interaction.guild),
+                        upsertUser(db, timestamp, interaction.member.user),
+                    ]);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -103,7 +121,7 @@ async function handleInteraction(
                             allowed_mentions: { parse: AllowedMentionTypes.Users },
                             content: await handleSet(
                                 db,
-                                interaction.guild_id,
+                                interaction.guild.id,
                                 interaction.member.user.id,
                                 interaction.data.options,
                             ),
@@ -115,6 +133,10 @@ async function handleInteraction(
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
+                    await Promise.all([
+                        upsertGuild(db, timestamp, interaction.guild),
+                        upsertUser(db, timestamp, interaction.member.user),
+                    ]);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {

@@ -1,5 +1,6 @@
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
-import type { Database } from '$lib/server/database';
+
+import { type Database, upsertGuild, upsertUser } from '$lib/server/database';
 
 import { IntegrationType, Webhook, WebhookEventType, WebhookType } from '$lib/server/models/discord/event';
 import { parse } from 'valibot';
@@ -10,7 +11,7 @@ import { verifyAsync } from '@noble/ed25519';
 
 import { handleApplicationAuthorized } from './application-authorized';
 
-async function handleWebhook(webhook: Webhook, db?: Database) {
+async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
     // eslint-disable-next-line default-case
     switch (webhook.type) {
         case WebhookType.Ping:
@@ -19,6 +20,10 @@ async function handleWebhook(webhook: Webhook, db?: Database) {
             assert(typeof db !== 'undefined');
             strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
+            await Promise.all([
+                upsertGuild(db, timestamp, webhook.event.data.guild),
+                upsertUser(db, timestamp, webhook.event.data.user),
+            ]);
             await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.guild.owner_id);
             break;
     }
@@ -31,6 +36,9 @@ export async function POST({ locals: { db }, request }) {
     const timestamp = request.headers.get('X-Signature-Timestamp');
     if (timestamp === null) error(400);
 
+    // Used for validating the update time in interactions
+    const datetime = new Date(Number.parseInt(timestamp, 10) * 1000);
+
     const contentType = request.headers.get('Content-Type');
     if (contentType === null || contentType !== 'application/json') error(400);
 
@@ -41,7 +49,7 @@ export async function POST({ locals: { db }, request }) {
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
         const obj = JSON.parse(text);
         console.dir(obj, { depth: Infinity });
-        await handleWebhook(parse(Webhook, obj), db);
+        await handleWebhook(parse(Webhook, obj), datetime, db);
         return new Response(null, { status: 204 });
     }
 
