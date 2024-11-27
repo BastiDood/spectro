@@ -18,7 +18,8 @@
         "lint:html": "linthtml src/**/*.html",
         "lint:css": "stylelint src/**/*.css",
         "lint:js": "eslint",
-        "lint:svelte": "svelte-check --tsconfig ./tsconfig.json"
+        "lint:svelte": "svelte-check --tsconfig ./tsconfig.json",
+        "discord:register": "node --env-file=.env scripts/register-slash-commands.js"
     },
     "dependencies": {
         "@noble/ed25519": "^2.1.0",
