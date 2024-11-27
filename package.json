@@ -37,6 +37,7 @@
         "@types/node": "^22.10.0",
         "@types/pg": "^8.11.10",
         "autoprefixer": "^10.4.20",
+        "dotenv": "^16.4.5",
         "drizzle-kit": "^0.28.1",
         "eslint": "^9.15.0",
         "eslint-config-prettier": "^9.1.0",
