@@ -90,16 +90,21 @@ async function submitConfession(
 
     strictEqual(otherResults.length, 0);
     assert(typeof result?._id === 'string');
+    const confessionId = BigInt(result._id);
 
-    const code = await dispatchConfessionViaHttp(channelId, BigInt(result._id), label, createdAt, description);
-    switch (code) {
-        case null:
-            return;
-        case DiscordErrorCode.MissingAccess:
-            throw new MissingAccessError();
-        default:
-            throw new MessageDeliveryError(code);
+    if (approvedAt instanceof Date) {
+        const code = await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, description);
+        switch (code) {
+            case null:
+                return `Your confession (#${confessionId}) has been published.`;
+            case DiscordErrorCode.MissingAccess:
+                throw new MissingAccessError();
+            default:
+                throw new MessageDeliveryError(code);
+        }
     }
+
+    return `Your confession (#${confessionId}) has been submitted, but its publication is pending approval.`;
 }
 
 export async function handleConfess(
@@ -113,8 +118,7 @@ export async function handleConfess(
     strictEqual(option?.type, ApplicationCommandDataOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        await submitConfession(db, createdAt, channelId, authorId, option.value);
-        return 'Your message has been submitted.';
+        return await submitConfession(db, createdAt, channelId, authorId, option.value);
     } catch (err) {
         if (err instanceof ConfessionError) {
             console.error(err);
