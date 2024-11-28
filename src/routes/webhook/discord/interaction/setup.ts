@@ -25,25 +25,7 @@ class InsufficientPermissionError extends SetupError {
     }
 }
 
-class MissingRowCountError extends SetupError {
-    constructor() {
-        super('An update operation did not return the number of affected rows. Please report this bug.');
-        this.name = 'MissingRowCountError';
-    }
-}
-
-class UnexpectedRowCountError extends SetupError {
-    constructor(public count: number) {
-        super(`An unexpected number of rows (${count}) were returned when updating channels. Please report this bug.`);
-        this.name = 'UnexpectedRowCountError';
-    }
-}
-
-/**
- * @throws {InsufficientPermissionError}
- * @throws {MissingRowCountError}
- * @throws {UnexpectedRowCountError}
- */
+/** @throws {InsufficientPermissionError} */
 async function enableConfessions(
     db: Database,
     guildId: Snowflake,
@@ -67,18 +49,14 @@ async function enableConfessions(
     if (typeof isApprovalRequired !== 'undefined')
         set.isApprovalRequired = sql`excluded.${sql.raw(channel.isApprovalRequired.name)}`;
 
-    const { rowCount } = await db
+    const [result, ...otherResults] = await db
         .insert(channel)
         .values({ id: channelId, guildId, label, isApprovalRequired, disabledAt: null })
-        .onConflictDoUpdate({ target: [channel.guildId, channel.id], set });
-    switch (rowCount) {
-        case null:
-            throw new MissingRowCountError();
-        case 1:
-            break;
-        default:
-            throw new UnexpectedRowCountError(rowCount);
-    }
+        .onConflictDoUpdate({ target: [channel.guildId, channel.id], set })
+        .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
+    strictEqual(otherResults.length, 0);
+    assert(typeof result !== 'undefined');
+    return result;
 }
 
 export async function handleSetup(
@@ -88,8 +66,10 @@ export async function handleSetup(
     userId: Snowflake,
     options: ApplicationCommandDataOption[],
 ) {
-    let label: string | null = null;
-    let isApprovalRequired: boolean | null = null;
+    // eslint-disable-next-line init-declarations
+    let label: string | undefined;
+    // eslint-disable-next-line init-declarations
+    let isApprovalRequired: boolean | undefined;
 
     for (const option of options)
         switch (option.type) {
@@ -106,12 +86,11 @@ export async function handleSetup(
                 break;
         }
 
-    assert(label !== null);
-    assert(isApprovalRequired !== null);
-
     try {
-        await enableConfessions(db, guildId, channelId, userId, label, isApprovalRequired);
-        return 'Confessions have been set up for this channel.';
+        const result = await enableConfessions(db, guildId, channelId, userId, label, isApprovalRequired);
+        return result.isApprovalRequired
+            ? `Only approved confessions (labelled **${result.label}**) are now enabled for this channel.`
+            : `Any confessions (labelled **${result.label}**) are now enabled for this channel.`;
     } catch (err) {
         if (err instanceof SetupError) {
             console.error(err);
