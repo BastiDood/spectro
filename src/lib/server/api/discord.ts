@@ -10,15 +10,15 @@ export async function dispatchConfessionViaHttp(
     confessionId: bigint,
     label: string,
     timestamp: Date,
-    content: string,
+    description: string,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const body = JSON.stringify({
         embeds: [
             {
                 type: EmbedType.Rich,
-                title: `${label} (${confessionId})`,
-                content,
+                title: `${label} #${confessionId}`,
+                description,
                 timestamp,
             } satisfies RichEmbed,
         ],
@@ -34,12 +34,12 @@ export async function dispatchConfessionViaHttp(
         },
     });
 
-    if (response.status === 201) {
-        const json = await response.json();
+    const json = await response.json();
+    if (response.status === 200) {
         console.log('CREATE_MESSAGE:json', json);
         return true;
     }
 
-    console.error('CREATE_MESSAGE:fetch', response.status);
+    console.error('CREATE_MESSAGE:fetch', response.status, json);
     return false;
 }

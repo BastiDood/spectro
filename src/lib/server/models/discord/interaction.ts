@@ -320,7 +320,6 @@ export interface RichEmbed {
     type: EmbedType.Rich;
     title?: string;
     description?: string;
-    content?: string;
     url?: URL;
     timestamp?: Date;
     color?: number;

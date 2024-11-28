@@ -10,7 +10,7 @@ import { confession, guild } from '$lib/server/database/models';
 import { eq, sql } from 'drizzle-orm';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
-abstract class ConfessionError extends Error { }
+abstract class ConfessionError extends Error {}
 
 class UnknownChannelError extends ConfessionError {
     constructor() {
@@ -52,7 +52,7 @@ async function submitConfession(
     createdAt: Date,
     channelId: Snowflake,
     authorId: Snowflake,
-    content: string,
+    description: string,
 ) {
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true },
@@ -72,17 +72,17 @@ async function submitConfession(
         .where(eq(guild.id, guildId))
         .returning({ confessionId: guild.lastConfessionId });
 
-    const approvedAt = isApprovalRequired ? sql`NULL` : sql`DEFAULT`;
+    const approvedAt = isApprovalRequired ? sql`NULL` : createdAt;
     const {
         rows: [result, ...otherResults],
     } = await db.execute(
-        sql`WITH _guild AS ${updateLastConfession} INSERT INTO ${confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}) VALUES (${createdAt}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${content}, ${approvedAt}) RETURNING ${confession.confessionId}`,
+        sql`WITH _guild AS ${updateLastConfession} INSERT INTO ${confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}) SELECT ${createdAt}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt} FROM _guild RETURNING ${confession.confessionId} _id`,
     );
 
     strictEqual(otherResults.length, 0);
-    assert(typeof result?.confessionId === 'bigint');
+    assert(typeof result?._id === 'string');
 
-    if (await dispatchConfessionViaHttp(channelId, result.confessionId, label, createdAt, content)) return;
+    if (await dispatchConfessionViaHttp(channelId, BigInt(result._id), label, createdAt, description)) return;
     throw new MessageDeliveryError();
 }
 
