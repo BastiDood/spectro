@@ -1,7 +1,5 @@
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
-import { upsertGuild, upsertUser } from '$lib/server/database';
-
 import assert, { fail } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
@@ -18,7 +16,7 @@ import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
-import type { Database } from '$lib/server/database/index';
+import { type Database, upsertUser } from '$lib/server/database';
 import { handleConfess } from './confess';
 import { handleLockdown } from './lockdown';
 import { handleResend } from './resend';
@@ -38,13 +36,10 @@ async function handleInteraction(
                 case 'confess':
                     assert(typeof db !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
-                    assert(typeof interaction.guild !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
-                    await Promise.all([
-                        upsertGuild(db, timestamp, interaction.guild),
-                        upsertUser(db, timestamp, interaction.member.user),
-                    ]);
+                    // await upsertGuild(db, timestamp, interaction.guild);
+                    await upsertUser(db, timestamp, interaction.member.user);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -60,23 +55,20 @@ async function handleInteraction(
                     };
                 case 'setup':
                     assert(typeof db !== 'undefined');
-                    assert(typeof interaction.guild !== 'undefined');
+                    assert(typeof interaction.guild_id !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
-                    await Promise.all([
-                        upsertGuild(db, timestamp, interaction.guild),
-                        upsertUser(db, timestamp, interaction.member.user),
-                    ]);
+                    // await upsertGuild(db, timestamp, interaction.guild);
+                    await upsertUser(db, timestamp, interaction.member.user);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
                             flags: InteractionCallbackMessageDataFlags.Ephemeral,
                             content: await handleSetup(
                                 db,
-                                interaction.guild.id,
+                                interaction.guild_id,
                                 interaction.channel_id,
-                                interaction.guild.owner_id,
                                 interaction.member.user.id,
                                 interaction.data.options,
                             ),
@@ -84,13 +76,11 @@ async function handleInteraction(
                     };
                 case 'lockdown':
                     assert(typeof db !== 'undefined');
-                    assert(typeof interaction.guild !== 'undefined');
+                    assert(typeof interaction.guild_id !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
-                    await Promise.all([
-                        upsertGuild(db, timestamp, interaction.guild),
-                        upsertUser(db, timestamp, interaction.member.user),
-                    ]);
+                    // await upsertGuild(db, timestamp, interaction.guild);
+                    await upsertUser(db, timestamp, interaction.member.user);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -98,22 +88,19 @@ async function handleInteraction(
                             content: await handleLockdown(
                                 db,
                                 timestamp,
-                                interaction.guild.id,
+                                interaction.guild_id,
                                 interaction.channel_id,
-                                interaction.guild.owner_id,
                                 interaction.member.user.id,
                             ),
                         },
                     };
                 case 'set':
                     assert(typeof db !== 'undefined');
-                    assert(typeof interaction.guild !== 'undefined');
+                    assert(typeof interaction.guild_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
-                    await Promise.all([
-                        upsertGuild(db, timestamp, interaction.guild),
-                        upsertUser(db, timestamp, interaction.member.user),
-                    ]);
+                    // await upsertGuild(db, timestamp, interaction.guild);
+                    await upsertUser(db, timestamp, interaction.member.user);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -121,7 +108,7 @@ async function handleInteraction(
                             allowed_mentions: { parse: AllowedMentionTypes.Users },
                             content: await handleSet(
                                 db,
-                                interaction.guild.id,
+                                interaction.guild_id,
                                 interaction.member.user.id,
                                 interaction.data.options,
                             ),
@@ -129,23 +116,20 @@ async function handleInteraction(
                     };
                 case 'resend':
                     assert(typeof db !== 'undefined');
-                    assert(typeof interaction.guild !== 'undefined');
+                    assert(typeof interaction.guild_id !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.data.options !== 'undefined');
-                    await Promise.all([
-                        upsertGuild(db, timestamp, interaction.guild),
-                        upsertUser(db, timestamp, interaction.member.user),
-                    ]);
+                    // await upsertGuild(db, timestamp, interaction.guild);
+                    await upsertUser(db, timestamp, interaction.member.user);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
                             flags: InteractionCallbackMessageDataFlags.Ephemeral,
                             content: await handleResend(
                                 db,
-                                interaction.guild.id,
+                                interaction.guild_id,
                                 interaction.channel_id,
-                                interaction.guild.owner_id,
                                 interaction.member.user.id,
                                 interaction.data.options,
                             ),

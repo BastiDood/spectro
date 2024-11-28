@@ -48,22 +48,19 @@ async function enableConfessions(
     db: Database,
     guildId: Snowflake,
     channelId: Snowflake,
-    guildOwnerId: Snowflake,
     userId: Snowflake,
     label?: string,
     isApprovalRequired?: boolean,
 ) {
-    if (guildOwnerId !== userId) {
-        const permission = await db.query.permission.findFirst({
-            columns: {},
-            where(table, { and, eq }) {
-                return and(eq(table.guildId, guildId), eq(table.userId, userId));
-            },
-        });
+    const permission = await db.query.permission.findFirst({
+        columns: {},
+        where(table, { and, eq }) {
+            return and(eq(table.guildId, guildId), eq(table.userId, userId));
+        },
+    });
 
-        // No need to check `is_admin` because this command only requires moderator privileges.
-        if (typeof permission === 'undefined') throw new InsufficientPermissionError();
-    }
+    // No need to check `is_admin` because this command only requires moderator privileges.
+    if (typeof permission === 'undefined') throw new InsufficientPermissionError();
 
     const set: PgUpdateSetSource<typeof channel> = { disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}` };
     if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
@@ -88,7 +85,6 @@ export async function handleSetup(
     db: Database,
     guildId: Snowflake,
     channelId: Snowflake,
-    guildOwnerId: Snowflake,
     userId: Snowflake,
     options: ApplicationCommandDataOption[],
 ) {
@@ -114,7 +110,7 @@ export async function handleSetup(
     assert(isApprovalRequired !== null);
 
     try {
-        await enableConfessions(db, guildId, channelId, guildOwnerId, userId, label, isApprovalRequired);
+        await enableConfessions(db, guildId, channelId, userId, label, isApprovalRequired);
         return `Confessions have been set up for <#${channelId}>.`;
     } catch (err) {
         if (err instanceof SetupError) {

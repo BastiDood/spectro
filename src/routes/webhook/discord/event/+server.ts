@@ -1,7 +1,5 @@
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
-import { type Database, upsertGuild, upsertUser } from '$lib/server/database';
-
 import { IntegrationType, Webhook, WebhookEventType, WebhookType } from '$lib/server/models/discord/event';
 import { parse } from 'valibot';
 
@@ -9,6 +7,7 @@ import assert, { strictEqual } from 'node:assert/strict';
 import { error } from '@sveltejs/kit';
 import { verifyAsync } from '@noble/ed25519';
 
+import { type Database, upsertUser } from '$lib/server/database';
 import { handleApplicationAuthorized } from './application-authorized';
 
 async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
@@ -20,10 +19,8 @@ async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
             assert(typeof db !== 'undefined');
             strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
-            await Promise.all([
-                upsertGuild(db, timestamp, webhook.event.data.guild),
-                upsertUser(db, timestamp, webhook.event.data.user),
-            ]);
+            // await upsertGuild(db, timestamp, webhook.event.data.guild);
+            await upsertUser(db, timestamp, webhook.event.data.user);
             await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.guild.owner_id);
             break;
     }

@@ -50,20 +50,17 @@ async function disableConfessions(
     disabledAt: Date,
     guildId: Snowflake,
     channelId: Snowflake,
-    guildOwnerId: Snowflake,
     userId: Snowflake,
 ) {
-    if (guildOwnerId !== userId) {
-        const permission = await db.query.permission.findFirst({
-            columns: {},
-            where(table, { and, eq }) {
-                return and(eq(table.guildId, guildId), eq(table.userId, userId));
-            },
-        });
+    const permission = await db.query.permission.findFirst({
+        columns: {},
+        where(table, { and, eq }) {
+            return and(eq(table.guildId, guildId), eq(table.userId, userId));
+        },
+    });
 
-        // No need to check `is_admin` because this command only requires moderator privileges.
-        if (typeof permission === 'undefined') throw new InsufficientPermissionError();
-    }
+    // No need to check `is_admin` because this command only requires moderator privileges.
+    if (typeof permission === 'undefined') throw new InsufficientPermissionError();
 
     const { rowCount } = await db.update(channel).set({ disabledAt }).where(eq(channel.id, channelId));
     switch (rowCount) {
@@ -83,11 +80,10 @@ export async function handleLockdown(
     disabledAt: Date,
     guildId: Snowflake,
     channelId: Snowflake,
-    guildOwnerId: Snowflake,
     userId: Snowflake,
 ) {
     try {
-        await disableConfessions(db, disabledAt, guildId, channelId, guildOwnerId, userId);
+        await disableConfessions(db, disabledAt, guildId, channelId, userId);
         return `Confessions have been temporarily disabled for <#${channelId}>.`;
     } catch (err) {
         if (err instanceof LockdownError) {

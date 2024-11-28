@@ -48,21 +48,18 @@ async function resendConfession(
     db: Database,
     guildId: Snowflake,
     channelId: Snowflake,
-    guildOwnerId: Snowflake,
     userId: Snowflake,
     confessionId: bigint,
 ) {
-    if (guildOwnerId !== userId) {
-        const permission = await db.query.permission.findFirst({
-            columns: {},
-            where(table, { and, eq }) {
-                return and(eq(table.guildId, guildId), eq(table.userId, userId));
-            },
-        });
+    const permission = await db.query.permission.findFirst({
+        columns: {},
+        where(table, { and, eq }) {
+            return and(eq(table.guildId, guildId), eq(table.userId, userId));
+        },
+    });
 
-        // No need to check `is_admin` because this command only requires moderator privileges.
-        if (typeof permission === 'undefined') throw new InsufficientPermissionError();
-    }
+    // No need to check `is_admin` because this command only requires moderator privileges.
+    if (typeof permission === 'undefined') throw new InsufficientPermissionError();
 
     const confession = await db.query.confession.findFirst({
         with: { channel: { columns: { label: true } } },
@@ -90,7 +87,6 @@ export async function handleResend(
     db: Database,
     guildId: Snowflake,
     channelId: Snowflake,
-    guildOwnerId: Snowflake,
     userId: Snowflake,
     [option, ...options]: ApplicationCommandDataOption[],
 ) {
@@ -98,7 +94,7 @@ export async function handleResend(
     strictEqual(option?.type, ApplicationCommandDataOptionType.Integer);
     strictEqual(option.name, 'confession');
     try {
-        await resendConfession(db, guildId, channelId, guildOwnerId, userId, BigInt(option.value));
+        await resendConfession(db, guildId, channelId, userId, BigInt(option.value));
         return 'The confession has been resent to this channel.';
     } catch (err) {
         if (err instanceof ResendError) {

@@ -14,7 +14,6 @@ import {
     variant,
 } from 'valibot';
 import { type RawSnowflake, Snowflake } from './snowflake';
-import { Guild } from './guild';
 import { GuildMember } from './member';
 
 export const enum InteractionType {
@@ -30,7 +29,6 @@ export const BaseInteraction = object({
     id: Snowflake,
     application_id: Snowflake,
     guild_id: optional(Snowflake),
-    guild: optional(Guild),
     channel_id: optional(Snowflake),
     token: string(),
     member: optional(GuildMember),
@@ -371,10 +369,10 @@ export interface InteractionCallbackMessageData {
 
 export interface InteractionCallbackMessage {
     type:
-        | InteractionCallbackType.ChannelMessageWithSource
-        | InteractionCallbackType.DeferredChannelMessageWithSource
-        | InteractionCallbackType.DeferredUpdateMessage
-        | InteractionCallbackType.UpdateMessage;
+    | InteractionCallbackType.ChannelMessageWithSource
+    | InteractionCallbackType.DeferredChannelMessageWithSource
+    | InteractionCallbackType.DeferredUpdateMessage
+    | InteractionCallbackType.UpdateMessage;
     data: Partial<InteractionCallbackMessageData>;
 }
 
