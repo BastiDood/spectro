@@ -57,7 +57,6 @@ async function handleInteraction(
                     assert(typeof interaction.guild_id !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
-                    assert(typeof interaction.data.options !== 'undefined');
                     // await upsertGuild(db, timestamp, interaction.guild);
                     await upsertUser(db, timestamp, interaction.member.user);
                     return {
@@ -69,7 +68,7 @@ async function handleInteraction(
                                 interaction.guild_id,
                                 interaction.channel_id,
                                 interaction.member.user.id,
-                                interaction.data.options,
+                                interaction.data.options ?? [],
                             ),
                         },
                     };
