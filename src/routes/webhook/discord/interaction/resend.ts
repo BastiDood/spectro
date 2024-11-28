@@ -3,12 +3,13 @@ import {
     ApplicationCommandDataOptionType,
 } from '$lib/server/models/discord/interaction';
 import type { Database } from '$lib/server/database';
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 import { strictEqual } from 'node:assert/strict';
 
-abstract class ResendError extends Error { }
+abstract class ResendError extends Error {}
 
 class InsufficientPermissionError extends ResendError {
     constructor() {
@@ -19,8 +20,18 @@ class InsufficientPermissionError extends ResendError {
 
 class ConfessionNotFoundError extends ResendError {
     constructor(public confessionId: bigint) {
-        super(`Confession #${confessionId} does not exist in this channel.`);
+        super(`Confession #${confessionId} does not exist in this guild.`);
         this.name = 'ConfessionNotFoundError';
+    }
+}
+
+class ConfessionWrongChannel extends ResendError {
+    constructor(
+        public channelId: Snowflake,
+        public confessionId: bigint,
+    ) {
+        super(`Confession #${confessionId} can only be resent in <#${channelId}>.`);
+        this.name = 'ConfessionNotApprovedError';
     }
 }
 
@@ -31,9 +42,16 @@ class ConfessionNotApprovedError extends ResendError {
     }
 }
 
-class MessageDeliveryError extends ResendError {
+class MissingAccessError extends ResendError {
     constructor() {
-        super('The confession message could not be delivered.');
+        super('Spectro does not have the permission to resend confessions to this channel.');
+        this.name = 'MissingAccessError';
+    }
+}
+
+class MessageDeliveryError extends ResendError {
+    constructor(public code: number) {
+        super(`The confession message failed delivery with error code ${code}.`);
         this.name = 'MessageDeliveryError';
     }
 }
@@ -41,7 +59,9 @@ class MessageDeliveryError extends ResendError {
 /**
  * @throws {InsufficientPermissionError}
  * @throws {ConfessionNotFoundError}
+ * @throws {ConfessionWrongChannel}
  * @throws {ConfessionNotApprovedError}
+ * @throws {MissingAccessError}
  * @throws {MessageDeliveryError}
  */
 async function resendConfession(
@@ -63,24 +83,34 @@ async function resendConfession(
 
     const confession = await db.query.confession.findFirst({
         with: { channel: { columns: { label: true } } },
-        columns: { createdAt: true, content: true, approvedAt: true },
-        where(table, { and, eq }) {
-            return and(eq(table.channelId, channelId), eq(table.confessionId, confessionId));
+        columns: { channelId: true, createdAt: true, content: true, approvedAt: true },
+        where(table, { eq }) {
+            return eq(table.confessionId, confessionId);
         },
     });
 
     if (typeof confession === 'undefined') throw new ConfessionNotFoundError(confessionId);
     const {
+        channelId: confessionChannelId,
         approvedAt,
         createdAt,
         content,
         channel: { label },
     } = confession;
 
+    if (channelId !== confessionChannelId) throw new ConfessionWrongChannel(confessionChannelId, confessionId);
+
     if (approvedAt === null) throw new ConfessionNotApprovedError(confessionId);
 
-    if (await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, content)) return;
-    throw new MessageDeliveryError();
+    const code = await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, content);
+    switch (code) {
+        case null:
+            return `Confession #${confessionId} has been resent.`;
+        case DiscordErrorCode.MissingAccess:
+            throw new MissingAccessError();
+        default:
+            throw new MessageDeliveryError(code);
+    }
 }
 
 export async function handleResend(

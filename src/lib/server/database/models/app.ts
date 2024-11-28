@@ -81,7 +81,7 @@ export const confession = app.table(
             .references(() => user.id),
         content: text('content').notNull(),
     },
-    ({ channelId, confessionId }) => [uniqueIndex('channel_to_confession_unique_idx').on(channelId, confessionId)],
+    ({ confessionId, channelId }) => [uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId)],
 );
 
 export type Confession = typeof confession.$inferSelect;
