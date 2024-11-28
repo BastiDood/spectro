@@ -4,7 +4,6 @@ import assert, { fail } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
 import {
-    AllowedMentionTypes,
     Interaction,
     type InteractionCallback,
     InteractionCallbackMessageDataFlags,
@@ -105,7 +104,6 @@ async function handleInteraction(
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
                             flags: InteractionCallbackMessageDataFlags.Ephemeral,
-                            allowed_mentions: { parse: AllowedMentionTypes.Users },
                             content: await handleSet(
                                 db,
                                 interaction.guild_id,
