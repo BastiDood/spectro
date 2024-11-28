@@ -8,7 +8,7 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 import { strictEqual } from 'node:assert/strict';
 
-abstract class ResendError extends Error {}
+abstract class ResendError extends Error { }
 
 class InsufficientPermissionError extends ResendError {
     constructor() {
@@ -52,7 +52,7 @@ async function resendConfession(
     confessionId: bigint,
 ) {
     const permission = await db.query.permission.findFirst({
-        columns: {},
+        columns: { isAdmin: true },
         where(table, { and, eq }) {
             return and(eq(table.guildId, guildId), eq(table.userId, userId));
         },
