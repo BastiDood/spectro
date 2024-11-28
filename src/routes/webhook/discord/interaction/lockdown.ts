@@ -53,7 +53,7 @@ async function disableConfessions(
     userId: Snowflake,
 ) {
     const permission = await db.query.permission.findFirst({
-        columns: {},
+        columns: { isAdmin: true },
         where(table, { and, eq }) {
             return and(eq(table.guildId, guildId), eq(table.userId, userId));
         },
