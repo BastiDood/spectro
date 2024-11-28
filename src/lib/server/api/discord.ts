@@ -7,6 +7,9 @@ import { DiscordError } from '$lib/server/models/discord/error';
 import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
+const DEVELOPER_ICON_URL = new URL(
+    'https://cdn.discordapp.com/avatars/374495340902088704/aa236a66d815d3d204b28806e6305064.png',
+);
 
 export async function dispatchConfessionViaHttp(
     channelId: Snowflake,
@@ -23,6 +26,10 @@ export async function dispatchConfessionViaHttp(
                 title: `${label} #${confessionId}`,
                 description,
                 timestamp,
+                footer: {
+                    text: 'Coded with ❤ by BastiDood',
+                    icon_url: DEVELOPER_ICON_URL,
+                },
             } satisfies RichEmbed,
         ],
     });
