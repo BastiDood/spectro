@@ -1,3 +1,5 @@
+import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
+
 import type { Guild } from '$lib/server/models/discord/guild';
 import type { User } from '$lib/server/models/discord/user';
 
@@ -5,12 +7,13 @@ import { strictEqual } from 'node:assert/strict';
 
 import * as models from './models';
 import { lte, sql } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { drizzle } from 'drizzle-orm/node-postgres';
 
-export type Database = NodePgDatabase<typeof models>;
-export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+export const db = drizzle<typeof models>(POSTGRES_DATABASE_URL);
 
-type Interface = Database | Transaction;
+export type Database = typeof db;
+export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Interface = Database | Transaction;
 
 const USER_NAME = sql.raw(models.user.name.name);
 const USER_AVATAR_HASH = sql.raw(models.user.avatarHash.name);
@@ -45,6 +48,7 @@ export async function upsertUser(db: Interface, timestamp: Date, user: User) {
 }
 
 export async function upsertGuild(db: Interface, timestamp: Date, guild: Guild) {
+    // FIXME: Discord does not supply all information about the guild.
     await db
         .insert(models.guild)
         .values({
