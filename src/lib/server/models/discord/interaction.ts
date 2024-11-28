@@ -369,10 +369,10 @@ export interface InteractionCallbackMessageData {
 
 export interface InteractionCallbackMessage {
     type:
-    | InteractionCallbackType.ChannelMessageWithSource
-    | InteractionCallbackType.DeferredChannelMessageWithSource
-    | InteractionCallbackType.DeferredUpdateMessage
-    | InteractionCallbackType.UpdateMessage;
+        | InteractionCallbackType.ChannelMessageWithSource
+        | InteractionCallbackType.DeferredChannelMessageWithSource
+        | InteractionCallbackType.DeferredUpdateMessage
+        | InteractionCallbackType.UpdateMessage;
     data: Partial<InteractionCallbackMessageData>;
 }
 

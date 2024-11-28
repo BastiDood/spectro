@@ -10,11 +10,11 @@ import { confession, guild } from '$lib/server/database/models';
 import { eq, sql } from 'drizzle-orm';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
-abstract class ConfessionError extends Error {}
+abstract class ConfessionError extends Error { }
 
 class UnknownChannelError extends ConfessionError {
-    constructor(public channelId: Snowflake) {
-        super(`Channel <#${channelId}> does not exist.`);
+    constructor() {
+        super('This channel has not been set up for confessions yet.');
         this.name = 'UnknownChannelError';
     }
 }
@@ -61,7 +61,7 @@ async function submitConfession(
         },
     });
 
-    if (typeof channel === 'undefined') throw new UnknownChannelError(channelId);
+    if (typeof channel === 'undefined') throw new UnknownChannelError();
     const { guildId, disabledAt, label, isApprovalRequired } = channel;
 
     if (disabledAt !== null) throw new DisabledChannelError(disabledAt);
