@@ -35,7 +35,7 @@ abstract class SetError extends Error {
     }
 }
 
-class SelfOperationError extends Error {
+class SelfOperationError extends SetError {
     constructor() {
         super('You cannot set your own permissions.');
         this.name = 'SelfOperationError';
