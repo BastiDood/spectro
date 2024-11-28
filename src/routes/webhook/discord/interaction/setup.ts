@@ -53,7 +53,7 @@ async function enableConfessions(
     isApprovalRequired?: boolean,
 ) {
     const permission = await db.query.permission.findFirst({
-        columns: {},
+        columns: { isAdmin: true },
         where(table, { and, eq }) {
             return and(eq(table.guildId, guildId), eq(table.userId, userId));
         },
@@ -111,7 +111,7 @@ export async function handleSetup(
 
     try {
         await enableConfessions(db, guildId, channelId, userId, label, isApprovalRequired);
-        return `Confessions have been set up for <#${channelId}>.`;
+        return 'Confessions have been set up for this channel.';
     } catch (err) {
         if (err instanceof SetupError) {
             console.error(err);
