@@ -3,6 +3,9 @@ import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { EmbedType, type RichEmbed } from '$lib/server/models/discord/interaction';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
+import { DiscordError } from '$lib/server/models/discord/error';
+import { parse } from 'valibot';
+
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
 export async function dispatchConfessionViaHttp(
@@ -37,9 +40,10 @@ export async function dispatchConfessionViaHttp(
     const json = await response.json();
     if (response.status === 200) {
         console.log('CREATE_MESSAGE:json', json);
-        return true;
+        return null;
     }
 
-    console.error('CREATE_MESSAGE:fetch', response.status, json);
-    return false;
+    const { code, message } = parse(DiscordError, json);
+    console.error('CREATE_MESSAGE:fetch', response.status, message);
+    return code;
 }

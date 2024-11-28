@@ -3,6 +3,7 @@ import {
     ApplicationCommandDataOptionType,
 } from '$lib/server/models/discord/interaction';
 import type { Database } from '$lib/server/database';
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import assert, { strictEqual } from 'node:assert/strict';
@@ -27,9 +28,16 @@ class DisabledChannelError extends ConfessionError {
     }
 }
 
-class MessageDeliveryError extends ConfessionError {
+class MissingAccessError extends ConfessionError {
     constructor() {
-        super('The confession message could not be delivered.');
+        super('Spectro does not have the permission to send messages to this channel.');
+        this.name = 'MissingAccessError';
+    }
+}
+
+class MessageDeliveryError extends ConfessionError {
+    constructor(public code: number) {
+        super(`The confession message failed delivery with error code ${code}.`);
         this.name = 'MessageDeliveryError';
     }
 }
@@ -45,6 +53,7 @@ const GUILD_LAST_CONFESSION_ID = sql.raw(guild.lastConfessionId.name);
 /**
  * @throws {UnknownChannelError}
  * @throws {DisabledChannelError}
+ * @throws {MissingAccessError}
  * @throws {MessageDeliveryError}
  */
 async function submitConfession(
@@ -82,8 +91,15 @@ async function submitConfession(
     strictEqual(otherResults.length, 0);
     assert(typeof result?._id === 'string');
 
-    if (await dispatchConfessionViaHttp(channelId, BigInt(result._id), label, createdAt, description)) return;
-    throw new MessageDeliveryError();
+    const code = await dispatchConfessionViaHttp(channelId, BigInt(result._id), label, createdAt, description);
+    switch (code) {
+        case null:
+            return;
+        case DiscordErrorCode.MissingAccess:
+            throw new MissingAccessError();
+        default:
+            throw new MessageDeliveryError(code);
+    }
 }
 
 export async function handleConfess(
