@@ -3,10 +3,8 @@ import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { channel } from '$lib/server/database/models';
 import { sql } from 'drizzle-orm';
 
-import {
-    type ApplicationCommandDataOption,
-    ApplicationCommandDataOptionType,
-} from '$lib/server/models/discord/interaction';
+import type { InteractionApplicationCommandDataOption } from '$lib/server/models/discord/interaction/application-command/option';
+import { InteractionApplicationCommandDataOptionType } from '$lib/server/models/discord/interaction/application-command/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import assert, { fail, strictEqual } from 'node:assert/strict';
@@ -64,7 +62,7 @@ export async function handleSetup(
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
-    options: ApplicationCommandDataOption[],
+    options: InteractionApplicationCommandDataOption[],
 ) {
     // eslint-disable-next-line init-declarations
     let label: string | undefined;
@@ -73,11 +71,11 @@ export async function handleSetup(
 
     for (const option of options)
         switch (option.type) {
-            case ApplicationCommandDataOptionType.String:
+            case InteractionApplicationCommandDataOptionType.String:
                 strictEqual(option.name, 'label');
                 label = option.value;
                 break;
-            case ApplicationCommandDataOptionType.Boolean:
+            case InteractionApplicationCommandDataOptionType.Boolean:
                 strictEqual(option.name, 'approval');
                 isApprovalRequired = option.value;
                 break;

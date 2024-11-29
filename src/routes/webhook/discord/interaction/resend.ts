@@ -1,9 +1,7 @@
-import {
-    type ApplicationCommandDataOption,
-    ApplicationCommandDataOptionType,
-} from '$lib/server/models/discord/interaction';
 import type { Database } from '$lib/server/database';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import type { InteractionApplicationCommandDataOption } from '$lib/server/models/discord/interaction/application-command/option';
+import { InteractionApplicationCommandDataOptionType } from '$lib/server/models/discord/interaction/application-command/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
@@ -118,10 +116,10 @@ export async function handleResend(
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
-    [option, ...options]: ApplicationCommandDataOption[],
+    [option, ...options]: InteractionApplicationCommandDataOption[],
 ) {
     strictEqual(options.length, 0);
-    strictEqual(option?.type, ApplicationCommandDataOptionType.Integer);
+    strictEqual(option?.type, InteractionApplicationCommandDataOptionType.Integer);
     strictEqual(option.name, 'confession');
     try {
         await resendConfession(db, guildId, channelId, userId, BigInt(option.value));

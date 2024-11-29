@@ -3,13 +3,11 @@ import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 import assert, { fail } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
-import {
-    Interaction,
-    type InteractionCallback,
-    InteractionCallbackMessageDataFlags,
-    InteractionCallbackType,
-    InteractionType,
-} from '$lib/server/models/discord/interaction';
+import { Interaction } from '$lib/server/models/discord/interaction';
+import type { InteractionCallback } from '$lib/server/models/discord/interaction-callback';
+import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
+import { InteractionType } from '$lib/server/models/discord/interaction/base';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 
 import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
@@ -42,7 +40,7 @@ async function handleInteraction(
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
-                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            flags: MessageFlags.Ephemeral,
                             content: await handleConfess(
                                 db,
                                 timestamp,
@@ -62,7 +60,7 @@ async function handleInteraction(
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
-                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            flags: MessageFlags.Ephemeral,
                             content: await handleSetup(
                                 db,
                                 interaction.guild_id,
@@ -82,7 +80,7 @@ async function handleInteraction(
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
-                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            flags: MessageFlags.Ephemeral,
                             content: await handleLockdown(
                                 db,
                                 timestamp,
@@ -102,7 +100,7 @@ async function handleInteraction(
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
-                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            flags: MessageFlags.Ephemeral,
                             content: await handleSet(
                                 db,
                                 interaction.guild_id,
@@ -122,7 +120,7 @@ async function handleInteraction(
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
-                            flags: InteractionCallbackMessageDataFlags.Ephemeral,
+                            flags: MessageFlags.Ephemeral,
                             content: await handleResend(
                                 db,
                                 interaction.guild_id,

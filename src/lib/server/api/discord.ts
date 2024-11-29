@@ -1,6 +1,6 @@
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import { EmbedType, type RichEmbed } from '$lib/server/models/discord/interaction';
+import { EmbedType, type RichEmbed } from '$lib/server/models/discord/embed';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { DiscordError } from '$lib/server/models/discord/error';
