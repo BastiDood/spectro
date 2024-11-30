@@ -10,7 +10,12 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
-abstract class ConfessionError extends Error {}
+abstract class ConfessionError extends Error {
+    constructor(message?: string) {
+        super(message);
+        this.name = 'ConfessionError';
+    }
+}
 
 class UnknownChannelError extends ConfessionError {
     constructor() {
@@ -92,20 +97,18 @@ async function submitConfession(
             timestamp,
         );
 
-        const code = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, description);
-        switch (code) {
-            case null:
-                break;
-            case DiscordErrorCode.MissingAccess:
-                throw new MissingAccessError();
-            default:
-                throw new MessageDeliveryError(code);
-        }
+        const message = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, description);
+        if (typeof message === 'number')
+            switch (message) {
+                case DiscordErrorCode.MissingAccess:
+                    throw new MissingAccessError();
+                default:
+                    throw new MessageDeliveryError(message);
+            }
 
-        // TODO: Get the Message ID and Creation Time
         const { rowCount } = await tx
             .insert(publication)
-            .values({ confessionInternalId, messageId: 0n, publishedAt: new Date() });
+            .values({ confessionInternalId, messageId: message.id, publishedAt: message.timestamp });
         strictEqual(rowCount, 1);
 
         return confessionId;

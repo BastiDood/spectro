@@ -1,10 +1,10 @@
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import { type Embed, EmbedType } from '$lib/server/models/discord/embed';
+import { EmbedType } from '$lib/server/models/discord/embed';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { DiscordError } from '$lib/server/models/discord/error';
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+import { DiscordError } from '$lib/server/models/discord/error';
 import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
@@ -31,7 +31,7 @@ export async function dispatchConfessionViaHttp(
                     text: 'Coded with ❤ by BastiDood',
                     icon_url: DEVELOPER_ICON_URL,
                 },
-            } satisfies Embed,
+            },
         ],
     } satisfies CreateMessage);
 
@@ -48,7 +48,7 @@ export async function dispatchConfessionViaHttp(
     const json = await response.json();
     if (response.status === 200) {
         console.log('CREATE_MESSAGE:json', json);
-        return null;
+        return parse(Message, json);
     }
 
     const { code, message } = parse(DiscordError, json);

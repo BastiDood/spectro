@@ -109,20 +109,18 @@ async function resendConfession(
 
     if (approvedAt === null) throw new ConfessionNotApprovedError(confessionId);
 
-    const code = await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, content);
-    switch (code) {
-        case null:
-            break;
-        case DiscordErrorCode.MissingAccess:
-            throw new MissingAccessError();
-        default:
-            throw new MessageDeliveryError(code);
-    }
+    const message = await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, content);
+    if (typeof message === 'number')
+        switch (message) {
+            case DiscordErrorCode.MissingAccess:
+                throw new MissingAccessError();
+            default:
+                throw new MessageDeliveryError(message);
+        }
 
-    // TODO: Get the Message ID and Creation Time
     const { rowCount } = await db
         .insert(publication)
-        .values({ confessionInternalId, messageId: 0n, publishedAt: new Date() });
+        .values({ confessionInternalId, messageId: message.id, publishedAt: message.timestamp });
     strictEqual(rowCount, 1);
 
     return `Confession #${confessionId} has been resent.`;
