@@ -1,12 +1,13 @@
-import type { Database } from '$lib/server/database';
+import { strictEqual } from 'node:assert/strict';
+
+import { type Database, insertConfession } from '$lib/server/database';
+import { publication } from '$lib/server/database/models';
+
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import assert, { strictEqual } from 'node:assert/strict';
-import { confession, guild } from '$lib/server/database/models';
-import { eq, sql } from 'drizzle-orm';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
 abstract class ConfessionError extends Error {}
@@ -40,14 +41,6 @@ class MessageDeliveryError extends ConfessionError {
     }
 }
 
-const CONFESSION_CREATED_AT = sql.raw(confession.createdAt.name);
-const CONFESSION_CHANNEL_ID = sql.raw(confession.channelId.name);
-const CONFESSION_AUTHOR_ID = sql.raw(confession.authorId.name);
-const CONFESSION_CONFESSION_ID = sql.raw(confession.confessionId.name);
-const CONFESSION_CONTENT = sql.raw(confession.content.name);
-const CONFESSION_APPROVED_AT = sql.raw(confession.approvedAt.name);
-const GUILD_LAST_CONFESSION_ID = sql.raw(guild.lastConfessionId.name);
-
 /**
  * @throws {UnknownChannelError}
  * @throws {DisabledChannelError}
@@ -73,36 +66,52 @@ async function submitConfession(
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
-    const updateLastConfession = db
-        .update(guild)
-        .set({ lastConfessionId: sql`${guild.lastConfessionId} + 1` })
-        .where(eq(guild.id, guildId))
-        .returning({ confessionId: guild.lastConfessionId });
+    if (isApprovalRequired) {
+        const [internalId, confessionId] = await insertConfession(
+            db,
+            timestamp,
+            guildId,
+            channelId,
+            authorId,
+            description,
+            null,
+        );
 
-    const approvedAt = isApprovalRequired ? sql`NULL` : timestamp;
-    const {
-        rows: [result, ...otherResults],
-    } = await db.execute(
-        sql`WITH _guild AS ${updateLastConfession} INSERT INTO ${confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt} FROM _guild RETURNING ${confession.confessionId} _id`,
-    );
+        console.info('[PENDING_CONFESSION]', internalId);
+        return `Your confession (#${confessionId}) has been submitted, but its publication is pending approval.`;
+    }
 
-    strictEqual(otherResults.length, 0);
-    assert(typeof result?._id === 'string');
-    const confessionId = BigInt(result._id);
+    const confessionId = await db.transaction(async tx => {
+        const [confessionInternalId, confessionId] = await insertConfession(
+            tx,
+            timestamp,
+            guildId,
+            channelId,
+            authorId,
+            description,
+            timestamp,
+        );
 
-    if (approvedAt instanceof Date) {
         const code = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, description);
         switch (code) {
             case null:
-                return `Your confession (#${confessionId}) has been published.`;
+                break;
             case DiscordErrorCode.MissingAccess:
                 throw new MissingAccessError();
             default:
                 throw new MessageDeliveryError(code);
         }
-    }
 
-    return `Your confession (#${confessionId}) has been submitted, but its publication is pending approval.`;
+        // TODO: Get the Message ID and Creation Time
+        const { rowCount } = await tx
+            .insert(publication)
+            .values({ confessionInternalId, messageId: 0n, publishedAt: new Date() });
+        strictEqual(rowCount, 1);
+
+        return confessionId;
+    });
+
+    return `Your confession (#${confessionId}) has been published.`;
 }
 
 export async function handleConfess(

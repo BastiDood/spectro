@@ -1,13 +1,21 @@
+import { strictEqual } from 'node:assert/strict';
+
 import type { Database } from '$lib/server/database';
+import { publication } from '$lib/server/database/models';
+
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
-import { strictEqual } from 'node:assert/strict';
 
-abstract class ResendError extends Error {}
+abstract class ResendError extends Error {
+    constructor(message?: string) {
+        super(message);
+        this.name = 'ResendError';
+    }
+}
 
 class InsufficientPermissionError extends ResendError {
     constructor() {
@@ -81,7 +89,7 @@ async function resendConfession(
 
     const confession = await db.query.confession.findFirst({
         with: { channel: { columns: { label: true } } },
-        columns: { channelId: true, createdAt: true, content: true, approvedAt: true },
+        columns: { internalId: true, channelId: true, createdAt: true, content: true, approvedAt: true },
         where(table, { eq }) {
             return eq(table.confessionId, confessionId);
         },
@@ -89,6 +97,7 @@ async function resendConfession(
 
     if (typeof confession === 'undefined') throw new ConfessionNotFoundError(confessionId);
     const {
+        internalId: confessionInternalId,
         channelId: confessionChannelId,
         approvedAt,
         createdAt,
@@ -103,12 +112,20 @@ async function resendConfession(
     const code = await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, content);
     switch (code) {
         case null:
-            return `Confession #${confessionId} has been resent.`;
+            break;
         case DiscordErrorCode.MissingAccess:
             throw new MissingAccessError();
         default:
             throw new MessageDeliveryError(code);
     }
+
+    // TODO: Get the Message ID and Creation Time
+    const { rowCount } = await db
+        .insert(publication)
+        .values({ confessionInternalId, messageId: 0n, publishedAt: new Date() });
+    strictEqual(rowCount, 1);
+
+    return `Confession #${confessionId} has been resent.`;
 }
 
 export async function handleResend(

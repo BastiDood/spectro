@@ -154,6 +154,7 @@ async function handleInteraction(
             // TODO
             assert(typeof db !== 'undefined');
             fail('todo');
+            // TODO: Add Publication Entry
             break;
         default:
             fail(`unexpected interaction type ${interaction.type}`);
