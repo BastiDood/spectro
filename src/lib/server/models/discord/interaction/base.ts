@@ -5,10 +5,10 @@ import { type InferOutput, literal, object, optional, string } from 'valibot';
 
 export const enum InteractionType {
     Ping = 1,
-    ApplicationCommand,
-    MessageComponent,
-    ApplicationCommandAutocomplete,
-    ModalSubmit,
+    ApplicationCommand = 2,
+    MessageComponent = 3,
+    ApplicationCommandAutocomplete = 4,
+    ModalSubmit = 5,
 }
 
 export const InteractionBase = object({

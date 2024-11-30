@@ -1,10 +1,10 @@
 export const enum MessageComponentType {
     ActionRow = 1,
-    Button,
-    StringSelect,
-    TextInput,
-    UserSelect,
-    RoleSelect,
-    MentionableSelect,
-    ChannelSelect,
+    Button = 2,
+    StringSelect = 3,
+    TextInput = 4,
+    UserSelect = 5,
+    RoleSelect = 6,
+    MentionableSelect = 7,
+    ChannelSelect = 8,
 }
