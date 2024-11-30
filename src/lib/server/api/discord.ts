@@ -1,6 +1,7 @@
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { EmbedType } from '$lib/server/models/discord/embed';
+import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
@@ -18,9 +19,10 @@ export async function dispatchConfessionViaHttp(
     label: string,
     timestamp: Date,
     description: string,
+    replyToMessageId?: Snowflake | undefined,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    const body = JSON.stringify({
+    const params: CreateMessage = {
         embeds: [
             {
                 type: EmbedType.Rich,
@@ -33,8 +35,17 @@ export async function dispatchConfessionViaHttp(
                 },
             },
         ],
-    } satisfies CreateMessage);
+    };
 
+    if (typeof replyToMessageId !== 'undefined')
+        params.message_reference = {
+            type: MessageReferenceType.Default,
+            channel_id: channelId,
+            message_id: replyToMessageId,
+            fail_if_not_exists: false,
+        };
+
+    const body = JSON.stringify(params, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
         body,
         method: 'POST',

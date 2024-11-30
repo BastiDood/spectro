@@ -7,21 +7,21 @@ import { MessageComponentType } from '$lib/server/models/discord/message/compone
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-abstract class ReplyError extends Error {
+abstract class ReplyModalError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ReplyError';
     }
 }
 
-class ConfessionNotFoundError extends ReplyError {
+class ConfessionNotFoundError extends ReplyModalError {
     constructor() {
         super('This message is not associated to any known confessions.');
         this.name = 'ConfessionNotFoundError';
     }
 }
 
-class DisabledChannelError extends ReplyError {
+class DisabledChannelError extends ReplyModalError {
     constructor(public disabledAt: Date) {
         const timestamp = Math.floor(disabledAt.valueOf() / 1000);
         super(`This channel has temporarily disabled confessions (including replies) since <t:${timestamp}:R>.`);
@@ -29,6 +29,10 @@ class DisabledChannelError extends ReplyError {
     }
 }
 
+/**
+ * @throws {ConfessionNotFoundError}
+ * @throws {DisabledChannelError}
+ */
 async function renderReplyModal(db: Database, timestamp: Date, messageId: Snowflake) {
     const found = await db.query.publication.findFirst({
         columns: {},
@@ -60,22 +64,27 @@ async function renderReplyModal(db: Database, timestamp: Date, messageId: Snowfl
         title: `Replying to ${label} #${confessionId}`,
         components: [
             {
-                custom_id,
-                type: MessageComponentType.TextInput,
-                style: MessageComponentTextInputStyle.Long,
-                required: true,
-                label: 'Message',
-                placeholder: `Hi ${label} #${confessionId}...`,
+                type: MessageComponentType.ActionRow,
+                components: [
+                    {
+                        custom_id,
+                        type: MessageComponentType.TextInput,
+                        style: MessageComponentTextInputStyle.Long,
+                        required: true,
+                        label: 'Message',
+                        placeholder: `Hi ${label} #${confessionId}...`,
+                    },
+                ],
             },
         ],
     } satisfies InteractionCallbackModal;
 }
 
-export async function handleReply(db: Database, timestamp: Date, messageId: Snowflake) {
+export async function handleReplyModal(db: Database, timestamp: Date, messageId: Snowflake) {
     try {
         return await renderReplyModal(db, timestamp, messageId);
     } catch (err) {
-        if (err instanceof ReplyError) {
+        if (err instanceof ReplyModalError) {
             console.error(err);
             return {
                 type: InteractionCallbackType.ChannelMessageWithSource,

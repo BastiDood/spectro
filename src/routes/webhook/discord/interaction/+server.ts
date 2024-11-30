@@ -20,7 +20,8 @@ import { verifyAsync } from '@noble/ed25519';
 import { type Database, upsertUser } from '$lib/server/database';
 import { handleConfess } from './confess';
 import { handleLockdown } from './lockdown';
-import { handleReply } from './reply';
+import { handleReplyModal } from './reply-modal';
+import { handleReplySubmit } from './reply-submit';
 import { handleResend } from './resend';
 import { handleSet } from './set';
 import { handleSetup } from './setup';
@@ -139,7 +140,7 @@ async function handleInteraction(
                         case 'reply':
                             // await upsertGuild(db, timestamp, interaction.guild);
                             await upsertUser(db, timestamp, interaction.member.user);
-                            return await handleReply(db, timestamp, interaction.data.target_id);
+                            return await handleReplyModal(db, timestamp, interaction.data.target_id);
                         default:
                             fail(`unexpected interaction application command message name ${interaction.data.name}`);
                             break;
@@ -153,9 +154,24 @@ async function handleInteraction(
         case InteractionType.ModalSubmit:
             // TODO
             assert(typeof db !== 'undefined');
-            fail('todo');
-            // TODO: Add Publication Entry
-            break;
+            assert(typeof interaction.channel_id !== 'undefined');
+            assert(typeof interaction.member?.user !== 'undefined');
+            // await upsertGuild(db, timestamp, interaction.guild);
+            await upsertUser(db, timestamp, interaction.member.user);
+            return {
+                type: InteractionCallbackType.ChannelMessageWithSource,
+                data: {
+                    flags: MessageFlags.Ephemeral,
+                    content: await handleReplySubmit(
+                        db,
+                        timestamp,
+                        interaction.channel_id,
+                        interaction.member.user.id,
+                        BigInt(interaction.data.custom_id),
+                        interaction.data.components,
+                    ),
+                },
+            };
         default:
             fail(`unexpected interaction type ${interaction.type}`);
             break;

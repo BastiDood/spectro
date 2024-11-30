@@ -16,5 +16,6 @@ export type Message = InferOutput<typeof Message>;
 
 export interface CreateMessage {
     allowed_mentions?: Partial<AllowedMentions>;
-    embeds: Message['embeds'];
+    embeds?: Message['embeds'];
+    message_reference?: Message['message_reference'];
 }
