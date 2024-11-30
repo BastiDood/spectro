@@ -1,7 +1,9 @@
-import { type InferOutput, array, literal, object, pipe, string, transform, variant } from 'valibot';
+import { type InferOutput, array, literal, object, string, variant } from 'valibot';
 import { Guild } from './guild';
 import { Snowflake } from './snowflake';
 import { User } from './user';
+
+import { Timestamp } from '$lib/server/models/timestamp';
 
 const BaseWebhook = object({
     version: literal(1),
@@ -19,12 +21,7 @@ export const enum WebhookEventType {
     QuestUserEnrollment = 'QUEST_USER_ENROLLMENT',
 }
 
-export const BaseWebhookEvent = object({
-    timestamp: pipe(
-        string(),
-        transform(date => new Date(date)),
-    ),
-});
+export const BaseWebhookEvent = object({ timestamp: Timestamp });
 
 export const enum IntegrationType {
     Guild = 0,

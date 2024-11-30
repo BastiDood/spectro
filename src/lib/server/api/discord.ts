@@ -1,9 +1,10 @@
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import { EmbedType, type RichEmbed } from '$lib/server/models/discord/embed';
+import { type Embed, EmbedType } from '$lib/server/models/discord/embed';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { DiscordError } from '$lib/server/models/discord/error';
+import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
@@ -30,9 +31,9 @@ export async function dispatchConfessionViaHttp(
                     text: 'Coded with ❤ by BastiDood',
                     icon_url: DEVELOPER_ICON_URL,
                 },
-            } satisfies RichEmbed,
+            } satisfies Embed,
         ],
-    });
+    } satisfies CreateMessage);
 
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
         body,

@@ -1,14 +1,18 @@
-import type { RawSnowflake } from './snowflake';
+import { type InferOutput, array, boolean, object, picklist } from 'valibot';
 
-export const enum AllowedMentionTypes {
+import { Snowflake } from './snowflake';
+
+export const enum AllowedMentionType {
     Roles = 'roles',
     Users = 'users',
     Everyone = 'everyone',
 }
 
-export interface AllowedMentions {
-    parse: AllowedMentionTypes;
-    roles: RawSnowflake[];
-    users: RawSnowflake[];
-    replied_user: boolean;
-}
+export const AllowedMentions = object({
+    parse: array(picklist([AllowedMentionType.Roles, AllowedMentionType.Users, AllowedMentionType.Everyone])),
+    roles: array(Snowflake),
+    users: array(Snowflake),
+    replied_user: boolean(),
+});
+
+export type AllowedMentions = InferOutput<typeof AllowedMentions>;
