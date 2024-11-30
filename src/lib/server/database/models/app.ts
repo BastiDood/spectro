@@ -67,6 +67,7 @@ export type NewChannel = typeof channel.$inferInsert;
 export const confession = app.table(
     'confession',
     {
+        internalId: bigint('internal_id', { mode: 'bigint' }).generatedAlwaysAsIdentity().notNull().primaryKey(),
         channelId: bigint('channel_id', { mode: 'bigint' })
             .notNull()
             .references(() => channel.id),
@@ -87,6 +88,23 @@ export const confession = app.table(
 export type Confession = typeof confession.$inferSelect;
 export type NewConfession = typeof confession.$inferInsert;
 
-export const confessionRelations = relations(confession, ({ one }) => ({
+export const confessionRelations = relations(confession, ({ one, many }) => ({
     channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
+    // eslint-disable-next-line no-use-before-define
+    publication: many(publication),
+}));
+
+export const publication = app.table('publication', {
+    messageId: bigint('message_id', { mode: 'bigint' }).notNull().primaryKey(),
+    confessionInternalId: bigint('confession_internal_id', { mode: 'bigint' })
+        .notNull()
+        .references(() => confession.internalId, { onDelete: 'cascade' }),
+    publishedAt: timestamp('published_at', { withTimezone: true }).notNull(),
+});
+
+export type Publication = typeof publication.$inferSelect;
+export type NewPublication = typeof publication.$inferInsert;
+
+export const publicationRelations = relations(publication, ({ one }) => ({
+    confession: one(confession, { fields: [publication.confessionInternalId], references: [confession.internalId] }),
 }));

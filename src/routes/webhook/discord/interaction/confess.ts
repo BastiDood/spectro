@@ -56,7 +56,7 @@ const GUILD_LAST_CONFESSION_ID = sql.raw(guild.lastConfessionId.name);
  */
 async function submitConfession(
     db: Database,
-    createdAt: Date,
+    timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
     description: string,
@@ -71,7 +71,7 @@ async function submitConfession(
     if (typeof channel === 'undefined') throw new UnknownChannelError();
     const { guildId, disabledAt, label, isApprovalRequired } = channel;
 
-    if (disabledAt !== null) throw new DisabledChannelError(disabledAt);
+    if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
     const updateLastConfession = db
         .update(guild)
@@ -79,11 +79,11 @@ async function submitConfession(
         .where(eq(guild.id, guildId))
         .returning({ confessionId: guild.lastConfessionId });
 
-    const approvedAt = isApprovalRequired ? sql`NULL` : createdAt;
+    const approvedAt = isApprovalRequired ? sql`NULL` : timestamp;
     const {
         rows: [result, ...otherResults],
     } = await db.execute(
-        sql`WITH _guild AS ${updateLastConfession} INSERT INTO ${confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}) SELECT ${createdAt}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt} FROM _guild RETURNING ${confession.confessionId} _id`,
+        sql`WITH _guild AS ${updateLastConfession} INSERT INTO ${confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt} FROM _guild RETURNING ${confession.confessionId} _id`,
     );
 
     strictEqual(otherResults.length, 0);
@@ -91,7 +91,7 @@ async function submitConfession(
     const confessionId = BigInt(result._id);
 
     if (approvedAt instanceof Date) {
-        const code = await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, description);
+        const code = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, description);
         switch (code) {
             case null:
                 return `Your confession (#${confessionId}) has been published.`;
@@ -107,7 +107,7 @@ async function submitConfession(
 
 export async function handleConfess(
     db: Database,
-    createdAt: Date,
+    timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
@@ -116,7 +116,7 @@ export async function handleConfess(
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        return await submitConfession(db, createdAt, channelId, authorId, option.value);
+        return await submitConfession(db, timestamp, channelId, authorId, option.value);
     } catch (err) {
         if (err instanceof ConfessionError) {
             console.error(err);
