@@ -1,7 +1,7 @@
 import type { Database } from '$lib/server/database';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import type { InteractionApplicationCommandDataOption } from '$lib/server/models/discord/interaction/application-command/option';
-import { InteractionApplicationCommandDataOptionType } from '$lib/server/models/discord/interaction/application-command/option/base';
+import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
+import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import assert, { strictEqual } from 'node:assert/strict';
@@ -110,10 +110,10 @@ export async function handleConfess(
     createdAt: Date,
     channelId: Snowflake,
     authorId: Snowflake,
-    [option, ...options]: InteractionApplicationCommandDataOption[],
+    [option, ...options]: InteractionApplicationCommandChatInputOption[],
 ) {
     strictEqual(options.length, 0);
-    strictEqual(option?.type, InteractionApplicationCommandDataOptionType.String);
+    strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
         return await submitConfession(db, createdAt, channelId, authorId, option.value);

@@ -1,20 +1,13 @@
-import { type InferOutput, array, literal, object, optional, string, union } from 'valibot';
+import { type InferOutput, literal, object, variant } from 'valibot';
 
 import { InteractionBase, InteractionType } from '$lib/server/models/discord/interaction/base';
-import { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { InteractionApplicationCommandDataOption } from './option';
+import { InteractionApplicationCommandChatInput } from './chat-input';
 
 export const InteractionApplicationCommand = object({
     ...InteractionBase.entries,
-    type: union([literal(InteractionType.ApplicationCommand), literal(InteractionType.ApplicationCommandAutocomplete)]),
-    data: object({
-        id: Snowflake,
-        name: string(),
-        guild_id: optional(Snowflake),
-        options: optional(array(InteractionApplicationCommandDataOption)),
-        // TODO: resolved
-    }),
+    type: literal(InteractionType.ApplicationCommand),
+    data: variant('type', [InteractionApplicationCommandChatInput]),
 });
 
 export type InteractionApplicationCommand = InferOutput<typeof InteractionApplicationCommand>;

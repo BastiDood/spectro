@@ -135,6 +135,10 @@ async function handleInteraction(
                     break;
             }
             break;
+        case InteractionType.ModalSubmit:
+            // TODO
+            fail('todo');
+            break;
         default:
             fail(`unexpected interaction type ${interaction.type}`);
             break;

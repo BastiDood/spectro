@@ -1,6 +1,6 @@
 import type { Database } from '$lib/server/database';
-import type { InteractionApplicationCommandDataOption } from '$lib/server/models/discord/interaction/application-command/option';
-import { InteractionApplicationCommandDataOptionType } from '$lib/server/models/discord/interaction/application-command/option/base';
+import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
+import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { and, eq } from 'drizzle-orm';
@@ -88,15 +88,15 @@ export async function handleSet(
     db: Database,
     guildId: Snowflake,
     userId: Snowflake,
-    [command, ...commands]: InteractionApplicationCommandDataOption[],
+    [command, ...commands]: InteractionApplicationCommandChatInputOption[],
 ) {
     strictEqual(commands.length, 0);
-    strictEqual(command?.type, InteractionApplicationCommandDataOptionType.SubCommand);
+    strictEqual(command?.type, InteractionApplicationCommandChatInputOptionType.SubCommand);
     const role = parseRole(command.name);
 
     const [option, ...options] = command.options;
     strictEqual(options.length, 0);
-    strictEqual(option?.type, InteractionApplicationCommandDataOptionType.User);
+    strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.User);
     strictEqual(option.name, 'user');
 
     try {
