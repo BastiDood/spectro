@@ -25,6 +25,13 @@ class DisabledChannelError extends ReplySubmitError {
     }
 }
 
+class ApprovalRequiredError extends ReplySubmitError {
+    constructor() {
+        super('Moderator approval has since been enabled on this channel. Your reply will be discarded.');
+        this.name = 'ApprovalRequiredError';
+    }
+}
+
 class MissingAccessError extends ReplySubmitError {
     constructor() {
         super('Spectro does not have the permission to send messages to this channel.');
@@ -42,6 +49,7 @@ class MessageDeliveryError extends ReplySubmitError {
 /**
  * @throws {UnknownChannelError}
  * @throws {DisabledChannelError}
+ * @throws {ApprovalRequiredError}
  * @throws {MissingAccessError}
  * @throws {MessageDeliveryError}
  */
@@ -65,20 +73,8 @@ async function submitReply(
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
-    if (isApprovalRequired) {
-        const [internalId, confessionId] = await insertConfession(
-            db,
-            timestamp,
-            guildId,
-            channelId,
-            authorId,
-            content,
-            null,
-        );
-
-        console.info('[PENDING_CONFESSION]', internalId);
-        return `Your confession (#${confessionId}) has been submitted, but its publication is pending approval.`;
-    }
+    // TODO: Somehow keep track of which confession is being replied to rather than just failing here.
+    if (isApprovalRequired) throw new ApprovalRequiredError();
 
     const confessionId = await db.transaction(async tx => {
         const [confessionInternalId, confessionId] = await insertConfession(

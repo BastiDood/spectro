@@ -29,16 +29,24 @@ class DisabledChannelError extends ReplyModalError {
     }
 }
 
+class ApprovalRequiredError extends ReplyModalError {
+    constructor() {
+        super('You cannot (yet) reply to a confession in a channel that requires moderator approval.');
+        this.name = 'ApprovalRequiredError';
+    }
+}
+
 /**
  * @throws {ConfessionNotFoundError}
  * @throws {DisabledChannelError}
+ * @throws {ApprovalRequiredError}
  */
 async function renderReplyModal(db: Database, timestamp: Date, messageId: Snowflake) {
     const found = await db.query.publication.findFirst({
         columns: {},
         with: {
             confession: {
-                with: { channel: { columns: { label: true, disabledAt: true } } },
+                with: { channel: { columns: { label: true, disabledAt: true, isApprovalRequired: true } } },
                 columns: { confessionId: true },
             },
         },
@@ -51,11 +59,14 @@ async function renderReplyModal(db: Database, timestamp: Date, messageId: Snowfl
     const {
         confession: {
             confessionId,
-            channel: { disabledAt, label },
+            channel: { disabledAt, isApprovalRequired, label },
         },
     } = found;
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
+
+    // TODO: Somehow keep track of which confession is being replied to rather than just failing here.
+    if (isApprovalRequired) throw new ApprovalRequiredError();
 
     const custom_id = messageId.toString();
     return {
