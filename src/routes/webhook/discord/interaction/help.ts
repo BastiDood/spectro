@@ -1,5 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
+import { APP_ICON_URL, DEVELOPER_ICON_URL } from '$lib/server/constants';
+
 import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Message } from '$lib/server/models/discord/message';
@@ -17,10 +19,15 @@ export function handleHelp([arg, ...otherArgs]: InteractionApplicationCommandCha
         flags: parsePublic(arg) ? undefined : MessageFlags.Ephemeral,
         embeds: [
             {
+                color: 0x237feb,
                 title: 'Help Page',
                 description:
                     'Spectro enables your community members to post anonymous confessions and replies to moderator-configured channels. However, for the sake of moderation, confessions are still logged for later viewing.',
-                color: 0x237feb,
+                author: {
+                    name: 'Spectro',
+                    icon_url: APP_ICON_URL,
+                    url: new URL('https://spectro.fly.dev/'),
+                },
                 fields: [
                     {
                         name: '`/help [preview]`',
@@ -54,17 +61,8 @@ export function handleHelp([arg, ...otherArgs]: InteractionApplicationCommandCha
                     },
                 ],
                 footer: {
-                    icon_url: new URL(
-                        'https://cdn.discordapp.com/avatars/374495340902088704/aa236a66d815d3d204b28806e6305064.png?size=32',
-                    ),
+                    icon_url: DEVELOPER_ICON_URL,
                     text: 'Coded with love by BastiDood...',
-                },
-                author: {
-                    name: 'Spectro',
-                    icon_url: new URL(
-                        'https://cdn.discordapp.com/app-icons/1310159012234264617/bd6113e80b99a55937748ad9bdfa364b.png?size=32',
-                    ),
-                    url: new URL('https://github.com/BastiDood/spectro'),
                 },
             },
         ],
