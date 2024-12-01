@@ -5,8 +5,9 @@ RUN corepack enable pnpm
 WORKDIR /app
 COPY pnpm-lock.yaml .
 RUN pnpm fetch
-COPY . .
+COPY package.json .
 RUN pnpm install --offline
+COPY . .
 RUN pnpm build
 RUN pnpm prune --prod
 
