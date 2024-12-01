@@ -7,11 +7,12 @@ COPY pnpm-lock.yaml .
 RUN pnpm fetch
 COPY . .
 RUN pnpm install --offline
-RUN pnpm --prod deploy /prod
-RUN pnpm build && mv build/ /prod
+RUN pnpm build
+RUN pnpm prune --prod
 
 FROM gcr.io/distroless/nodejs22-debian12:nonroot-amd64 AS deploy
-COPY --from=build /prod ~/app
+COPY --from=build /app/node_modules node_modules/
+COPY --from=build /app/build build/
 EXPOSE 3000
 
 # This is the command to start the SvelteKit server. The background email worker
@@ -19,4 +20,4 @@ EXPOSE 3000
 # (see the fly.toml), we use Process Groups to spawn both the main SvelteKit
 # server and the email worker at the same time. For the sake of supplying a
 # # default entry point, the following `CMD` starts the SvelteKit server.
-CMD ["~/app/build/index.js"]
+CMD ["build/index.js"]

@@ -1,9 +1,6 @@
 app = 'spectro'
 primary_region = 'sin'
 
-[processes]
-app = '~/app/build/index.js'
-
 [http_service]
 processes = ['app']
 internal_port = 3000
