@@ -80,7 +80,6 @@ export default tsEslint.config(
             'no-sequences': 'error',
             'no-throw-literal': 'error',
             'no-undef-init': 'error',
-            'no-undefined': 'error',
             'no-unneeded-ternary': 'error',
             'no-unused-expressions': 'error',
             'no-useless-call': 'error',
