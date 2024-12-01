@@ -59,14 +59,15 @@ async function submitConfession(
     description: string,
 ) {
     const channel = await db.query.channel.findFirst({
-        columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true },
+        columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true, color: true },
         where({ id }, { eq }) {
             return eq(id, channelId);
         },
     });
 
     if (typeof channel === 'undefined') throw new UnknownChannelError();
-    const { guildId, disabledAt, label, isApprovalRequired } = channel;
+    const { guildId, disabledAt, color, label, isApprovalRequired } = channel;
+    const hex = color === null ? undefined : Number.parseInt(color, 2);
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
@@ -96,7 +97,15 @@ async function submitConfession(
             null,
         );
 
-        const message = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, description, null);
+        const message = await dispatchConfessionViaHttp(
+            channelId,
+            confessionId,
+            label,
+            hex,
+            timestamp,
+            description,
+            null,
+        );
         if (typeof message === 'number')
             switch (message) {
                 case DiscordErrorCode.MissingAccess:

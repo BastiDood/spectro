@@ -87,7 +87,7 @@ async function resendConfession(
     if (typeof permission === 'undefined') throw new InsufficientPermissionError();
 
     const confession = await db.query.confession.findFirst({
-        with: { channel: { columns: { label: true } } },
+        with: { channel: { columns: { label: true, color: true } } },
         columns: { parentMessageId: true, channelId: true, createdAt: true, content: true, approvedAt: true },
         where(table, { eq }) {
             return eq(table.confessionId, confessionId);
@@ -101,8 +101,9 @@ async function resendConfession(
         approvedAt,
         createdAt,
         content,
-        channel: { label },
+        channel: { label, color },
     } = confession;
+    const hex = color === null ? undefined : Number.parseInt(color, 2);
 
     if (channelId !== confessionChannelId) throw new ConfessionWrongChannel(confessionChannelId, confessionId);
 
@@ -112,6 +113,7 @@ async function resendConfession(
         channelId,
         confessionId,
         label,
+        hex,
         createdAt,
         content,
         parentMessageId,

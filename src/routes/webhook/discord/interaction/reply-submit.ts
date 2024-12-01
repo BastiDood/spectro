@@ -52,14 +52,14 @@ async function submitReply(
     content: string,
 ) {
     const channel = await db.query.channel.findFirst({
-        columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true },
+        columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true, color: true },
         where({ id }, { eq }) {
             return eq(id, channelId);
         },
     });
 
     assert(typeof channel !== 'undefined');
-    const { guildId, disabledAt, label, isApprovalRequired } = channel;
+    const { guildId, disabledAt, label, color, isApprovalRequired } = channel;
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
@@ -77,6 +77,7 @@ async function submitReply(
         return `Your confession (${label} #${confessionId}) has been submitted, but its publication is pending approval.`;
     }
 
+    const hex = color === null ? undefined : Number.parseInt(color, 2);
     const confessionId = await db.transaction(async tx => {
         const confessionId = await insertConfession(
             tx,
@@ -93,6 +94,7 @@ async function submitReply(
             channelId,
             confessionId,
             label,
+            hex,
             timestamp,
             content,
             parentMessageId,

@@ -39,6 +39,13 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
                     description: 'A label to use for the confession. Defaults to "Confession".',
                 },
                 {
+                    type: 3,
+                    name: 'color',
+                    description: 'A hex-encoded RGB color to use for highlighting confession embeds.',
+                    min_length: 6,
+                    max_length: 6,
+                },
+                {
                     type: 5,
                     name: 'approval',
                     description:

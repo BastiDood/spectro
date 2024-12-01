@@ -17,6 +17,7 @@ export async function dispatchConfessionViaHttp(
     channelId: Snowflake,
     confessionId: bigint,
     label: string,
+    color: number | undefined,
     timestamp: Date,
     description: string,
     replyToMessageId: Snowflake | null,
@@ -29,6 +30,7 @@ export async function dispatchConfessionViaHttp(
                 title: `${label} #${confessionId}`,
                 description,
                 timestamp,
+                color,
                 footer: {
                     text: 'Spectro by BastiDood',
                     icon_url: DEVELOPER_ICON_URL,

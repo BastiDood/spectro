@@ -1,4 +1,4 @@
-import { bigint, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigint, bit, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
@@ -55,6 +55,7 @@ export const channel = app.table(
             .notNull()
             .references(() => guild.id, { onDelete: 'cascade' }),
         disabledAt: timestamp('disabled_at', { withTimezone: true }),
+        color: bit('color', { dimensions: 24 }),
         isApprovalRequired: boolean('is_approval_required').notNull().default(false),
         label: text('label').notNull().default('Confession'),
     },

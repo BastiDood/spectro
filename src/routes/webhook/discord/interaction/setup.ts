@@ -29,8 +29,9 @@ async function enableConfessions(
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
-    label?: string,
-    isApprovalRequired?: boolean,
+    label: string | undefined,
+    color: number | undefined,
+    isApprovalRequired: boolean | undefined,
 ) {
     const permission = await db.query.permission.findFirst({
         columns: { isAdmin: true },
@@ -44,12 +45,20 @@ async function enableConfessions(
 
     const set: PgUpdateSetSource<typeof channel> = { disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}` };
     if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
+    if (typeof color !== 'undefined') set.color = sql`excluded.${sql.raw(channel.color.name)}`;
     if (typeof isApprovalRequired !== 'undefined')
         set.isApprovalRequired = sql`excluded.${sql.raw(channel.isApprovalRequired.name)}`;
 
     const [result, ...otherResults] = await db
         .insert(channel)
-        .values({ id: channelId, guildId, label, isApprovalRequired, disabledAt: null })
+        .values({
+            id: channelId,
+            guildId,
+            label,
+            isApprovalRequired,
+            color: color?.toString(2).padStart(24, '0'),
+            disabledAt: null,
+        })
         .onConflictDoUpdate({ target: [channel.guildId, channel.id], set })
         .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
     strictEqual(otherResults.length, 0);
@@ -57,6 +66,7 @@ async function enableConfessions(
     return result;
 }
 
+const HEX_COLOR = /^[0-9a-f]{6}$/i;
 export async function handleSetup(
     db: Database,
     guildId: Snowflake,
@@ -67,13 +77,25 @@ export async function handleSetup(
     // eslint-disable-next-line init-declarations
     let label: string | undefined;
     // eslint-disable-next-line init-declarations
+    let color: number | undefined;
+    // eslint-disable-next-line init-declarations
     let isApprovalRequired: boolean | undefined;
 
     for (const option of options)
         switch (option.type) {
             case InteractionApplicationCommandChatInputOptionType.String:
-                strictEqual(option.name, 'label');
-                label = option.value;
+                switch (option.name) {
+                    case 'label':
+                        label = option.value;
+                        break;
+                    case 'color':
+                        if (HEX_COLOR.test(option.value)) color = Number.parseInt(option.value, 16);
+                        else return `\`${option.value}\` is not a valid hex-encoded RGB value.`;
+                        break;
+                    default:
+                        fail(`unexpected setup argument ${option.name}`);
+                        break;
+                }
                 break;
             case InteractionApplicationCommandChatInputOptionType.Boolean:
                 strictEqual(option.name, 'approval');
@@ -85,7 +107,7 @@ export async function handleSetup(
         }
 
     try {
-        const result = await enableConfessions(db, guildId, channelId, userId, label, isApprovalRequired);
+        const result = await enableConfessions(db, guildId, channelId, userId, label, color, isApprovalRequired);
         return result.isApprovalRequired
             ? `Only approved confessions (labelled **${result.label}**) are now enabled for this channel.`
             : `Any confessions (labelled **${result.label}**) are now enabled for this channel.`;
