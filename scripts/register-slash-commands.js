@@ -120,7 +120,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
         },
         {
             type: 3,
-            name: 'Reply to This Confession',
+            name: 'Reply Anonymously',
             integration_types: [0],
             contexts: [0],
         },

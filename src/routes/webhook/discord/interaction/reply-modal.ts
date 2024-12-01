@@ -58,14 +58,14 @@ async function renderReplyModal(db: Database, timestamp: Date, channelId: Snowfl
     return {
         type: InteractionCallbackType.Modal,
         data: {
-            custom_id: messageId.toString(),
+            custom_id: 'reply',
             title: 'Reply to a Message',
             components: [
                 {
                     type: MessageComponentType.ActionRow,
                     components: [
                         {
-                            custom_id: channelId.toString(),
+                            custom_id: messageId.toString(),
                             type: MessageComponentType.TextInput,
                             style: MessageComponentTextInputStyle.Long,
                             required: true,

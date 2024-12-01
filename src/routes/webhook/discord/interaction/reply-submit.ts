@@ -89,7 +89,15 @@ async function submitReply(
             parentMessageId,
         );
 
-        const message = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, content, null);
+        const message = await dispatchConfessionViaHttp(
+            channelId,
+            confessionId,
+            label,
+            timestamp,
+            content,
+            parentMessageId,
+        );
+
         if (typeof message === 'number')
             switch (message) {
                 case DiscordErrorCode.MissingAccess:
@@ -108,7 +116,6 @@ export async function handleReplySubmit(
     db: Database,
     timestamp: Date,
     channelId: Snowflake,
-    parentMessageId: Snowflake,
     authorId: Snowflake,
     [row, ...otherRows]: MessageComponents,
 ) {
@@ -121,6 +128,7 @@ export async function handleReplySubmit(
 
     strictEqual(component?.type, MessageComponentType.TextInput);
     assert(typeof component.value !== 'undefined');
+    const parentMessageId = BigInt(component.custom_id);
 
     try {
         return await submitReply(db, timestamp, channelId, parentMessageId, authorId, component.value);

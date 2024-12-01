@@ -40,7 +40,6 @@ export async function dispatchConfessionViaHttp(
     if (replyToMessageId !== null)
         params.message_reference = {
             type: MessageReferenceType.Default,
-            channel_id: channelId,
             message_id: replyToMessageId,
             fail_if_not_exists: false,
         };

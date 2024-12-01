@@ -105,6 +105,7 @@ async function submitConfession(
                     throw new MessageDeliveryError(message);
             }
 
+        console.dir(message, { depth: Infinity });
         return confessionId;
     });
 
