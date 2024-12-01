@@ -3,7 +3,9 @@ import type { MessageComponentActionRow } from '$lib/server/models/discord/messa
 
 export interface InteractionCallbackModal {
     type: InteractionCallbackType.Modal;
-    custom_id: string;
-    title: string;
-    components: MessageComponentActionRow[];
+    data: {
+        custom_id: string;
+        title: string;
+        components: MessageComponentActionRow[];
+    };
 }

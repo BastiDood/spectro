@@ -130,8 +130,10 @@ export async function handleReplySubmit(
     assert(typeof component !== 'undefined');
 
     strictEqual(component?.type, MessageComponentType.TextInput);
-    strictEqual(BigInt(component.custom_id), referredMessageId);
     assert(typeof component.value !== 'undefined');
+
+    const confessionId = BigInt(component.custom_id);
+    console.log('[REPLY_TO_CONFESSION]', channelId, confessionId);
 
     try {
         return await submitReply(db, timestamp, channelId, authorId, referredMessageId, component.value);

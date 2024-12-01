@@ -68,26 +68,27 @@ async function renderReplyModal(db: Database, timestamp: Date, messageId: Snowfl
     // TODO: Somehow keep track of which confession is being replied to rather than just failing here.
     if (isApprovalRequired) throw new ApprovalRequiredError();
 
-    const custom_id = messageId.toString();
     return {
-        custom_id,
         type: InteractionCallbackType.Modal,
-        title: `Replying to ${label} #${confessionId}`,
-        components: [
-            {
-                type: MessageComponentType.ActionRow,
-                components: [
-                    {
-                        custom_id,
-                        type: MessageComponentType.TextInput,
-                        style: MessageComponentTextInputStyle.Long,
-                        required: true,
-                        label: 'Message',
-                        placeholder: `Hi ${label} #${confessionId}...`,
-                    },
-                ],
-            },
-        ],
+        data: {
+            custom_id: messageId.toString(),
+            title: `Replying to ${label} #${confessionId}`,
+            components: [
+                {
+                    type: MessageComponentType.ActionRow,
+                    components: [
+                        {
+                            custom_id: confessionId.toString(),
+                            type: MessageComponentType.TextInput,
+                            style: MessageComponentTextInputStyle.Long,
+                            required: true,
+                            label: 'Reply',
+                            placeholder: `Hi ${label} #${confessionId}...`,
+                        },
+                    ],
+                },
+            ],
+        },
     } satisfies InteractionCallbackModal;
 }
 

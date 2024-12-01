@@ -22,8 +22,8 @@ export const enum MessageComponentTextInputStyle {
 export const MessageComponentTextInput = object({
     type: literal(MessageComponentType.TextInput),
     custom_id: string(),
-    style: picklist([MessageComponentTextInputStyle.Short, MessageComponentTextInputStyle.Long]),
-    label: string(),
+    style: optional(picklist([MessageComponentTextInputStyle.Short, MessageComponentTextInputStyle.Long])),
+    label: optional(string()),
     min_length: optional(pipe(number(), safeInteger(), minValue(0), maxValue(4000))),
     max_length: optional(pipe(number(), safeInteger(), minValue(1), maxValue(4000))),
     required: optional(boolean()),
