@@ -7,7 +7,7 @@ import assert, { strictEqual } from 'node:assert/strict';
 import { error } from '@sveltejs/kit';
 import { verifyAsync } from '@noble/ed25519';
 
-import { type Database, upsertUser } from '$lib/server/database';
+import { type Database, upsertGuild, upsertUser } from '$lib/server/database';
 import { handleApplicationAuthorized } from './application-authorized';
 
 async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
@@ -19,7 +19,11 @@ async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
             assert(typeof db !== 'undefined');
             strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
-            await upsertUser(db, timestamp, webhook.event.data.user);
+            await Promise.all([
+                upsertUser(db, timestamp, webhook.event.data.user),
+                // TODO: Merge the new guild insert with the permission insert.
+                upsertGuild(db, timestamp, webhook.event.data.guild),
+            ]);
             await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.guild.owner_id);
             break;
     }
