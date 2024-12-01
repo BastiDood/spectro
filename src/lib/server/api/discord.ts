@@ -30,7 +30,7 @@ export async function dispatchConfessionViaHttp(
                 timestamp,
                 color,
                 footer: {
-                    text: 'Spectro by BastiDood',
+                    text: "Coded with love by BastiDood | Admins can access Spectro's confession logs",
                     icon_url: DEVELOPER_ICON_URL,
                 },
             },
