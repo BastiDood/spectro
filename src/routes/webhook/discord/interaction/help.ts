@@ -12,7 +12,7 @@ function parsePublic(arg?: InteractionApplicationCommandChatInputOption) {
 }
 
 export function handleHelp([arg, ...otherArgs]: InteractionApplicationCommandChatInputOption[]): Partial<Message> {
-    strictEqual(otherArgs.length, 1);
+    strictEqual(otherArgs.length, 0);
     return {
         flags: parsePublic(arg) ? undefined : MessageFlags.Ephemeral,
         embeds: [
