@@ -36,15 +36,15 @@ async function handleInteraction(
         case InteractionType.Ping:
             return { type: InteractionCallbackType.Pong };
         case InteractionType.ApplicationCommand:
-            assert(typeof db !== 'undefined');
-            assert(typeof interaction.member?.user !== 'undefined');
-            await upsertUser(db, timestamp, interaction.member.user);
             switch (interaction.data.type) {
                 case InteractionApplicationCommandType.ChatInput:
                     switch (interaction.data.name) {
                         case 'confess':
+                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
+                            assert(typeof interaction.member?.user !== 'undefined');
+                            await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -64,8 +64,11 @@ async function handleInteraction(
                                 data: handleHelp(interaction.data.options ?? []),
                             };
                         case 'setup':
+                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
+                            assert(typeof interaction.member?.user !== 'undefined');
+                            await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -80,8 +83,11 @@ async function handleInteraction(
                                 },
                             };
                         case 'lockdown':
+                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
+                            assert(typeof interaction.member?.user !== 'undefined');
+                            await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -96,8 +102,11 @@ async function handleInteraction(
                                 },
                             };
                         case 'set':
+                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
+                            assert(typeof interaction.member?.user !== 'undefined');
+                            await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -111,9 +120,12 @@ async function handleInteraction(
                                 },
                             };
                         case 'resend':
+                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
+                            assert(typeof interaction.member?.user !== 'undefined');
+                            await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -135,6 +147,7 @@ async function handleInteraction(
                 case InteractionApplicationCommandType.Message:
                     switch (interaction.data.name) {
                         case 'Reply Anonymously':
+                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             return await handleReplyModal(
                                 db,
