@@ -12,6 +12,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
     },
     body: JSON.stringify([
         {
+            type: 1,
             name: 'confess',
             description: 'Send an anonymous confession.',
             integration_types: [0],
@@ -26,6 +27,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             ],
         },
         {
+            type: 1,
             name: 'setup',
             description: 'Enable confessions for this channel.',
             integration_types: [0],
@@ -45,12 +47,14 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             ],
         },
         {
+            type: 1,
             name: 'lockdown',
             description: 'Temporarily disable confessions for this channel. Previous settings are remembered.',
             integration_types: [0],
             contexts: [0],
         },
         {
+            type: 1,
             name: 'resend',
             description:
                 'Resend a confession by its ID. This is useful when the original message was accidentally deleted.',
@@ -67,6 +71,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             ],
         },
         {
+            type: 1,
             name: 'set',
             description: 'Set the permissions for a guild member.',
             integration_types: [0],
@@ -112,6 +117,12 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
                     ],
                 },
             ],
+        },
+        {
+            type: 3,
+            name: 'Reply to This Confession',
+            integration_types: [0],
+            contexts: [0],
         },
     ]),
 });

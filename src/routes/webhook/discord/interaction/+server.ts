@@ -137,7 +137,7 @@ async function handleInteraction(
                     break;
                 case InteractionApplicationCommandType.Message:
                     switch (interaction.data.name) {
-                        case 'reply':
+                        case 'Reply to This Confession':
                             // await upsertGuild(db, timestamp, interaction.guild);
                             await upsertUser(db, timestamp, interaction.member.user);
                             return await handleReplyModal(db, timestamp, interaction.data.target_id);
