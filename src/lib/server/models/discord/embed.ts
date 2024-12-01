@@ -92,7 +92,7 @@ export const Embed = object({
     description: optional(string()),
     url: optional(Url),
     timestamp: optional(Timestamp),
-    color: optional(pipe(number(), safeInteger(), minValue(0x00000000), maxValue(0xffffffff))),
+    color: optional(pipe(number(), safeInteger(), minValue(0x000000), maxValue(0xffffff))),
     footer: optional(EmbedFooter),
     image: optional(EmbedImage),
     thumbnail: optional(EmbedImage),

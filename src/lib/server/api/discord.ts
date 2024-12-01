@@ -19,7 +19,7 @@ export async function dispatchConfessionViaHttp(
     label: string,
     timestamp: Date,
     description: string,
-    replyToMessageId?: Snowflake | undefined,
+    replyToMessageId: Snowflake | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const params: CreateMessage = {
@@ -37,7 +37,7 @@ export async function dispatchConfessionViaHttp(
         ],
     };
 
-    if (typeof replyToMessageId !== 'undefined')
+    if (replyToMessageId !== null)
         params.message_reference = {
             type: MessageReferenceType.Default,
             channel_id: channelId,

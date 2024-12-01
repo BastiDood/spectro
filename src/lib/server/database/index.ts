@@ -22,6 +22,7 @@ const CONFESSION_AUTHOR_ID = sql.raw(schema.confession.authorId.name);
 const CONFESSION_CONFESSION_ID = sql.raw(schema.confession.confessionId.name);
 const CONFESSION_CONTENT = sql.raw(schema.confession.content.name);
 const CONFESSION_APPROVED_AT = sql.raw(schema.confession.approvedAt.name);
+const CONFESSION_PARENT_MESSAGE_ID = sql.raw(schema.confession.parentMessageId.name);
 
 const USER_NAME = sql.raw(schema.user.name.name);
 const USER_AVATAR_HASH = sql.raw(schema.user.avatarHash.name);
@@ -49,18 +50,18 @@ export async function insertConfession(
     authorId: Snowflake,
     description: string,
     approvedAt: Date | null,
+    parentMessageId: Snowflake | null,
 ) {
     const guild = updateLastConfession(db, guildId);
     const {
         rows: [result, ...otherResults],
     } = await db.execute(
-        sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
+        sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId} FROM _guild RETURNING ${schema.confession.confessionId} _confession_id`,
     );
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
-    assert(typeof result._internal_id === 'string');
     assert(typeof result._confession_id === 'string');
-    return [BigInt(result._internal_id), BigInt(result._confession_id)] as [bigint, bigint];
+    return BigInt(result._confession_id);
 }
 
 export async function upsertUser(db: Interface, timestamp: Date, user: User) {

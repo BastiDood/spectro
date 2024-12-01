@@ -19,7 +19,6 @@ async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
             assert(typeof db !== 'undefined');
             strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
-            // await upsertGuild(db, timestamp, webhook.event.data.guild);
             await upsertUser(db, timestamp, webhook.event.data.user);
             await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.guild.owner_id);
             break;

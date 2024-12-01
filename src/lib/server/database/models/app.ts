@@ -71,6 +71,7 @@ export const confession = app.table(
         channelId: bigint('channel_id', { mode: 'bigint' })
             .notNull()
             .references(() => channel.id),
+        parentMessageId: bigint('parent_message_id', { mode: 'bigint' }),
         // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
         confessionId: bigint('confession_id', { mode: 'bigint' })
             .notNull()
@@ -88,23 +89,6 @@ export const confession = app.table(
 export type Confession = typeof confession.$inferSelect;
 export type NewConfession = typeof confession.$inferInsert;
 
-export const confessionRelations = relations(confession, ({ one, many }) => ({
+export const confessionRelations = relations(confession, ({ one }) => ({
     channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
-    // eslint-disable-next-line no-use-before-define
-    publication: many(publication),
-}));
-
-export const publication = app.table('publication', {
-    messageId: bigint('message_id', { mode: 'bigint' }).notNull().primaryKey(),
-    confessionInternalId: bigint('confession_internal_id', { mode: 'bigint' })
-        .notNull()
-        .references(() => confession.internalId, { onDelete: 'cascade' }),
-    publishedAt: timestamp('published_at', { withTimezone: true }).notNull(),
-});
-
-export type Publication = typeof publication.$inferSelect;
-export type NewPublication = typeof publication.$inferInsert;
-
-export const publicationRelations = relations(publication, ({ one }) => ({
-    confession: one(confession, { fields: [publication.confessionInternalId], references: [confession.internalId] }),
 }));

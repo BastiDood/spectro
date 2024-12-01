@@ -1,7 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
 import { type Database, insertConfession } from '$lib/server/database';
-import { publication } from '$lib/server/database/models';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
@@ -25,13 +24,6 @@ class DisabledChannelError extends ReplySubmitError {
     }
 }
 
-class ApprovalRequiredError extends ReplySubmitError {
-    constructor() {
-        super('Moderator approval has since been enabled on this channel. Your reply will be discarded.');
-        this.name = 'ApprovalRequiredError';
-    }
-}
-
 class MissingAccessError extends ReplySubmitError {
     constructor() {
         super('Spectro does not have the permission to send messages to this channel.');
@@ -47,9 +39,7 @@ class MessageDeliveryError extends ReplySubmitError {
 }
 
 /**
- * @throws {UnknownChannelError}
  * @throws {DisabledChannelError}
- * @throws {ApprovalRequiredError}
  * @throws {MissingAccessError}
  * @throws {MessageDeliveryError}
  */
@@ -57,8 +47,8 @@ async function submitReply(
     db: Database,
     timestamp: Date,
     channelId: Snowflake,
+    parentMessageId: Snowflake,
     authorId: Snowflake,
-    referredMessageId: Snowflake,
     content: string,
 ) {
     const channel = await db.query.channel.findFirst({
@@ -73,11 +63,22 @@ async function submitReply(
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
-    // TODO: Somehow keep track of which confession is being replied to rather than just failing here.
-    if (isApprovalRequired) throw new ApprovalRequiredError();
+    if (isApprovalRequired) {
+        const confessionId = await insertConfession(
+            db,
+            timestamp,
+            guildId,
+            channelId,
+            authorId,
+            content,
+            null,
+            parentMessageId,
+        );
+        return `Your confession (${label} #${confessionId}) has been submitted, but its publication is pending approval.`;
+    }
 
     const confessionId = await db.transaction(async tx => {
-        const [confessionInternalId, confessionId] = await insertConfession(
+        const confessionId = await insertConfession(
             tx,
             timestamp,
             guildId,
@@ -85,17 +86,10 @@ async function submitReply(
             authorId,
             content,
             timestamp,
+            parentMessageId,
         );
 
-        const message = await dispatchConfessionViaHttp(
-            channelId,
-            confessionId,
-            label,
-            timestamp,
-            content,
-            referredMessageId,
-        );
-
+        const message = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, content, null);
         if (typeof message === 'number')
             switch (message) {
                 case DiscordErrorCode.MissingAccess:
@@ -104,22 +98,18 @@ async function submitReply(
                     throw new MessageDeliveryError(message);
             }
 
-        const { rowCount } = await tx
-            .insert(publication)
-            .values({ confessionInternalId, messageId: message.id, publishedAt: message.timestamp });
-        strictEqual(rowCount, 1);
         return confessionId;
     });
 
-    return `Your confession (#${confessionId}) has been published.`;
+    return `Your confession (${label} #${confessionId}) has been published.`;
 }
 
 export async function handleReplySubmit(
     db: Database,
     timestamp: Date,
     channelId: Snowflake,
+    parentMessageId: Snowflake,
     authorId: Snowflake,
-    referredMessageId: Snowflake,
     [row, ...otherRows]: MessageComponents,
 ) {
     strictEqual(otherRows.length, 0);
@@ -132,11 +122,8 @@ export async function handleReplySubmit(
     strictEqual(component?.type, MessageComponentType.TextInput);
     assert(typeof component.value !== 'undefined');
 
-    const confessionId = BigInt(component.custom_id);
-    console.log('[REPLY_TO_CONFESSION]', channelId, confessionId);
-
     try {
-        return await submitReply(db, timestamp, channelId, authorId, referredMessageId, component.value);
+        return await submitReply(db, timestamp, channelId, parentMessageId, authorId, component.value);
     } catch (err) {
         if (err instanceof ReplySubmitError) {
             console.error(err);

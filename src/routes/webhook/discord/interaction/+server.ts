@@ -43,7 +43,6 @@ async function handleInteraction(
                         case 'confess':
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
-                            // await upsertGuild(db, timestamp, interaction.guild);
                             await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
@@ -61,7 +60,6 @@ async function handleInteraction(
                         case 'setup':
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
-                            // await upsertGuild(db, timestamp, interaction.guild);
                             await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
@@ -79,7 +77,6 @@ async function handleInteraction(
                         case 'lockdown':
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
-                            // await upsertGuild(db, timestamp, interaction.guild);
                             await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
@@ -97,7 +94,6 @@ async function handleInteraction(
                         case 'set':
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
-                            // await upsertGuild(db, timestamp, interaction.guild);
                             await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
@@ -115,7 +111,6 @@ async function handleInteraction(
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
-                            // await upsertGuild(db, timestamp, interaction.guild);
                             await upsertUser(db, timestamp, interaction.member.user);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
@@ -138,9 +133,14 @@ async function handleInteraction(
                 case InteractionApplicationCommandType.Message:
                     switch (interaction.data.name) {
                         case 'Reply to This Confession':
-                            // await upsertGuild(db, timestamp, interaction.guild);
+                            assert(typeof interaction.channel_id !== 'undefined');
                             await upsertUser(db, timestamp, interaction.member.user);
-                            return await handleReplyModal(db, timestamp, interaction.data.target_id);
+                            return await handleReplyModal(
+                                db,
+                                timestamp,
+                                interaction.channel_id,
+                                interaction.data.target_id,
+                            );
                         default:
                             fail(`unexpected interaction application command message name ${interaction.data.name}`);
                             break;
@@ -156,7 +156,6 @@ async function handleInteraction(
             assert(typeof db !== 'undefined');
             assert(typeof interaction.channel_id !== 'undefined');
             assert(typeof interaction.member?.user !== 'undefined');
-            // await upsertGuild(db, timestamp, interaction.guild);
             await upsertUser(db, timestamp, interaction.member.user);
             return {
                 type: InteractionCallbackType.ChannelMessageWithSource,
@@ -166,8 +165,8 @@ async function handleInteraction(
                         db,
                         timestamp,
                         interaction.channel_id,
-                        interaction.member.user.id,
                         BigInt(interaction.data.custom_id),
+                        interaction.member.user.id,
                         interaction.data.components,
                     ),
                 },

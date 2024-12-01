@@ -1,7 +1,6 @@
 import { strictEqual } from 'node:assert/strict';
 
 import type { Database } from '$lib/server/database';
-import { publication } from '$lib/server/database/models';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -89,7 +88,7 @@ async function resendConfession(
 
     const confession = await db.query.confession.findFirst({
         with: { channel: { columns: { label: true } } },
-        columns: { internalId: true, channelId: true, createdAt: true, content: true, approvedAt: true },
+        columns: { parentMessageId: true, channelId: true, createdAt: true, content: true, approvedAt: true },
         where(table, { eq }) {
             return eq(table.confessionId, confessionId);
         },
@@ -97,7 +96,7 @@ async function resendConfession(
 
     if (typeof confession === 'undefined') throw new ConfessionNotFoundError(confessionId);
     const {
-        internalId: confessionInternalId,
+        parentMessageId,
         channelId: confessionChannelId,
         approvedAt,
         createdAt,
@@ -109,7 +108,15 @@ async function resendConfession(
 
     if (approvedAt === null) throw new ConfessionNotApprovedError(confessionId);
 
-    const message = await dispatchConfessionViaHttp(channelId, confessionId, label, createdAt, content);
+    const message = await dispatchConfessionViaHttp(
+        channelId,
+        confessionId,
+        label,
+        createdAt,
+        content,
+        parentMessageId,
+    );
+
     if (typeof message === 'number')
         switch (message) {
             case DiscordErrorCode.MissingAccess:
@@ -118,12 +125,7 @@ async function resendConfession(
                 throw new MessageDeliveryError(message);
         }
 
-    const { rowCount } = await db
-        .insert(publication)
-        .values({ confessionInternalId, messageId: message.id, publishedAt: message.timestamp });
-    strictEqual(rowCount, 1);
-
-    return `Confession #${confessionId} has been resent.`;
+    return `${label} #${confessionId} has been resent.`;
 }
 
 export async function handleResend(

@@ -1,7 +1,6 @@
 import { strictEqual } from 'node:assert/strict';
 
 import { type Database, insertConfession } from '$lib/server/database';
-import { publication } from '$lib/server/database/models';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -72,7 +71,7 @@ async function submitConfession(
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
     if (isApprovalRequired) {
-        const [internalId, confessionId] = await insertConfession(
+        const confessionId = await insertConfession(
             db,
             timestamp,
             guildId,
@@ -80,14 +79,13 @@ async function submitConfession(
             authorId,
             description,
             null,
+            null,
         );
-
-        console.info('[PENDING_CONFESSION]', internalId);
-        return `Your confession (#${confessionId}) has been submitted, but its publication is pending approval.`;
+        return `Your confession (${label} #${confessionId}) has been submitted, but its publication is pending approval.`;
     }
 
     const confessionId = await db.transaction(async tx => {
-        const [confessionInternalId, confessionId] = await insertConfession(
+        const confessionId = await insertConfession(
             tx,
             timestamp,
             guildId,
@@ -95,9 +93,10 @@ async function submitConfession(
             authorId,
             description,
             timestamp,
+            null,
         );
 
-        const message = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, description);
+        const message = await dispatchConfessionViaHttp(channelId, confessionId, label, timestamp, description, null);
         if (typeof message === 'number')
             switch (message) {
                 case DiscordErrorCode.MissingAccess:
@@ -106,15 +105,10 @@ async function submitConfession(
                     throw new MessageDeliveryError(message);
             }
 
-        const { rowCount } = await tx
-            .insert(publication)
-            .values({ confessionInternalId, messageId: message.id, publishedAt: message.timestamp });
-        strictEqual(rowCount, 1);
-
         return confessionId;
     });
 
-    return `Your confession (#${confessionId}) has been published.`;
+    return `Your confession (${label} #${confessionId}) has been published.`;
 }
 
 export async function handleConfess(

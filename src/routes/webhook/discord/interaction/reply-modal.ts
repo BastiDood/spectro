@@ -14,10 +14,10 @@ abstract class ReplyModalError extends Error {
     }
 }
 
-class ConfessionNotFoundError extends ReplyModalError {
+class UnknownChannelError extends ReplyModalError {
     constructor() {
-        super('This message is not associated to any known confessions.');
-        this.name = 'ConfessionNotFoundError';
+        super('This channel has not been set up for confessions yet.');
+        this.name = 'UnknownChannelError';
     }
 }
 
@@ -37,53 +37,40 @@ class ApprovalRequiredError extends ReplyModalError {
 }
 
 /**
- * @throws {ConfessionNotFoundError}
+ * @throws {UnknownChannelError}
  * @throws {DisabledChannelError}
  * @throws {ApprovalRequiredError}
  */
-async function renderReplyModal(db: Database, timestamp: Date, messageId: Snowflake) {
-    const found = await db.query.publication.findFirst({
-        columns: {},
-        with: {
-            confession: {
-                with: { channel: { columns: { label: true, disabledAt: true, isApprovalRequired: true } } },
-                columns: { confessionId: true },
-            },
-        },
-        where(table, { eq }) {
-            return eq(table.messageId, messageId);
+async function renderReplyModal(db: Database, timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
+    const channel = await db.query.channel.findFirst({
+        columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
+        where({ id }, { eq }) {
+            return eq(id, channelId);
         },
     });
 
-    if (typeof found === 'undefined') throw new ConfessionNotFoundError();
-    const {
-        confession: {
-            confessionId,
-            channel: { disabledAt, isApprovalRequired, label },
-        },
-    } = found;
+    if (typeof channel === 'undefined') throw new UnknownChannelError();
 
+    const { disabledAt, isApprovalRequired } = channel;
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
-
-    // TODO: Somehow keep track of which confession is being replied to rather than just failing here.
     if (isApprovalRequired) throw new ApprovalRequiredError();
 
     return {
         type: InteractionCallbackType.Modal,
         data: {
             custom_id: messageId.toString(),
-            title: `Replying to ${label} #${confessionId}`,
+            title: 'Reply to a Message',
             components: [
                 {
                     type: MessageComponentType.ActionRow,
                     components: [
                         {
-                            custom_id: confessionId.toString(),
+                            custom_id: channelId.toString(),
                             type: MessageComponentType.TextInput,
                             style: MessageComponentTextInputStyle.Long,
                             required: true,
                             label: 'Reply',
-                            placeholder: `Hi ${label} #${confessionId}...`,
+                            placeholder: 'Hello...',
                         },
                     ],
                 },
@@ -92,9 +79,9 @@ async function renderReplyModal(db: Database, timestamp: Date, messageId: Snowfl
     } satisfies InteractionCallbackModal;
 }
 
-export async function handleReplyModal(db: Database, timestamp: Date, messageId: Snowflake) {
+export async function handleReplyModal(db: Database, timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
     try {
-        return await renderReplyModal(db, timestamp, messageId);
+        return await renderReplyModal(db, timestamp, channelId, messageId);
     } catch (err) {
         if (err instanceof ReplyModalError) {
             console.error(err);
