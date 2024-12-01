@@ -19,6 +19,7 @@ import { verifyAsync } from '@noble/ed25519';
 
 import { type Database, upsertUser } from '$lib/server/database';
 import { handleConfess } from './confess';
+import { handleHelp } from './help';
 import { handleLockdown } from './lockdown';
 import { handleReplyModal } from './reply-modal';
 import { handleReplySubmit } from './reply-submit';
@@ -56,6 +57,11 @@ async function handleInteraction(
                                         interaction.data.options,
                                     ),
                                 },
+                            };
+                        case 'help':
+                            return {
+                                type: InteractionCallbackType.ChannelMessageWithSource,
+                                data: handleHelp(interaction.data.options ?? []),
                             };
                         case 'setup':
                             assert(typeof interaction.guild_id !== 'undefined');
