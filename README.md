@@ -57,3 +57,25 @@ pnpm lint:svelte # svelte-check
 # Check All Lints in Parallel
 pnpm lint
 ```
+
+# Acknowledgements
+
+Spectro is dedicated to the hundreds of students at the Department of Computer Science, University of the Philippines - Diliman who rely on anonymous confessions for their daily dose of technical discourse, academic inquiries, heated rants, quick-witted quips, and other social opportunities.
+
+Let Spectro bind the wider computer science community closer together in pursuit of collaboration in the service of our nation.
+
+- To the selfless student leaders keeping the spirit of the department alive.
+- To the tireless mentors who frequently share their knowledge and gifts to every academic inquiry.
+- To the seasoned veterans and alumni who impart their wisdom about the "real world" out there.
+- To the harshest critics of the department who only strive for the quality of education that we deserve.
+- To the wittiest comedians who brighten up the otherwise dry discourse.
+- To the anonymous lurkers who now feel safer and empowered to participate.
+
+Spectro is here is for you. 👻
+
+---
+
+_Coded with ❤ by [Basti Ortiz][BastiDood]. Themes, designs, and branding by [Jelly Raborar][Anjellyrika]._
+
+[BastiDood]: https://github.com/BastiDood
+[Anjellyrika]: https://github.com/Anjellyrika
