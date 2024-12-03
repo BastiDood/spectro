@@ -20,9 +20,9 @@ async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
             strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
             await Promise.all([
-                upsertUser(db, timestamp, webhook.event.data.user),
+                upsertUser(db, webhook.event.data.user, timestamp),
                 // TODO: Merge the new guild insert with the permission insert.
-                upsertGuild(db, timestamp, webhook.event.data.guild),
+                upsertGuild(db, webhook.event.data.guild, timestamp),
             ]);
             await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.guild.owner_id);
             break;

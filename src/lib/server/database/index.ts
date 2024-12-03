@@ -66,7 +66,7 @@ export async function insertConfession(
     return BigInt(result._confession_id);
 }
 
-export async function upsertUser(db: Interface, timestamp: Date, user: User) {
+export async function upsertUser(db: Interface, user: User, timestamp?: Date) {
     const { rowCount } = await db
         .insert(app.user)
         .values({
@@ -91,7 +91,7 @@ export async function upsertUser(db: Interface, timestamp: Date, user: User) {
     strictEqual(rowCount, 1);
 }
 
-export async function upsertGuild(db: Interface, timestamp: Date, guild: Guild) {
+export async function upsertGuild(db: Interface, guild: Guild, timestamp?: Date) {
     await db
         .insert(app.guild)
         .values({

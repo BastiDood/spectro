@@ -44,7 +44,7 @@ async function handleInteraction(
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
-                            await upsertUser(db, timestamp, interaction.member.user);
+                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -68,7 +68,7 @@ async function handleInteraction(
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
-                            await upsertUser(db, timestamp, interaction.member.user);
+                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -87,7 +87,7 @@ async function handleInteraction(
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
-                            await upsertUser(db, timestamp, interaction.member.user);
+                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -106,7 +106,7 @@ async function handleInteraction(
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
-                            await upsertUser(db, timestamp, interaction.member.user);
+                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -125,7 +125,7 @@ async function handleInteraction(
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
-                            await upsertUser(db, timestamp, interaction.member.user);
+                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -171,7 +171,7 @@ async function handleInteraction(
                     assert(typeof db !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
-                    await upsertUser(db, timestamp, interaction.member.user);
+                    await upsertUser(db, interaction.member.user, timestamp);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
