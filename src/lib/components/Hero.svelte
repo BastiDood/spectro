@@ -8,7 +8,7 @@
         <img
             src={Spectro}
             alt="Spectro mascot"
-            class="max-h-48 object-contain drop-shadow-[0_0_32px_rgba(255,255,157,0.35)]"
+            class="max-h-48 animate-floatUpDown object-contain drop-shadow-[0_0_32px_rgba(255,255,157,0.35)]"
         />
         <img src={TextLogo} alt="Spectro logo" class="max-h-32 object-contain md:max-h-48" />
     </div>

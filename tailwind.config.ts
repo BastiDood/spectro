@@ -22,6 +22,21 @@ export default {
                     950: '#24223d',
                 },
             },
+
+            animation: {
+                floatUpDown: '3s infinite floatUpDown',
+            },
+
+            keyframes: {
+                floatUpDown: {
+                    '0%, 100%': {
+                        transform: 'translateY(0)',
+                    },
+                    '50%': {
+                        transform: 'translateY(-12px)',
+                    },
+                },
+            },
         },
     },
 } satisfies Config;
