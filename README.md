@@ -6,19 +6,40 @@ Spectro is a [Discord bot][spectro-invite-link] that enables your community memb
 
 # Development
 
-## Environment Variables
+## Managing the Database
+
+Spectro requires a PostgreSQL database for data persistence. For convenience, we use Docker Compose to set up a local installation. The following environment variables are required for this to work.
+
+| **Name**                | **Description**                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `POSTGRES_DATABASE_URL` | The URL connection string of the running PostgreSQL development database instance.         |
+| `POSTGRES_PASSWORD`     | The password to use when initializing a brand new database as the default `postgres` user. |
+
+```bash
+# Download PostgreSQL with Docker (Compose).
+# Run and initialize an empty database.
+# Requires `POSTGRES_PASSWORD`.
+docker compose --profile=dev up --detach
+
+# Run the database migrations.
+# Requires `POSTGRES_DATABASE_URL`.
+pnpm db:migrate
+
+# Shut down the PostgreSQL server.
+docker compose --profile=dev down
+```
+
+## Running the Web Server
 
 Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files.
 
 | **Name**                 | **Description**                                                                                                         |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `POSTGRES_DATABASE_URL`  | The URL connection string of the running PostgreSQL database instance.                                                  |
+| `POSTGRES_DATABASE_URL`  | The URL connection string of the running PostgreSQL production database instance.                                       |
 | `DISCORD_APPLICATION_ID` | The publicly known Discord application ID that will be used for the verification of incoming webhooks and OAuth2 flows. |
 | `DISCORD_PUBLIC_KEY`     | The public key of the Discord application that will be used for the verification of incoming webhooks.                  |
 | `DISCORD_OAUTH_SECRET`   | The secret key of the Discord application that will be used for the verification of OAuth2 authorization code flows.    |
 | `DISCORD_BOT_TOKEN`      | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows.     |
-
-## Running the Web Server
 
 ```bash
 # Install the dependencies.
