@@ -88,6 +88,8 @@ Let Spectro bind the wider computer science community closer together in pursuit
 - For the seasoned veterans and alumni who impart their wisdom about the "real world" out there.
 - For the harshest critics of the department who only strive for the quality of education that we deserve.
 - For the wittiest comedians who brighten up the otherwise dry discourse.
+- For the persevering pupils who exemplify utmost scholarship even in the face of setbacks.
+- For the struggling students who nevertheless keep pushing out of passion for their craft.
 - For the anonymous lurkers who now feel safer and empowered to participate.
 
 Spectro is here is for you. 👻
