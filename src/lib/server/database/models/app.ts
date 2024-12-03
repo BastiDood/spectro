@@ -8,6 +8,8 @@ export const user = app.table('user', {
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     name: text('name').notNull(),
+    discriminator: text('discriminator').notNull(),
+    globalName: text('global_name'),
     avatarHash: text('avatar_hash'),
 });
 
