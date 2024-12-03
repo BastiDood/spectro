@@ -1,28 +1,40 @@
 import type { Config } from 'tailwindcss';
+import DaisyUI from 'daisyui';
+
 export default {
     experimental: { optimizeUniversalDefaults: true },
     content: ['./src/**/*.{html,js,svelte,ts}'],
-    theme: {
-        extend: {
-            colors: {
-                primary: {
-                    50: '#ffff9d',
-                    500: '#f7951d',
-                    950: '#55362e',
-                },
-                secondary: {
-                    50: '#e5a9f5',
-                    500: '#6a367a',
-                    950: '#0a0016',
-                },
-                surface: {
-                    50: '#f7f8f9',
-                    500: '#352f62',
-                    900: '#272544',
-                    950: '#24223d',
+    plugins: [DaisyUI],
+    daisyui: {
+        themes: [
+            {
+                spectro: {
+                    primary: '#f7951d',
+                    'primary-content': '#150800',
+                    secondary: '#6a367a',
+                    'secondary-content': '#e0d5e4',
+                    accent: '#6367b5',
+                    'accent-content': '#dde0f1',
+                    neutral: '#352f62',
+                    'neutral-content': '#d2d2df',
+                    'base-100': '#24223d',
+                    'base-200': '#1e1c34',
+                    'base-300': '#18162b',
+                    'base-content': '#ceced5',
+                    info: '#0891b2',
+                    'info-content': '#00070c',
+                    success: '#1b6f43',
+                    'success-content': '#d2e1d7',
+                    warning: '#ffc852',
+                    'warning-content': '#160f02',
+                    error: '#ab3030',
+                    'error-content': '#f3d6d3',
                 },
             },
-
+        ],
+    },
+    theme: {
+        extend: {
             animation: {
                 floatUpDown: '3s infinite floatUpDown',
             },

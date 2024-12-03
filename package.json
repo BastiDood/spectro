@@ -39,6 +39,7 @@
         "@types/node": "^22.10.1",
         "@types/pg": "^8.11.10",
         "autoprefixer": "^10.4.20",
+        "daisyui": "^4.12.14",
         "dotenv": "^16.4.7",
         "drizzle-kit": "^0.29.0",
         "eslint": "^9.16.0",
