@@ -44,12 +44,12 @@ export function handleHelp([arg, ...otherArgs]: InteractionApplicationCommandCha
                         inline: false,
                     },
                     {
-                        name: '`/lockdown`',
-                        value: '**Moderators and above only:** temporarily disables anonymous confessions for the channel. Previous settings are preserved for the next time `/setup` is run.',
-                    },
-                    {
                         name: '`/setup [label] [color] [approval]`',
                         value: '**Moderators and above only:** enables confessions for the current channel. Optionally, you may set a `label` to be used for the embed title (e.g., "Confession" by default). You may also set the RGB `color` hex code that will be used for the embeds. Finally, you may set whether to require prior `approval` before publishing a confession to a channel (e.g., no approval required by default). Running this command again will simply overwrite the affected previous settings.',
+                    },
+                    {
+                        name: '`/lockdown`',
+                        value: '**Moderators and above only:** temporarily disables anonymous confessions for the channel. Previous settings are preserved for the next time `/setup` is run.',
                     },
                     {
                         name: '`/resend <id>`',
