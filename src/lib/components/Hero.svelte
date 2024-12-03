@@ -8,10 +8,17 @@
         <img
             src={Spectro}
             alt="Spectro mascot"
-            class="max-h-48 animate-floatUpDown object-contain drop-shadow-[0_0_32px_rgba(255,255,157,0.35)]"
+            class="-z-10 max-h-48 animate-floatUpDown object-contain drop-shadow-[0_0_32px_rgba(255,255,157,0.35)]"
         />
         <img src={TextLogo} alt="Spectro logo" class="max-h-32 object-contain md:max-h-48" />
     </div>
     <h1 class="text-center text-lg md:text-xl">A confession bot for Discord with multi-channel support.</h1>
-    <button class="btn btn-primary rounded-full font-semibold md:px-8 md:text-lg">Add to Discord</button>
+    <div class="grid grid-flow-col gap-4">
+        <a href="/">
+            <button class="btn btn-primary rounded-full md:px-8 md:text-lg">Add to Discord</button>
+        </a>
+        <a href="/docs/">
+            <button class="btn btn-secondary rounded-full md:px-8 md:text-lg">Read the docs</button>
+        </a>
+    </div>
 </div>
