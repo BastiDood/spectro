@@ -56,7 +56,7 @@ export function handleHelp([arg, ...otherArgs]: InteractionApplicationCommandCha
                         value: '**Moderators and above only:** resends an existing confession by its `id`. This is useful for times when a confession message has been accidentally deleted. Note that the current channel settings are still enforced.',
                     },
                     {
-                        name: '`/set member|moderator|administrator <@user>`',
+                        name: '`/set <member|moderator|administrator> <@user>`',
                         value: '**Administrators only:** sets the privilege level of `@user`. Setting your own permissions—even as the server owner—is forbidden.',
                     },
                 ],
