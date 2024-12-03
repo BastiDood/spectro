@@ -1,5 +1,8 @@
 declare namespace App {
     interface Locals {
-        db?: import('$lib/server/database').Database;
+        ctx?: {
+            db: import('$lib/server/database').Database;
+            user?: Omit<import('$lib/server/database/models/app').User, 'createdAt' | 'updatedAt'> | undefined;
+        };
     }
 }

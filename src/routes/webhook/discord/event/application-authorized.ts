@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { Database } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { permission } from '$lib/server/database/models';
+import { permission } from '$lib/server/database/models/app';
 import { sql } from 'drizzle-orm';
 
 export async function handleApplicationAuthorized(db: Database, guildId: Snowflake, userId: Snowflake) {

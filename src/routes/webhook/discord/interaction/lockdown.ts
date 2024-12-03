@@ -1,7 +1,7 @@
 import type { Database } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { channel } from '$lib/server/database/models';
+import { channel } from '$lib/server/database/models/app';
 import { eq } from 'drizzle-orm';
 
 abstract class LockdownError extends Error {

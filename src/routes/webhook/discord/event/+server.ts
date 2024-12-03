@@ -29,7 +29,7 @@ async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
     }
 }
 
-export async function POST({ locals: { db }, request }) {
+export async function POST({ locals: { ctx }, request }) {
     const ed25519 = request.headers.get('X-Signature-Ed25519');
     if (ed25519 === null) error(400);
 
@@ -49,7 +49,7 @@ export async function POST({ locals: { db }, request }) {
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
         const obj = JSON.parse(text);
         console.dir(obj, { depth: Infinity });
-        await handleWebhook(parse(Webhook, obj), datetime, db);
+        await handleWebhook(parse(Webhook, obj), datetime, ctx?.db);
         return new Response(null, { status: 204 });
     }
 

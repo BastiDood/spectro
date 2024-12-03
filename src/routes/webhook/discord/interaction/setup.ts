@@ -1,13 +1,13 @@
+import assert, { fail, strictEqual } from 'node:assert/strict';
+
 import type { Database } from '$lib/server/database';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
-import { channel } from '$lib/server/database/models';
+import { channel } from '$lib/server/database/models/app';
 import { sql } from 'drizzle-orm';
 
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
-import assert, { fail, strictEqual } from 'node:assert/strict';
 
 abstract class SetupError extends Error {
     constructor(message?: string) {

@@ -196,7 +196,7 @@ async function handleInteraction(
     }
 }
 
-export async function POST({ locals: { db }, request }) {
+export async function POST({ locals: { ctx }, request }) {
     const ed25519 = request.headers.get('X-Signature-Ed25519');
     if (ed25519 === null) error(400);
 
@@ -217,7 +217,7 @@ export async function POST({ locals: { db }, request }) {
         const obj = JSON.parse(text);
         console.dir(obj, { depth: Infinity });
         const interaction = parse(Interaction, obj);
-        return json(await handleInteraction(datetime, interaction, db));
+        return json(await handleInteraction(datetime, interaction, ctx?.db));
     }
 
     error(401);

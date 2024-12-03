@@ -1,11 +1,12 @@
+import { fail, strictEqual } from 'node:assert/strict';
+
 import type { Database } from '$lib/server/database';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { and, eq } from 'drizzle-orm';
-import { fail, strictEqual } from 'assert';
-import { permission } from '$lib/server/database/models';
+import { permission } from '$lib/server/database/models/app';
 
 const enum Role {
     Member = 'member',
