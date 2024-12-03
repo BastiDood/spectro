@@ -10,10 +10,10 @@ Spectro is a [Discord bot][spectro-invite-link] that enables your community memb
 
 Spectro requires a PostgreSQL database for data persistence. For convenience, we use Docker Compose to set up a local installation. The following environment variables are required for this to work.
 
-| **Name**                | **Description**                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------ |
-| `POSTGRES_DATABASE_URL` | The URL connection string of the running PostgreSQL development database instance.         |
-| `POSTGRES_PASSWORD`     | The password to use when initializing a brand new database as the default `postgres` user. |
+| **Name**                | **Description**                                                    |
+| ----------------------- | ------------------------------------------------------------------ |
+| `POSTGRES_DATABASE_URL` | The URL connection string for the PostgreSQL development database. |
+| `POSTGRES_PASSWORD`     | The password with which to initialize the default `postgres` user. |
 
 ```bash
 # Download PostgreSQL with Docker (Compose).
@@ -35,7 +35,7 @@ Spectro requires some environment variables to run correctly. If the following t
 
 | **Name**                 | **Description**                                                                                                         |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `POSTGRES_DATABASE_URL`  | The URL connection string of the running PostgreSQL production database instance.                                       |
+| `POSTGRES_DATABASE_URL`  | The URL connection string for the PostgreSQL production database.                                                       |
 | `DISCORD_APPLICATION_ID` | The publicly known Discord application ID that will be used for the verification of incoming webhooks and OAuth2 flows. |
 | `DISCORD_PUBLIC_KEY`     | The public key of the Discord application that will be used for the verification of incoming webhooks.                  |
 | `DISCORD_OAUTH_SECRET`   | The secret key of the Discord application that will be used for the verification of OAuth2 authorization code flows.    |
