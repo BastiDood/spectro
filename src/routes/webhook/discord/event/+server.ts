@@ -22,7 +22,8 @@ async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
             await upsertUser(db, webhook.event.data.user, timestamp);
             // TODO: Merge the new guild insert with the permission insert.
             await upsertGuild(db, webhook.event.data.guild, timestamp);
-            await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.guild.owner_id);
+            // FIXME: Is this really the most secure way to do this?
+            await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.user.id);
             break;
     }
 }
