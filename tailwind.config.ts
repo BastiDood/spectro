@@ -39,7 +39,6 @@ export default {
             animation: {
                 float: '3s infinite float',
             },
-
             keyframes: {
                 float: {
                     '0%, 100%': {
