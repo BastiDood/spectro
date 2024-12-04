@@ -1,6 +1,12 @@
 app = 'spectro'
 primary_region = 'sin'
 
+[[vm]]
+size = 'shared-cpu-1x'
+
+[deploy]
+strategy = "bluegreen"
+
 [http_service]
 processes = ['app']
 internal_port = 3000
@@ -9,5 +15,9 @@ auto_stop_machines = 'stop'
 auto_start_machines = true
 min_machines_running = 0
 
-[[vm]]
-size = 'shared-cpu-1x'
+[[http_service.checks]]
+method = "GET"
+path = "/"
+grace_period = "4s"
+interval = "10s"
+timeout = "20s"
