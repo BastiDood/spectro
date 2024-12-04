@@ -12,13 +12,13 @@
         />
         <img src={TextLogo} alt="Spectro logo" class="max-h-32 object-contain md:max-h-48" />
     </div>
-    <h1 class="text-center text-lg md:text-xl">A confession bot for Discord with multi-channel support.</h1>
+    <h1 class="text-center text-lg md:text-xl">A multi-channel confession bot for Discord with anonymous replies.</h1>
     <div class="grid grid-flow-col gap-4">
         <a href="/">
             <button class="btn btn-primary rounded-full md:px-8 md:text-lg">Add to Discord</button>
         </a>
         <a href="/docs/">
-            <button class="btn btn-secondary rounded-full md:px-8 md:text-lg">Read the docs</button>
+            <button class="btn btn-secondary rounded-full md:px-8 md:text-lg">Read the Docs</button>
         </a>
     </div>
 </div>
