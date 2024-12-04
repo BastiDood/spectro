@@ -1,4 +1,4 @@
-import { DEVELOPER_ICON_URL } from '$lib/server/constants';
+import { APP_ICON_URL } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { EmbedType } from '$lib/server/models/discord/embed';
@@ -30,8 +30,8 @@ export async function dispatchConfessionViaHttp(
                 timestamp,
                 color,
                 footer: {
-                    text: "Coded with love by BastiDood | Admins can access Spectro's confession logs",
-                    icon_url: DEVELOPER_ICON_URL,
+                    text: "Admins can access Spectro's confession logs",
+                    icon_url: APP_ICON_URL,
                 },
             },
         ],
