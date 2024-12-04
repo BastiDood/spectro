@@ -1,10 +1,11 @@
 import type { Config } from 'tailwindcss';
 import DaisyUI from 'daisyui';
+import typo from '@tailwindcss/typography';
 
 export default {
     experimental: { optimizeUniversalDefaults: true },
     content: ['./src/**/*.{html,js,svelte,ts}'],
-    plugins: [DaisyUI],
+    plugins: [DaisyUI, typo],
     daisyui: {
         themes: [
             {
