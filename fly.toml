@@ -17,7 +17,7 @@ min_machines_running = 0
 
 [[http_service.checks]]
 method = "GET"
-path = "/"
-grace_period = "4s"
-interval = "10s"
-timeout = "20s"
+path = "/health"
+grace_period = "3s"
+interval = "6s"
+timeout = "12s"
