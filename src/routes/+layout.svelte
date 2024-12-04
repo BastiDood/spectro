@@ -4,9 +4,16 @@
     import GitHub from '@iconify/icons-simple-icons/github';
     import Icon from '@iconify/svelte';
     import LogoMark from '$lib/brand/logomark/logomark.svg';
+    import banner from '$lib/brand/link-preview.png?url';
+    import favicon from '$lib/brand/favicon.ico?url';
 
     const { children } = $props();
 </script>
+
+<svelte:head>
+    <link rel="icon" href={favicon} />
+    <meta property="og:image" content="https://spectro.fly.dev{banner}" />
+</svelte:head>
 
 <header class="sticky top-0 bg-base-100 p-1 pl-4 pr-10 shadow-sm">
     <nav class="navbar">
