@@ -2,6 +2,8 @@
     import './app.css';
     const { children } = $props();
 
+    import GitHub from '@iconify/icons-simple-icons/github';
+    import Icon from '@iconify/svelte';
     import LogoMark from '$lib/brand/logomark/logomark.svg';
 </script>
 
@@ -13,7 +15,9 @@
             </a>
         </div>
         <div class="navbar-end">
-            <a href="https://github.com/BastiDood/spectro" class="link-hover link">GitHub</a>
+            <a href="https://github.com/BastiDood/spectro">
+                <Icon icon={GitHub} width="32" />
+            </a>
         </div>
     </nav>
 </header>
