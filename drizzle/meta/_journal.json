@@ -8,6 +8,27 @@
       "when": 1733087105816,
       "tag": "0000_initial-migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1733270689000,
+      "tag": "0001_enable-pgcrypto-extension",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1733270946592,
+      "tag": "0002_oauth-sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1733270987862,
+      "tag": "0003_enforce-non-null-on-discriminator",
+      "breakpoints": true
     }
   ]
 }

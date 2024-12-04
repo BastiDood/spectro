@@ -1,0 +1,1 @@
+ALTER TABLE "app"."user" ALTER COLUMN "discriminator" DROP DEFAULT;
