@@ -1,10 +1,11 @@
 <script>
     import './app.css';
-    const { children } = $props();
 
     import GitHub from '@iconify/icons-simple-icons/github';
     import Icon from '@iconify/svelte';
     import LogoMark from '$lib/brand/logomark/logomark.svg';
+    
+    const { children } = $props();
 </script>
 
 <header class="sticky top-0 bg-base-100 p-1 pl-4 pr-10 shadow-sm">
