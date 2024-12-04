@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
     import Spectro from '$lib/brand/logomark/logomark-transparent.svg';
     import TextLogo from '$lib/brand/logotype/logotype-dark-textonly.svg';
 </script>
