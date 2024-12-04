@@ -78,6 +78,10 @@ pnpm lint:svelte # svelte-check
 pnpm lint
 ```
 
+## Legal
+
+The Spectro project is licensed under the [GNU Affero General Public License v3.0](./LICENSE). However, some files (e.g., brand assets) are exceptions that have been licensed under different terms and limitations. See the [`COPYING.md`](./COPYING.md) file for more details.
+
 # Acknowledgements
 
 Spectro is dedicated to the hundreds of students at the Department of Computer Science, University of the Philippines - Diliman who rely on anonymous confessions for their daily dose of technical discourse, academic inquiries, heated rants, quick-witted quips, and other social opportunities.
