@@ -102,7 +102,7 @@ export async function handleSet(
 
     try {
         await setGuildPermissions(db, guildId, userId, option.value, role);
-        return `Successfully set <@${option.value}> to ${option.name}.`;
+        return `Successfully set <@${option.value}> to ${command.name}.`;
     } catch (err) {
         if (err instanceof SetError) {
             console.error(err);
