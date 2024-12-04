@@ -13,22 +13,22 @@
         channels. However, for the sake of moderation, confessions are still logged for later viewing.
     </p>
     <h2 class="border-b border-neutral pb-2">Commands</h2>
-    <code class="text-lg"> /help [preview] </code>
+    <code class="text-lg">/help [preview]</code>
     <p>
         <strong>Open the help page.</strong> By default, the help page is shown privately, but you can enable the
         <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
-    <code class="text-lg"> /confess &lt;content&gt; </code>
+    <code class="text-lg">/confess &lt;content&gt;</code>
     <p>
         <strong>Send a confession to a channel.</strong> This command fails if the current channel has not yet been configured
         to receive confessions.
     </p>
-    <code class="text-lg"> Apps &gt; Reply Anonymously </code>
+    <code class="text-lg">Apps &gt; Reply Anonymously</code>
     <p>
         You may <strong>anonymously reply</strong> to any message (in a confessions-enabled channel) by right-clicking
         on that message and invoking the <code>Apps &gt; Reply Anonymously command.</code>
     </p>
-    <code class="text-lg"> /setup [label] [color] [approval] </code>
+    <code class="text-lg">/setup [label] [color] [approval]</code>
     <div class="alert alert-info text-info-content">Moderators and above only.</div>
     <p>
         <strong>Enables confessions for the current channel.</strong> Optionally, you may set a <code>label</code> to be
@@ -37,13 +37,13 @@
         a confession to a channel (e.g., no approval required by default). Running this command again will simply overwrite
         the affected previous settings.
     </p>
-    <code class="text-lg"> /lockdown </code>
+    <code class="text-lg">/lockdown</code>
     <div class="alert alert-info text-info-content">Moderators and above only.</div>
     <p>
         <strong>Temporarily disables anonymous confessions for the channel.</strong> Previous settings are preserved for
         the next time <code>/setup</code> is run.
     </p>
-    <code class="text-lg"> /resend &lt;id&gt; </code>
+    <code class="text-lg">/resend &lt;id&gt;</code>
     <p>
         <strong>Resends an existing confession by its <code>id</code>.</strong> This is useful for times when a confession
         message has been accidentally deleted. Note that the current channel settings are still enforced.
