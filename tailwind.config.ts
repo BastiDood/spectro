@@ -36,11 +36,11 @@ export default {
     theme: {
         extend: {
             animation: {
-                floatUpDown: '3s infinite floatUpDown',
+                float: '3s infinite float',
             },
 
             keyframes: {
-                floatUpDown: {
+                float: {
                     '0%, 100%': {
                         transform: 'translateY(0)',
                     },
