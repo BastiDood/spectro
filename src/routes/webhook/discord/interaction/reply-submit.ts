@@ -1,6 +1,7 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
 import { type Database, insertConfession } from '$lib/server/database';
+import type { Logger } from 'pino';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
@@ -45,6 +46,7 @@ class MessageDeliveryError extends ReplySubmitError {
  */
 async function submitReply(
     db: Database,
+    logger: Logger,
     timestamp: Date,
     channelId: Snowflake,
     parentMessageId: Snowflake,
@@ -61,6 +63,9 @@ async function submitReply(
     assert(typeof channel !== 'undefined');
     const { guildId, disabledAt, label, color, isApprovalRequired } = channel;
 
+    const child = logger.child({ channel });
+    child.info('channel for reply submission found');
+
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
     if (isApprovalRequired) {
@@ -74,6 +79,7 @@ async function submitReply(
             null,
             parentMessageId,
         );
+        child.info({ confessionId }, 'reply submitted but pending approval');
         return `Your confession (${label} #${confessionId}) has been submitted, but its publication is pending approval.`;
     }
 
@@ -91,6 +97,7 @@ async function submitReply(
         );
 
         const message = await dispatchConfessionViaHttp(
+            child,
             channelId,
             confessionId,
             label,
@@ -111,11 +118,13 @@ async function submitReply(
         return confessionId;
     });
 
+    child.info({ confessionId }, 'reply published');
     return `Your confession (${label} #${confessionId}) has been published.`;
 }
 
 export async function handleReplySubmit(
     db: Database,
+    logger: Logger,
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
@@ -133,10 +142,10 @@ export async function handleReplySubmit(
     const parentMessageId = BigInt(component.custom_id);
 
     try {
-        return await submitReply(db, timestamp, channelId, parentMessageId, authorId, component.value);
+        return await submitReply(db, logger, timestamp, channelId, parentMessageId, authorId, component.value);
     } catch (err) {
         if (err instanceof ReplySubmitError) {
-            console.error(err);
+            logger.error(err);
             return err.message;
         }
         throw err;

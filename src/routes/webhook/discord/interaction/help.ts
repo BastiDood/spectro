@@ -2,6 +2,8 @@ import { strictEqual } from 'node:assert/strict';
 
 import { APP_ICON_URL, DEVELOPER_ICON_URL } from '$lib/server/constants';
 
+import type { Logger } from 'pino';
+
 import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Message } from '$lib/server/models/discord/message';
@@ -13,10 +15,17 @@ function parsePublic(arg?: InteractionApplicationCommandChatInputOption) {
     return arg.value;
 }
 
-export function handleHelp([arg, ...otherArgs]: InteractionApplicationCommandChatInputOption[]): Partial<Message> {
+export function handleHelp(
+    logger: Logger,
+    [arg, ...otherArgs]: InteractionApplicationCommandChatInputOption[],
+): Partial<Message> {
     strictEqual(otherArgs.length, 0);
+
+    const isPublic = parsePublic(arg);
+    logger.info({ isPublic }, 'help page summoned');
+
     return {
-        flags: parsePublic(arg) ? undefined : MessageFlags.Ephemeral,
+        flags: isPublic ? undefined : MessageFlags.Ephemeral,
         embeds: [
             {
                 color: 0x237feb,

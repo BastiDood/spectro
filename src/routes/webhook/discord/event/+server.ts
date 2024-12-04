@@ -8,22 +8,24 @@ import { error } from '@sveltejs/kit';
 import { verifyAsync } from '@noble/ed25519';
 
 import { type Database, upsertGuild, upsertUser } from '$lib/server/database';
+import type { Logger } from 'pino';
 import { handleApplicationAuthorized } from './application-authorized';
 
-async function handleWebhook(webhook: Webhook, timestamp: Date, db?: Database) {
+// TODO: Fine-grained database-level performance logs.
+async function handleWebhook(db: Database, logger: Logger, webhook: Webhook, timestamp: Date) {
     // eslint-disable-next-line default-case
     switch (webhook.type) {
         case WebhookType.Ping:
+            logger.info('ping');
             break;
         case WebhookType.Event:
-            assert(typeof db !== 'undefined');
             strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
             await upsertUser(db, webhook.event.data.user, timestamp);
             // TODO: Merge the new guild insert with the permission insert.
             await upsertGuild(db, webhook.event.data.guild, timestamp);
             // FIXME: Is this really the most secure way to do this?
-            await handleApplicationAuthorized(db, webhook.event.data.guild.id, webhook.event.data.user.id);
+            await handleApplicationAuthorized(db, logger, webhook.event.data.guild.id, webhook.event.data.user.id);
             break;
     }
 }
@@ -46,9 +48,13 @@ export async function POST({ locals: { ctx }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        const obj = JSON.parse(text);
-        console.dir(obj, { depth: Infinity });
-        await handleWebhook(parse(Webhook, obj), datetime, ctx?.db);
+        const event = JSON.parse(text);
+
+        assert(typeof ctx !== 'undefined');
+        const logger = ctx.logger.child({ event });
+        logger.info('event received');
+
+        await handleWebhook(ctx.db, logger, parse(Webhook, event), datetime);
         return new Response(null, { status: 204 });
     }
 

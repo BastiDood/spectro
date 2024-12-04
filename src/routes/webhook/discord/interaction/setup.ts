@@ -1,7 +1,9 @@
 import assert, { fail, strictEqual } from 'node:assert/strict';
 
 import type { Database } from '$lib/server/database';
+import type { Logger } from 'pino';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
+
 import { channel } from '$lib/server/database/models/app';
 import { sql } from 'drizzle-orm';
 
@@ -26,6 +28,7 @@ class InsufficientPermissionError extends SetupError {
 /** @throws {InsufficientPermissionError} */
 async function enableConfessions(
     db: Database,
+    logger: Logger,
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
@@ -42,6 +45,9 @@ async function enableConfessions(
 
     // No need to check `is_admin` because this command only requires moderator privileges.
     if (typeof permission === 'undefined') throw new InsufficientPermissionError();
+
+    const child = logger.child({ permission });
+    child.info('enabling confessions');
 
     const set: PgUpdateSetSource<typeof channel> = { disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}` };
     if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
@@ -63,12 +69,15 @@ async function enableConfessions(
         .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
+
+    child.info('confessions enabled');
     return result;
 }
 
 const HEX_COLOR = /^[0-9a-f]{6}$/i;
 export async function handleSetup(
     db: Database,
+    logger: Logger,
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
@@ -107,13 +116,22 @@ export async function handleSetup(
         }
 
     try {
-        const result = await enableConfessions(db, guildId, channelId, userId, label, color, isApprovalRequired);
+        const result = await enableConfessions(
+            db,
+            logger,
+            guildId,
+            channelId,
+            userId,
+            label,
+            color,
+            isApprovalRequired,
+        );
         return result.isApprovalRequired
             ? `Only approved confessions (labelled **${result.label}**) are now enabled for this channel.`
             : `Any confessions (labelled **${result.label}**) are now enabled for this channel.`;
     } catch (err) {
         if (err instanceof SetupError) {
-            console.error(err);
+            logger.error(err);
             return err.message;
         }
         throw err;

@@ -1,16 +1,13 @@
-import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
-
 import assert, { fail } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
-import { Interaction } from '$lib/server/models/discord/interaction';
-import { InteractionType } from '$lib/server/models/discord/interaction/base';
+import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
+import { Interaction } from '$lib/server/models/discord/interaction';
+import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
 import type { InteractionCallback } from '$lib/server/models/discord/interaction-callback';
 import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
-
-import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
-
+import { InteractionType } from '$lib/server/models/discord/interaction/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
 import { error, json } from '@sveltejs/kit';
@@ -18,6 +15,7 @@ import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
 import { type Database, upsertUser } from '$lib/server/database';
+import type { Logger } from 'pino';
 import { handleConfess } from './confess';
 import { handleHelp } from './help';
 import { handleLockdown } from './lockdown';
@@ -28,9 +26,10 @@ import { handleSet } from './set';
 import { handleSetup } from './setup';
 
 async function handleInteraction(
+    db: Database,
+    logger: Logger, // TODO: Fine-grained database-level performance logs.
     timestamp: Date,
     interaction: Interaction,
-    db?: Database,
 ): Promise<InteractionCallback> {
     switch (interaction.type) {
         case InteractionType.Ping:
@@ -40,7 +39,6 @@ async function handleInteraction(
                 case InteractionApplicationCommandType.ChatInput:
                     switch (interaction.data.name) {
                         case 'confess':
-                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
@@ -51,6 +49,7 @@ async function handleInteraction(
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleConfess(
                                         db,
+                                        logger,
                                         timestamp,
                                         interaction.channel_id,
                                         interaction.member.user.id,
@@ -61,10 +60,9 @@ async function handleInteraction(
                         case 'help':
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
-                                data: handleHelp(interaction.data.options ?? []),
+                                data: handleHelp(logger, interaction.data.options ?? []),
                             };
                         case 'setup':
-                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
@@ -75,6 +73,7 @@ async function handleInteraction(
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleSetup(
                                         db,
+                                        logger,
                                         interaction.guild_id,
                                         interaction.channel_id,
                                         interaction.member.user.id,
@@ -83,7 +82,6 @@ async function handleInteraction(
                                 },
                             };
                         case 'lockdown':
-                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
@@ -94,6 +92,7 @@ async function handleInteraction(
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleLockdown(
                                         db,
+                                        logger,
                                         timestamp,
                                         interaction.guild_id,
                                         interaction.channel_id,
@@ -102,7 +101,6 @@ async function handleInteraction(
                                 },
                             };
                         case 'set':
-                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
@@ -113,6 +111,7 @@ async function handleInteraction(
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleSet(
                                         db,
+                                        logger,
                                         interaction.guild_id,
                                         interaction.member.user.id,
                                         interaction.data.options,
@@ -120,7 +119,6 @@ async function handleInteraction(
                                 },
                             };
                         case 'resend':
-                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
@@ -132,6 +130,7 @@ async function handleInteraction(
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleResend(
                                         db,
+                                        logger,
                                         interaction.guild_id,
                                         interaction.channel_id,
                                         interaction.member.user.id,
@@ -147,10 +146,10 @@ async function handleInteraction(
                 case InteractionApplicationCommandType.Message:
                     switch (interaction.data.name) {
                         case 'Reply Anonymously':
-                            assert(typeof db !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             return await handleReplyModal(
                                 db,
+                                logger,
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.data.target_id,
@@ -178,6 +177,7 @@ async function handleInteraction(
                             flags: MessageFlags.Ephemeral,
                             content: await handleReplySubmit(
                                 db,
+                                logger,
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.member.user.id,
@@ -214,10 +214,12 @@ export async function POST({ locals: { ctx }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        const obj = JSON.parse(text);
-        console.dir(obj, { depth: Infinity });
-        const interaction = parse(Interaction, obj);
-        return json(await handleInteraction(datetime, interaction, ctx?.db));
+        const interaction = JSON.parse(text);
+
+        assert(typeof ctx !== 'undefined');
+        const logger = ctx.logger.child({ interaction });
+
+        return json(await handleInteraction(ctx.db, logger, datetime, parse(Interaction, interaction)));
     }
 
     error(401);

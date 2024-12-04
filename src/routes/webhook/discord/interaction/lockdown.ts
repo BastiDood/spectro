@@ -1,4 +1,5 @@
 import type { Database } from '$lib/server/database';
+import type { Logger } from 'pino';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { channel } from '$lib/server/database/models/app';
@@ -47,6 +48,7 @@ class ChannelNotSetupError extends LockdownError {
  */
 async function disableConfessions(
     db: Database,
+    logger: Logger,
     disabledAt: Date,
     guildId: Snowflake,
     channelId: Snowflake,
@@ -62,6 +64,9 @@ async function disableConfessions(
     // No need to check `is_admin` because this command only requires moderator privileges.
     if (typeof permission === 'undefined') throw new InsufficientPermissionError();
 
+    const child = logger.child({ permission });
+    child.info('permission of the user disabling the confessions sound');
+
     const { rowCount } = await db.update(channel).set({ disabledAt }).where(eq(channel.id, channelId));
     switch (rowCount) {
         case null:
@@ -73,21 +78,24 @@ async function disableConfessions(
         default:
             throw new UnexpectedRowCountError(rowCount);
     }
+
+    child.info('confessions disabled');
 }
 
 export async function handleLockdown(
     db: Database,
+    logger: Logger,
     disabledAt: Date,
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
 ) {
     try {
-        await disableConfessions(db, disabledAt, guildId, channelId, userId);
+        await disableConfessions(db, logger, disabledAt, guildId, channelId, userId);
         return `Confessions have been temporarily disabled for <#${channelId}>.`;
     } catch (err) {
         if (err instanceof LockdownError) {
-            console.error(err);
+            logger.error(err);
             return err.message;
         }
         throw err;

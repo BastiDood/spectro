@@ -1,6 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
 import type { Database } from '$lib/server/database';
+import type { Logger } from 'pino';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -71,6 +72,7 @@ class MessageDeliveryError extends ResendError {
  */
 async function resendConfession(
     db: Database,
+    logger: Logger,
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
@@ -85,6 +87,9 @@ async function resendConfession(
 
     // No need to check `is_admin` because this command only requires moderator privileges.
     if (typeof permission === 'undefined') throw new InsufficientPermissionError();
+
+    const permissionChild = logger.child({ permission });
+    permissionChild.info('permission for the user resending the confession found');
 
     const confession = await db.query.confession.findFirst({
         with: { channel: { columns: { label: true, color: true } } },
@@ -105,11 +110,15 @@ async function resendConfession(
     } = confession;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
+    const confessionChild = permissionChild.child({ confession });
+    confessionChild.info('confession to be resent found');
+
     if (channelId !== confessionChannelId) throw new ConfessionWrongChannel(confessionChannelId, confessionId);
 
     if (approvedAt === null) throw new ConfessionNotApprovedError(confessionId);
 
     const message = await dispatchConfessionViaHttp(
+        confessionChild,
         channelId,
         confessionId,
         label,
@@ -127,11 +136,13 @@ async function resendConfession(
                 throw new MessageDeliveryError(message);
         }
 
+    confessionChild.info('confession resent');
     return `${label} #${confessionId} has been resent.`;
 }
 
 export async function handleResend(
     db: Database,
+    logger: Logger,
     guildId: Snowflake,
     channelId: Snowflake,
     userId: Snowflake,
@@ -141,11 +152,11 @@ export async function handleResend(
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.Integer);
     strictEqual(option.name, 'confession');
     try {
-        await resendConfession(db, guildId, channelId, userId, BigInt(option.value));
+        await resendConfession(db, logger, guildId, channelId, userId, BigInt(option.value));
         return 'The confession has been resent to this channel.';
     } catch (err) {
         if (err instanceof ResendError) {
-            console.error(err);
+            logger.error(err);
             return err.message;
         }
         throw err;

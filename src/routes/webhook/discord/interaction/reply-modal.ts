@@ -1,4 +1,6 @@
 import type { Database } from '$lib/server/database';
+import type { Logger } from 'pino';
+
 import type { InteractionCallbackMessage } from '$lib/server/models/discord/interaction-callback/message';
 import type { InteractionCallbackModal } from '$lib/server/models/discord/interaction-callback/modal';
 import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
@@ -41,7 +43,13 @@ class ApprovalRequiredError extends ReplyModalError {
  * @throws {DisabledChannelError}
  * @throws {ApprovalRequiredError}
  */
-async function renderReplyModal(db: Database, timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
+async function renderReplyModal(
+    db: Database,
+    logger: Logger,
+    timestamp: Date,
+    channelId: Snowflake,
+    messageId: Snowflake,
+) {
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
         where({ id }, { eq }) {
@@ -50,11 +58,16 @@ async function renderReplyModal(db: Database, timestamp: Date, channelId: Snowfl
     });
 
     if (typeof channel === 'undefined') throw new UnknownChannelError();
-
     const { disabledAt, isApprovalRequired } = channel;
+
+    const child = logger.child({ channel });
+    child.info('channel for reply modal found');
+
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
+
     if (isApprovalRequired) throw new ApprovalRequiredError();
 
+    child.info('reply modal prompted');
     return {
         type: InteractionCallbackType.Modal,
         data: {
@@ -79,12 +92,18 @@ async function renderReplyModal(db: Database, timestamp: Date, channelId: Snowfl
     } satisfies InteractionCallbackModal;
 }
 
-export async function handleReplyModal(db: Database, timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
+export async function handleReplyModal(
+    db: Database,
+    logger: Logger,
+    timestamp: Date,
+    channelId: Snowflake,
+    messageId: Snowflake,
+) {
     try {
-        return await renderReplyModal(db, timestamp, channelId, messageId);
+        return await renderReplyModal(db, logger, timestamp, channelId, messageId);
     } catch (err) {
         if (err instanceof ReplyModalError) {
-            console.error(err);
+            logger.error(err);
             return {
                 type: InteractionCallbackType.ChannelMessageWithSource,
                 data: { flags: MessageFlags.Ephemeral, content: err.message },

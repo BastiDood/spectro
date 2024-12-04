@@ -1,6 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
 import { type Database, insertConfession } from '$lib/server/database';
+import type { Logger } from 'pino';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -53,6 +54,7 @@ class MessageDeliveryError extends ConfessionError {
  */
 async function submitConfession(
     db: Database,
+    logger: Logger,
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
@@ -69,6 +71,9 @@ async function submitConfession(
     const { guildId, disabledAt, color, label, isApprovalRequired } = channel;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
+    const child = logger.child({ channel });
+    child.info('channel for confession submission found');
+
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
 
     if (isApprovalRequired) {
@@ -82,6 +87,7 @@ async function submitConfession(
             null,
             null,
         );
+        child.info({ confessionId }, 'confession submitted but pending approval');
         return `Your confession (${label} #${confessionId}) has been submitted, but its publication is pending approval.`;
     }
 
@@ -98,6 +104,7 @@ async function submitConfession(
         );
 
         const message = await dispatchConfessionViaHttp(
+            logger,
             channelId,
             confessionId,
             label,
@@ -106,6 +113,7 @@ async function submitConfession(
             description,
             null,
         );
+
         if (typeof message === 'number')
             switch (message) {
                 case DiscordErrorCode.MissingAccess:
@@ -114,15 +122,16 @@ async function submitConfession(
                     throw new MessageDeliveryError(message);
             }
 
-        console.dir(message, { depth: Infinity });
         return confessionId;
     });
 
+    child.info({ confessionId }, 'confession published');
     return `Your confession (${label} #${confessionId}) has been published.`;
 }
 
 export async function handleConfess(
     db: Database,
+    logger: Logger,
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
@@ -132,10 +141,10 @@ export async function handleConfess(
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        return await submitConfession(db, timestamp, channelId, authorId, option.value);
+        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value);
     } catch (err) {
         if (err instanceof ConfessionError) {
-            console.error(err);
+            logger.error(err);
             return err.message;
         }
         throw err;

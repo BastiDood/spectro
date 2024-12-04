@@ -1,6 +1,8 @@
 import { APP_ICON_URL } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
+import type { Logger } from 'pino';
+
 import { EmbedType } from '$lib/server/models/discord/embed';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -12,6 +14,7 @@ import { parse } from 'valibot';
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
 export async function dispatchConfessionViaHttp(
+    logger: Logger,
     channelId: Snowflake,
     confessionId: bigint,
     label: string,
@@ -57,11 +60,12 @@ export async function dispatchConfessionViaHttp(
 
     const json = await response.json();
     if (response.status === 200) {
-        console.log('CREATE_MESSAGE:json', json);
+        logger.info({ createMessage: json }, 'message created');
         return parse(Message, json);
     }
 
+    logger.error({ statusCode: response.status, discordError: json }, 'message dispatch failed');
     const { code, message } = parse(DiscordError, json);
-    console.error('CREATE_MESSAGE:fetch', response.status, message);
+    logger.error(message);
     return code;
 }
