@@ -47,6 +47,13 @@ Spectro requires some environment variables to run correctly. If the following t
 | `DISCORD_OAUTH_REDIRECT_URI` | The redirect URI that will serve as the callback endpoint for the verification of OAuth2 authorization code flows.      |
 | `DISCORD_BOT_TOKEN`          | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows.     |
 
+The following variables are optional in development, but _highly_ recommended in the production environment.
+
+| **Name**        | **Description**                                              |
+| --------------- | ------------------------------------------------------------ |
+| `AXIOM_DATASET` | An Axiom dataset to which structured logs will be delivered. |
+| `AXIOM_TOKEN`   | The Axiom token used to authenticate with the ingest.        |
+
 ```bash
 # Install the dependencies.
 pnpm install

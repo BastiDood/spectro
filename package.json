@@ -23,6 +23,7 @@
         "discord:register": "node --env-file=.env scripts/register-slash-commands.js"
     },
     "dependencies": {
+        "@axiomhq/pino": "^1.3.0",
         "@iconify/icons-simple-icons": "^1.2.74",
         "@iconify/svelte": "^4.0.2",
         "@noble/ed25519": "^2.1.0",
