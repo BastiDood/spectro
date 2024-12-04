@@ -6,6 +6,11 @@ Spectro is a [Discord bot][spectro-invite-link] that enables your community memb
 
 # Development
 
+Spectro is a standard full-stack [SvelteKit][Svelte] web application that leverages [PostgreSQL] as the database layer.
+
+[Svelte]: https://svelte.dev/
+[PostgreSQL]: https://www.postgresql.org/
+
 ## Managing the Database
 
 Spectro requires a PostgreSQL database for data persistence. For convenience, we use Docker Compose to set up a local installation. The following environment variables are required for this to work.
