@@ -23,6 +23,8 @@
         "discord:register": "node --env-file=.env scripts/register-slash-commands.js"
     },
     "dependencies": {
+        "@iconify/icons-simple-icons": "^1.2.74",
+        "@iconify/svelte": "^4.0.2",
         "@noble/ed25519": "^2.1.0",
         "@sveltejs/kit": "^2.9.0",
         "drizzle-orm": "^0.37.0",
@@ -39,6 +41,7 @@
         "@types/node": "^22.10.1",
         "@types/pg": "^8.11.10",
         "autoprefixer": "^10.4.20",
+        "daisyui": "^4.12.14",
         "dotenv": "^16.4.7",
         "drizzle-kit": "^0.29.0",
         "eslint": "^9.16.0",
