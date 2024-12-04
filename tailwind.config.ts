@@ -32,6 +32,7 @@ export default {
                 },
             },
         ],
+        logs: false,
     },
     theme: {
         extend: {
