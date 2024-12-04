@@ -14,9 +14,9 @@
     </div>
     <h1 class="text-center text-lg md:text-xl">A multi-channel confession bot for Discord with anonymous replies.</h1>
     <div class="grid grid-flow-col gap-4">
-        <a href="/">
-            <button class="btn btn-primary rounded-full md:px-8 md:text-lg">Add to Discord</button>
-        </a>
+        <div class="tooltip tooltip-primary" data-tip="Coming soon!">
+            <button class="btn btn-primary rounded-full md:px-8 md:text-lg" disabled>Add to Discord</button>
+        </div>
         <a href="/docs/">
             <button class="btn btn-secondary rounded-full md:px-8 md:text-lg">Read the Docs</button>
         </a>
