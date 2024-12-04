@@ -7,6 +7,6 @@ assert(typeof process.env.POSTGRES_DATABASE_URL !== 'undefined', 'missing postgr
 export default defineConfig({
     out: 'drizzle',
     dialect: 'postgresql',
-    schema: './src/lib/server/database/models/index.js',
+    schema: './src/lib/server/database/models/*.ts',
     dbCredentials: { url: process.env.POSTGRES_DATABASE_URL },
 });
