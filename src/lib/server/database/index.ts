@@ -27,6 +27,8 @@ const CONFESSION_APPROVED_AT = sql.raw(app.confession.approvedAt.name);
 const CONFESSION_PARENT_MESSAGE_ID = sql.raw(app.confession.parentMessageId.name);
 
 const USER_NAME = sql.raw(app.user.name.name);
+const USER_GLOBAL_NAME = sql.raw(app.user.globalName.name);
+const USER_DISCRIMINATOR = sql.raw(app.user.discriminator.name);
 const USER_AVATAR_HASH = sql.raw(app.user.avatarHash.name);
 const USER_UPDATED_AT = sql.raw(app.user.updatedAt.name);
 
@@ -82,6 +84,8 @@ export async function upsertUser(db: Interface, user: User, timestamp?: Date) {
             target: app.user.id,
             set: {
                 name: sql`excluded.${USER_NAME}`,
+                globalName: sql`excluded.${USER_GLOBAL_NAME}`,
+                discriminator: sql`excluded.${USER_DISCRIMINATOR}`,
                 avatarHash: sql`excluded.${USER_AVATAR_HASH}`,
                 updatedAt: sql`excluded.${USER_UPDATED_AT}`,
             },
