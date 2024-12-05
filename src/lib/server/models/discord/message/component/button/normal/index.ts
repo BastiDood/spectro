@@ -1,4 +1,4 @@
-import { type InferOutput, literal, object, union } from 'valibot';
+import { type InferOutput, literal, object, string, union } from 'valibot';
 
 import {
     MessageComponentButtonBase,
@@ -15,6 +15,7 @@ export const MessageComponentButtonNormal = object({
         literal(MessageComponentButtonStyle.Success),
         literal(MessageComponentButtonStyle.Danger),
     ]),
+    custom_id: string(),
 });
 
 export type MessageComponentButtonNormal = InferOutput<typeof MessageComponentButtonNormal>;

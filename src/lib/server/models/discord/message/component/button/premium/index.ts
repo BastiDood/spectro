@@ -1,4 +1,4 @@
-import { type InferOutput, literal, object, pipe, string, transform } from 'valibot';
+import { type InferOutput, literal, object, string } from 'valibot';
 
 import {
     MessageComponentButtonBase,
@@ -10,10 +10,7 @@ export const MessageComponentButtonPremium = object({
     ...MessageComponentButtonBase.entries,
     type: literal(MessageComponentType.Button),
     style: literal(MessageComponentButtonStyle.Premium),
-    url: pipe(
-        string(),
-        transform(url => new URL(url)),
-    ),
+    sku_id: string(),
 });
 
 export type MessageComponentButtonPremium = InferOutput<typeof MessageComponentButtonPremium>;
