@@ -1,19 +1,14 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { APP_ICON_URL, DEVELOPER_ICON_URL } from '$lib/server/constants';
+import { APP_ICON_URL, APP_WEBSITE, DEVELOPER_ICON_URL } from '$lib/server/constants';
 
 import type { Logger } from 'pino';
 
 import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
-import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Message } from '$lib/server/models/discord/message';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
-function parsePublic(arg?: InteractionApplicationCommandChatInputOption) {
-    if (typeof arg === 'undefined') return false;
-    strictEqual(arg.type, InteractionApplicationCommandChatInputOptionType.Boolean);
-    return arg.value;
-}
+import { parsePublic } from './util';
 
 export function handleHelp(
     logger: Logger,
@@ -28,16 +23,20 @@ export function handleHelp(
         flags: isPublic ? undefined : MessageFlags.Ephemeral,
         embeds: [
             {
-                color: 0x237feb,
+                color: 0xf7951d,
                 title: 'Help Page',
-                description:
-                    'Spectro enables your community members to post anonymous confessions and replies to moderator-configured channels. However, for the sake of moderation, confessions are still logged for later viewing.',
+                description: `[Spectro](${APP_WEBSITE}) enables your community members to post anonymous confessions and replies to moderator-configured channels. However, for the sake of moderation, confessions are still logged for later viewing.`,
                 author: {
                     name: 'Spectro',
                     icon_url: APP_ICON_URL,
-                    url: new URL('https://spectro.fly.dev/'),
+                    url: APP_WEBSITE,
                 },
                 fields: [
+                    {
+                        name: '`/info [preview]`',
+                        value: 'View important information and links about Spectro. By default, the information page is shown privately, but you can enable the `public` message mode. This command can be run anywhere: server channels, private DMs, etc.',
+                        inline: false,
+                    },
                     {
                         name: '`/help [preview]`',
                         value: 'Open this very help page. By default, the help page is shown privately, but you can enable the `public` message mode. This command can be run anywhere: server channels, private DMs, etc.',

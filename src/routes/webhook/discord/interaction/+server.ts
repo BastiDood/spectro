@@ -18,6 +18,7 @@ import { type Database, upsertUser } from '$lib/server/database';
 import type { Logger } from 'pino';
 import { handleConfess } from './confess';
 import { handleHelp } from './help';
+import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';
 import { handleReplyModal } from './reply-modal';
 import { handleReplySubmit } from './reply-submit';
@@ -137,6 +138,11 @@ async function handleInteraction(
                                         interaction.data.options,
                                     ),
                                 },
+                            };
+                        case 'info':
+                            return {
+                                type: InteractionCallbackType.ChannelMessageWithSource,
+                                data: handleInfo(logger, interaction.data.options ?? []),
                             };
                         default:
                             fail(`unexpected application command chat input name ${interaction.data.name}`);

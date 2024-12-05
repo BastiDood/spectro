@@ -1,3 +1,5 @@
+export const APP_WEBSITE = new URL('https://spectro.fly.dev/');
+
 export const APP_ICON_URL = new URL(
     'https://cdn.discordapp.com/app-icons/1310159012234264617/bd6113e80b99a55937748ad9bdfa364b.png?size=32',
 );

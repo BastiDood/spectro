@@ -13,6 +13,20 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
     body: JSON.stringify([
         {
             type: 1,
+            name: 'info',
+            description: 'Learn more about the bot.',
+            integration_types: [0, 1],
+            contexts: [0, 1, 2],
+            options: [
+                {
+                    type: 5,
+                    name: 'public',
+                    description: 'Send the help message publicly. Disabled by default.',
+                },
+            ],
+        },
+        {
+            type: 1,
             name: 'help',
             description: 'Open the help page.',
             integration_types: [0, 1],
