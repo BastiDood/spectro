@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { defineConfig } from 'drizzle-kit';
 
