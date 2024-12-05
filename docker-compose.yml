@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: spectro
     env_file:
-      - .env
+      - .env.development
     restart: always
     ports:
       - 5432:5432
