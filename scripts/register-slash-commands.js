@@ -43,6 +43,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             type: 1,
             name: 'confess',
             description: 'Send an anonymous confession.',
+            default_member_permissions: (1 << 11).toString(),
             integration_types: [0],
             contexts: [0],
             options: [
@@ -55,9 +56,17 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             ],
         },
         {
+            type: 3,
+            name: 'Reply Anonymously',
+            default_member_permissions: (1 << 11).toString(),
+            integration_types: [0],
+            contexts: [0],
+        },
+        {
             type: 1,
             name: 'setup',
             description: 'Enable confessions for this channel.',
+            default_member_permissions: (1 << 4).toString(),
             integration_types: [0],
             contexts: [0],
             options: [
@@ -85,6 +94,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             type: 1,
             name: 'lockdown',
             description: 'Temporarily disable confessions for this channel. Previous settings are remembered.',
+            default_member_permissions: (1 << 4).toString(),
             integration_types: [0],
             contexts: [0],
         },
@@ -93,6 +103,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             name: 'resend',
             description:
                 'Resend a confession by its ID. This is useful when the original message was accidentally deleted.',
+            default_member_permissions: (1 << 13).toString(),
             integration_types: [0],
             contexts: [0],
             options: [
@@ -104,12 +115,6 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
                     description: 'A label to use for the confession. Defaults to "Confession".',
                 },
             ],
-        },
-        {
-            type: 3,
-            name: 'Reply Anonymously',
-            integration_types: [0],
-            contexts: [0],
         },
     ]),
 });
