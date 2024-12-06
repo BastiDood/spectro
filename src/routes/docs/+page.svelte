@@ -48,10 +48,4 @@
         <strong>Resends an existing confession by its <code>id</code>.</strong> This is useful for times when a confession
         message has been accidentally deleted. Note that the current channel settings are still enforced.
     </p>
-    <code class="text-lg"> /set &lt;member|moderator|administrator&gt; &lt;@user&gt; </code>
-    <div class="alert alert-info text-info-content">Administrators only.</div>
-    <p>
-        <strong>Sets the privilege level of <code>@user</code>.</strong> Setting your own permissions—even as the server
-        owner—is forbidden.
-    </p>
 </div>

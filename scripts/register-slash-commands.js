@@ -106,54 +106,6 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             ],
         },
         {
-            type: 1,
-            name: 'set',
-            description: 'Set the permissions for a guild member.',
-            integration_types: [0],
-            contexts: [0],
-            options: [
-                {
-                    type: 1,
-                    name: 'member',
-                    description: 'Set the user to be a regular member.',
-                    options: [
-                        {
-                            type: 6,
-                            name: 'user',
-                            required: true,
-                            description: 'The user to be set as a regular member.',
-                        },
-                    ],
-                },
-                {
-                    type: 1,
-                    name: 'moderator',
-                    description: 'Set the user to be a confession moderator.',
-                    options: [
-                        {
-                            type: 6,
-                            name: 'user',
-                            required: true,
-                            description: 'The user to be set as a confession moderator.',
-                        },
-                    ],
-                },
-                {
-                    type: 1,
-                    name: 'administrator',
-                    description: 'Set the user to be a confession administrator.',
-                    options: [
-                        {
-                            type: 6,
-                            name: 'user',
-                            required: true,
-                            description: 'The user to be set as a confession administrator.',
-                        },
-                    ],
-                },
-            ],
-        },
-        {
             type: 3,
             name: 'Reply Anonymously',
             integration_types: [0],
