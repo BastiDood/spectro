@@ -1,4 +1,13 @@
-import { type InferOutput, array, nullish, number, object, pipe, safeInteger, string } from 'valibot';
+import {
+    type InferOutput,
+    array,
+    nullish,
+    object,
+    optional,
+    pipe,
+    string,
+    transform,
+} from 'valibot';
 import { Snowflake } from './snowflake';
 import { User } from './user';
 
@@ -7,7 +16,12 @@ export const GuildMember = object({
     nick: nullish(string()),
     avatar: nullish(string()),
     roles: array(Snowflake),
-    flags: pipe(number(), safeInteger()),
+    permissions: optional(
+        pipe(
+            string(),
+            transform(perms => BigInt(perms)),
+        ),
+    ),
 });
 
 export type GuildMember = InferOutput<typeof GuildMember>;
