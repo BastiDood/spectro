@@ -21,7 +21,7 @@ abstract class ResendError extends Error {
 
 class InsufficientPermissionError extends ResendError {
     constructor() {
-        super('You do not have the permission to resend confessions for this channel.');
+        super('You need the **"Manage Messages"** permission to resend confessions for this channel.');
         this.name = 'InsufficientPermissionError';
     }
 }

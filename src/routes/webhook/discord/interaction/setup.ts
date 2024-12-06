@@ -23,7 +23,7 @@ abstract class SetupError extends Error {
 
 class InsufficientPermissionError extends SetupError {
     constructor() {
-        super('You need the "Manage Channels" permission to set up confessions for this channel.');
+        super('You need the **"Manage Channels"** permission to set up confessions for this channel.');
         this.name = 'InsufficientPermissionError';
     }
 }

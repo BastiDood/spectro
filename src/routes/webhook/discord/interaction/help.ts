@@ -44,24 +44,24 @@ export function handleHelp(
                     },
                     {
                         name: '`/confess <content>`',
-                        value: 'Send a confession to a channel. This command fails if the current channel has not yet been configured to receive confessions.',
+                        value: 'Requires the **"Send Messages"** permission. Send a confession to a channel. This command fails if the current channel has not yet been configured to receive confessions.',
                     },
                     {
                         name: '`Apps > Reply Anonymously`',
-                        value: 'You may anonymously reply to any message (in a confessions-enabled channel) by right-clicking on that message and invoking the `Apps > Reply Anonymously` command.',
+                        value: 'Requires the **"Send Messages"** permission. You can anonymously reply to any message (in a confessions-enabled channel) by right-clicking on that message and invoking the `Apps > Reply Anonymously` command.',
                         inline: false,
                     },
                     {
                         name: '`/setup [label] [color] [approval]`',
-                        value: '**Moderators and above only:** enables confessions for the current channel. Optionally, you may set a `label` to be used for the embed title (e.g., "Confession" by default). You may also set the RGB `color` hex code that will be used for the embeds. Finally, you may set whether to require prior `approval` before publishing a confession to a channel (e.g., no approval required by default). Running this command again will simply overwrite the affected previous settings.',
+                        value: 'Requires the **"Manage Channels"** permission. Enables confessions for the current channel. Optionally, you can set a `label` to be used for the embed title (e.g., "Confession" by default). You may also set the RGB `color` hex code that will be used for the embeds. Finally, you may set whether to require prior `approval` before publishing a confession to a channel (e.g., no approval required by default). Running this command again will simply overwrite the affected previous settings.',
                     },
                     {
                         name: '`/lockdown`',
-                        value: '**Moderators and above only:** temporarily disables anonymous confessions for the channel. Previous settings are preserved for the next time `/setup` is run.',
+                        value: 'Requires the **"Manage Channels"** permission. Temporarily disables anonymous confessions for the channel. Previous settings are preserved for the next time `/setup` is run.',
                     },
                     {
                         name: '`/resend <id>`',
-                        value: '**Moderators and above only:** resends an existing confession by its `id`. This is useful for times when a confession message has been accidentally deleted. Note that the current channel settings are still enforced.',
+                        value: 'Requires the **"Manage Messages"** permission. Resends an existing confession by its `id`. This is useful for times when a confession message has been accidentally deleted. Note that the current channel settings are still enforced.',
                     },
                 ],
                 footer: {

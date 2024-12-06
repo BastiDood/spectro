@@ -22,7 +22,7 @@ abstract class ReplySubmitError extends Error {
 
 class InsufficentPermissionError extends ReplySubmitError {
     constructor() {
-        super('You need the "Send Messages" permission to anonymously reply in this channel.');
+        super('You need the **"Send Messages"** permission to submit an anonymous reply in this channel.');
         this.name = 'InsufficentPermissionError';
     }
 }

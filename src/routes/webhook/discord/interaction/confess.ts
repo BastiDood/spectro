@@ -21,7 +21,7 @@ abstract class ConfessionError extends Error {
 
 class InsufficentPermissionError extends ConfessionError {
     constructor() {
-        super('You need the "Send Messages" permission to submit a confession to this channel.');
+        super('You need the **"Send Messages"** permission to submit a confession to this channel.');
         this.name = 'InsufficentPermissionError';
     }
 }

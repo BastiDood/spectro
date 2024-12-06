@@ -21,7 +21,7 @@ abstract class ReplyModalError extends Error {
 
 class InsufficentPermissionError extends ReplyModalError {
     constructor() {
-        super('You need the "Send Messages" permission to anonymously reply in this channel.');
+        super('You need the **"Send Messages"** permission to anonymously reply in this channel.');
         this.name = 'InsufficentPermissionError';
     }
 }
