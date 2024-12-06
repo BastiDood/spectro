@@ -52,7 +52,7 @@ export async function dispatchConfessionViaHttp(
         body,
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json;charset=utf-8',
             'Content-Length': body.length.toString(),
             Authorization: `Bot ${botToken}`,
         },
