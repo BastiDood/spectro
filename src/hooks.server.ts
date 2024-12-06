@@ -51,9 +51,10 @@ export async function handle({ event, resolve }) {
             event.locals.ctx.logger.fatal(err, 'unknown error encountered');
         }
         throw err;
+    } finally {
+        const requestTimeMillis = performance.now() - start;
+        event.locals.ctx.logger.info({ requestTimeMillis });
     }
 
-    const requestTimeMillis = performance.now() - start;
-    event.locals.ctx.logger.info({ requestTimeMillis });
     return response;
 }

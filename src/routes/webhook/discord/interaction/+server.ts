@@ -221,11 +221,17 @@ export async function POST({ locals: { ctx }, request }) {
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
         const interaction = JSON.parse(text);
-
         assert(typeof ctx !== 'undefined');
         const logger = ctx.logger.child({ interaction });
+        ctx.logger.info('interaction received');
+        const parsed = parse(Interaction, interaction);
 
-        return json(await handleInteraction(ctx.db, logger, datetime, parse(Interaction, interaction)));
+        const start = performance.now();
+        const response = await handleInteraction(ctx.db, logger, datetime, parsed);
+        const interactionTimeMillis = performance.now() - start;
+        logger.info({ interactionTimeMillis }, 'interaction processed');
+
+        return json(response);
     }
 
     error(401);

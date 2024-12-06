@@ -49,12 +49,16 @@ export async function POST({ locals: { ctx }, request }) {
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
         const event = JSON.parse(text);
-
         assert(typeof ctx !== 'undefined');
         const logger = ctx.logger.child({ event });
-        logger.info('event received');
+        logger.info('webhook event received');
+        const parsed = parse(Webhook, event);
 
-        await handleWebhook(ctx.db, logger, parse(Webhook, event), datetime);
+        const start = performance.now();
+        await handleWebhook(ctx.db, logger, parsed, datetime);
+        const webhookTimeMillis = performance.now() - start;
+        logger.info({ webhookTimeMillis }, 'webhook event processed');
+
         return new Response(null, { status: 204 });
     }
 
