@@ -79,6 +79,8 @@ async function resendConfession(
     permissions: bigint,
     confessionId: bigint,
 ) {
+    // The moderator must have been able to delete the message to begin with. We thus
+    // require the `MANAGE_MESSAGES` permission to ensure that they are still a moderator.
     if (excludesMask(permissions, MANAGE_MESSAGES)) throw new InsufficientPermissionError();
 
     const confession = await db.query.confession.findFirst({

@@ -8,12 +8,21 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
+import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
+import { excludesMask } from './util';
 
 abstract class ConfessionError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ConfessionError';
+    }
+}
+
+class InsufficentPermissionError extends ConfessionError {
+    constructor() {
+        super('You need the "Send Messages" permission to submit a confession to this channel.');
+        this.name = 'InsufficentPermissionError';
     }
 }
 
@@ -47,6 +56,7 @@ class MessageDeliveryError extends ConfessionError {
 }
 
 /**
+ * @throws {InsufficentPermissionError}
  * @throws {UnknownChannelError}
  * @throws {DisabledChannelError}
  * @throws {MissingAccessError}
@@ -58,8 +68,11 @@ async function submitConfession(
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
+    permissions: bigint,
     description: string,
 ) {
+    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionError();
+
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true, color: true },
         where({ id }, { eq }) {
@@ -135,13 +148,14 @@ export async function handleConfess(
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
+    permissions: bigint,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
 ) {
     strictEqual(options.length, 0);
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value);
+        return await submitConfession(db, logger, timestamp, channelId, authorId, permissions, option.value);
     } catch (err) {
         if (err instanceof ConfessionError) {
             logger.error(err);

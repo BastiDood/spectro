@@ -1,8 +1,5 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { type Database, insertConfession } from '$lib/server/database';
-import type { Logger } from 'pino';
-
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
@@ -10,10 +7,23 @@ import { MessageComponentType } from '$lib/server/models/discord/message/compone
 import type { MessageComponents } from '$lib/server/models/discord/message/component';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
+import { type Database, insertConfession } from '$lib/server/database';
+import type { Logger } from 'pino';
+
+import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
+import { excludesMask } from './util';
+
 abstract class ReplySubmitError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ReplySubmitError';
+    }
+}
+
+class InsufficentPermissionError extends ReplySubmitError {
+    constructor() {
+        super('You need the "Send Messages" permission to anonymously reply in this channel.');
+        this.name = 'InsufficentPermissionError';
     }
 }
 
@@ -40,6 +50,7 @@ class MessageDeliveryError extends ReplySubmitError {
 }
 
 /**
+ * @throws {InsufficentPermissionError}
  * @throws {DisabledChannelError}
  * @throws {MissingAccessError}
  * @throws {MessageDeliveryError}
@@ -51,8 +62,11 @@ async function submitReply(
     channelId: Snowflake,
     parentMessageId: Snowflake,
     authorId: Snowflake,
+    permissions: bigint,
     content: string,
 ) {
+    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionError();
+
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true, color: true },
         where({ id }, { eq }) {
@@ -128,6 +142,7 @@ export async function handleReplySubmit(
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
+    permissions: bigint,
     [row, ...otherRows]: MessageComponents,
 ) {
     strictEqual(otherRows.length, 0);
@@ -142,7 +157,16 @@ export async function handleReplySubmit(
     const parentMessageId = BigInt(component.custom_id);
 
     try {
-        return await submitReply(db, logger, timestamp, channelId, parentMessageId, authorId, component.value);
+        return await submitReply(
+            db,
+            logger,
+            timestamp,
+            channelId,
+            parentMessageId,
+            authorId,
+            permissions,
+            component.value,
+        );
     } catch (err) {
         if (err instanceof ReplySubmitError) {
             logger.error(err);

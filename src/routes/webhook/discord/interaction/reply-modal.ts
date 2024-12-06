@@ -1,6 +1,3 @@
-import type { Database } from '$lib/server/database';
-import type { Logger } from 'pino';
-
 import type { InteractionCallbackMessage } from '$lib/server/models/discord/interaction-callback/message';
 import type { InteractionCallbackModal } from '$lib/server/models/discord/interaction-callback/modal';
 import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
@@ -9,10 +6,23 @@ import { MessageComponentType } from '$lib/server/models/discord/message/compone
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
+import type { Database } from '$lib/server/database';
+import type { Logger } from 'pino';
+
+import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
+import { excludesMask } from './util';
+
 abstract class ReplyModalError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ReplyError';
+    }
+}
+
+class InsufficentPermissionError extends ReplyModalError {
+    constructor() {
+        super('You need the "Send Messages" permission to anonymously reply in this channel.');
+        this.name = 'InsufficentPermissionError';
     }
 }
 
@@ -39,6 +49,7 @@ class ApprovalRequiredError extends ReplyModalError {
 }
 
 /**
+ * @throws {InsufficentPermissionError}
  * @throws {UnknownChannelError}
  * @throws {DisabledChannelError}
  * @throws {ApprovalRequiredError}
@@ -49,7 +60,10 @@ async function renderReplyModal(
     timestamp: Date,
     channelId: Snowflake,
     messageId: Snowflake,
+    permissions: bigint,
 ) {
+    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionError();
+
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
         where({ id }, { eq }) {
@@ -98,9 +112,10 @@ export async function handleReplyModal(
     timestamp: Date,
     channelId: Snowflake,
     messageId: Snowflake,
+    permissions: bigint,
 ) {
     try {
-        return await renderReplyModal(db, logger, timestamp, channelId, messageId);
+        return await renderReplyModal(db, logger, timestamp, channelId, messageId, permissions);
     } catch (err) {
         if (err instanceof ReplyModalError) {
             logger.error(err);

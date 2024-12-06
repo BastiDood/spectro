@@ -17,7 +17,7 @@ abstract class LockdownError extends Error {
 
 class InsufficientPermissionError extends LockdownError {
     constructor() {
-        super('You do not have the permission to disable confessions for this channel.');
+        super('You need the "Manage Channels" permission to disable confessions for this channel.');
         this.name = 'InsufficientPermissionError';
     }
 }

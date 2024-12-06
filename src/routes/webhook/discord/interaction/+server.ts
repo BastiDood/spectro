@@ -43,6 +43,7 @@ async function handleInteraction(
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
+                            assert(typeof interaction.member.permissions !== 'undefined');
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -53,6 +54,7 @@ async function handleInteraction(
                                         timestamp,
                                         interaction.channel_id,
                                         interaction.member.user.id,
+                                        interaction.member.permissions,
                                         interaction.data.options,
                                     ),
                                 },
@@ -127,12 +129,14 @@ async function handleInteraction(
                     switch (interaction.data.name) {
                         case 'Reply Anonymously':
                             assert(typeof interaction.channel_id !== 'undefined');
+                            assert(typeof interaction.member?.permissions !== 'undefined');
                             return await handleReplyModal(
                                 db,
                                 logger,
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.data.target_id,
+                                interaction.member.permissions,
                             );
                         default:
                             fail(`unexpected interaction application command message name ${interaction.data.name}`);
@@ -150,6 +154,7 @@ async function handleInteraction(
                     assert(typeof db !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
+                    assert(typeof interaction.member.permissions !== 'undefined');
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -160,6 +165,7 @@ async function handleInteraction(
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.member.user.id,
+                                interaction.member.permissions,
                                 interaction.data.components,
                             ),
                         },
