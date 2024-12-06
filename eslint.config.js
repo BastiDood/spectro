@@ -41,7 +41,7 @@ export default tsEslint.config(
             'block-scoped-var': 'error',
             'class-methods-use-this': 'error',
             'consistent-this': ['error', 'self'],
-            curly: ['error', 'multi'],
+            curly: ['error', 'multi', 'consistent'],
             'default-case': 'error',
             'dot-notation': 'error',
             eqeqeq: 'error',
