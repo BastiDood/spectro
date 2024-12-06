@@ -3,26 +3,9 @@ import { relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
 
-export const user = app.table('user', {
-    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    name: text('name').notNull(),
-    discriminator: text('discriminator').notNull(),
-    globalName: text('global_name'),
-    avatarHash: text('avatar_hash'),
-});
-
-export type User = typeof user.$inferSelect;
-export type NewUser = typeof user.$inferInsert;
-
 export const guild = app.table('guild', {
     id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    name: text('name').notNull(),
-    iconHash: text('icon_hash'),
-    splashHash: text('splash_hash'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
     lastConfessionId: bigint('last_confession_id', { mode: 'bigint' })
         .notNull()
@@ -64,9 +47,7 @@ export const confession = app.table(
             .default(0 as unknown as bigint),
         createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
         approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
-        authorId: bigint('author_id', { mode: 'bigint' })
-            .notNull()
-            .references(() => user.id),
+        authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
         content: text('content').notNull(),
     },
     ({ confessionId, channelId }) => [uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId)],

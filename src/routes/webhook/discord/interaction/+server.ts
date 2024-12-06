@@ -14,8 +14,9 @@ import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
-import { type Database, upsertUser } from '$lib/server/database';
+import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
+
 import { handleConfess } from './confess';
 import { handleHelp } from './help';
 import { handleInfo } from './info';
@@ -42,7 +43,6 @@ async function handleInteraction(
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
-                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -66,8 +66,6 @@ async function handleInteraction(
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
-                            assert(typeof interaction.member.user !== 'undefined');
-                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -85,7 +83,6 @@ async function handleInteraction(
                         case 'lockdown':
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
-                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -103,8 +100,6 @@ async function handleInteraction(
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
-                            assert(typeof interaction.member.user !== 'undefined');
-                            await upsertUser(db, interaction.member.user, timestamp);
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -155,7 +150,6 @@ async function handleInteraction(
                     assert(typeof db !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
-                    await upsertUser(db, interaction.member.user, timestamp);
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
