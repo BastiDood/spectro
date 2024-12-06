@@ -64,7 +64,7 @@ export function handleInfo(
                 },
                 footer: {
                     icon_url: DEVELOPER_ICON_URL,
-                    text: 'Coded with love by @bastidood. Themes, designs, and branding @jellycanne.',
+                    text: 'Coded with love by @bastidood. Themes, designs, and branding by @jellycanne.',
                 },
             },
         ],
