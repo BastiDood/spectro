@@ -8,7 +8,9 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
+import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
+import { excludesMask } from './util';
 
 abstract class ResendError extends Error {
     constructor(message?: string) {
@@ -73,23 +75,11 @@ class MessageDeliveryError extends ResendError {
 async function resendConfession(
     db: Database,
     logger: Logger,
-    guildId: Snowflake,
     channelId: Snowflake,
-    userId: Snowflake,
+    permissions: bigint,
     confessionId: bigint,
 ) {
-    const permission = await db.query.permission.findFirst({
-        columns: { isAdmin: true },
-        where(table, { and, eq }) {
-            return and(eq(table.guildId, guildId), eq(table.userId, userId));
-        },
-    });
-
-    // No need to check `is_admin` because this command only requires moderator privileges.
-    if (typeof permission === 'undefined') throw new InsufficientPermissionError();
-
-    const permissionChild = logger.child({ permission });
-    permissionChild.info('permission for the user resending the confession found');
+    if (excludesMask(permissions, MANAGE_MESSAGES)) throw new InsufficientPermissionError();
 
     const confession = await db.query.confession.findFirst({
         with: { channel: { columns: { label: true, color: true } } },
@@ -110,15 +100,15 @@ async function resendConfession(
     } = confession;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-    const confessionChild = permissionChild.child({ confession });
-    confessionChild.info('confession to be resent found');
+    const child = logger.child({ confession });
+    child.info('confession to be resent found');
 
     if (channelId !== confessionChannelId) throw new ConfessionWrongChannel(confessionChannelId, confessionId);
 
     if (approvedAt === null) throw new ConfessionNotApprovedError(confessionId);
 
     const message = await dispatchConfessionViaHttp(
-        confessionChild,
+        child,
         channelId,
         confessionId,
         label,
@@ -136,23 +126,24 @@ async function resendConfession(
                 throw new MessageDeliveryError(message);
         }
 
-    confessionChild.info('confession resent');
+    child.info('confession resent');
     return `${label} #${confessionId} has been resent.`;
 }
 
 export async function handleResend(
     db: Database,
     logger: Logger,
-    guildId: Snowflake,
     channelId: Snowflake,
-    userId: Snowflake,
+    permissions: bigint,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
 ) {
     strictEqual(options.length, 0);
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.Integer);
     strictEqual(option.name, 'confession');
+
+    const confessionId = BigInt(option.value);
     try {
-        await resendConfession(db, logger, guildId, channelId, userId, BigInt(option.value));
+        await resendConfession(db, logger, channelId, permissions, confessionId);
         return 'The confession has been resent to this channel.';
     } catch (err) {
         if (err instanceof ResendError) {

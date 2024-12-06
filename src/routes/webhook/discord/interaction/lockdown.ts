@@ -4,6 +4,9 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { channel } from '$lib/server/database/models/app';
 import { eq } from 'drizzle-orm';
+import { excludesMask } from './util';
+
+import { MANAGE_CHANNELS } from '$lib/server/models/discord/permission';
 
 abstract class LockdownError extends Error {
     constructor(message?: string) {
@@ -50,22 +53,10 @@ async function disableConfessions(
     db: Database,
     logger: Logger,
     disabledAt: Date,
-    guildId: Snowflake,
     channelId: Snowflake,
-    userId: Snowflake,
+    permissions: bigint,
 ) {
-    const permission = await db.query.permission.findFirst({
-        columns: { isAdmin: true },
-        where(table, { and, eq }) {
-            return and(eq(table.guildId, guildId), eq(table.userId, userId));
-        },
-    });
-
-    // No need to check `is_admin` because this command only requires moderator privileges.
-    if (typeof permission === 'undefined') throw new InsufficientPermissionError();
-
-    const child = logger.child({ permission });
-    child.info('permission of the user disabling the confessions sound');
+    if (excludesMask(permissions, MANAGE_CHANNELS)) throw new InsufficientPermissionError();
 
     const { rowCount } = await db.update(channel).set({ disabledAt }).where(eq(channel.id, channelId));
     switch (rowCount) {
@@ -79,20 +70,19 @@ async function disableConfessions(
             throw new UnexpectedRowCountError(rowCount);
     }
 
-    child.info('confessions disabled');
+    logger.info('confessions disabled');
 }
 
 export async function handleLockdown(
     db: Database,
     logger: Logger,
     disabledAt: Date,
-    guildId: Snowflake,
     channelId: Snowflake,
-    userId: Snowflake,
+    permissions: Snowflake,
 ) {
     try {
-        await disableConfessions(db, logger, disabledAt, guildId, channelId, userId);
-        return `Confessions have been temporarily disabled for <#${channelId}>.`;
+        await disableConfessions(db, logger, disabledAt, channelId, permissions);
+        return 'Confessions have been temporarily disabled for this channel.';
     } catch (err) {
         if (err instanceof LockdownError) {
             logger.error(err);

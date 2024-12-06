@@ -8,3 +8,7 @@ export function parsePublic(arg?: InteractionApplicationCommandChatInputOption) 
     strictEqual(arg.type, InteractionApplicationCommandChatInputOptionType.Boolean);
     return arg.value;
 }
+
+export function excludesMask(permissions: bigint, mask: bigint) {
+    return (permissions & mask) === 0n;
+}

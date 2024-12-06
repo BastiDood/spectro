@@ -11,6 +11,9 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
+import { MANAGE_CHANNELS } from '$lib/server/models/discord/permission';
+import { excludesMask } from './util';
+
 abstract class SetupError extends Error {
     constructor(message?: string) {
         super(message);
@@ -20,7 +23,7 @@ abstract class SetupError extends Error {
 
 class InsufficientPermissionError extends SetupError {
     constructor() {
-        super('You do not have the permission to set up confessions for this channel.');
+        super('You need the "Manage Channels" permission to set up confessions for this channel.');
         this.name = 'InsufficientPermissionError';
     }
 }
@@ -31,23 +34,12 @@ async function enableConfessions(
     logger: Logger,
     guildId: Snowflake,
     channelId: Snowflake,
-    userId: Snowflake,
+    permissions: bigint,
     label: string | undefined,
     color: number | undefined,
     isApprovalRequired: boolean | undefined,
 ) {
-    const permission = await db.query.permission.findFirst({
-        columns: { isAdmin: true },
-        where(table, { and, eq }) {
-            return and(eq(table.guildId, guildId), eq(table.userId, userId));
-        },
-    });
-
-    // No need to check `is_admin` because this command only requires moderator privileges.
-    if (typeof permission === 'undefined') throw new InsufficientPermissionError();
-
-    const child = logger.child({ permission });
-    child.info('enabling confessions');
+    if (excludesMask(permissions, MANAGE_CHANNELS)) throw new InsufficientPermissionError();
 
     const set: PgUpdateSetSource<typeof channel> = { disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}` };
     if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
@@ -70,7 +62,7 @@ async function enableConfessions(
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
 
-    child.info('confessions enabled');
+    logger.info('confessions enabled');
     return result;
 }
 
@@ -80,7 +72,7 @@ export async function handleSetup(
     logger: Logger,
     guildId: Snowflake,
     channelId: Snowflake,
-    userId: Snowflake,
+    permissions: Snowflake,
     options: InteractionApplicationCommandChatInputOption[],
 ) {
     // eslint-disable-next-line init-declarations
@@ -121,7 +113,7 @@ export async function handleSetup(
             logger,
             guildId,
             channelId,
-            userId,
+            permissions,
             label,
             color,
             isApprovalRequired,

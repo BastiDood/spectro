@@ -32,23 +32,6 @@ export const guild = app.table('guild', {
 export type Guild = typeof guild.$inferSelect;
 export type NewGuild = typeof guild.$inferInsert;
 
-export const permission = app.table(
-    'permission',
-    {
-        guildId: bigint('guild_id', { mode: 'bigint' })
-            .notNull()
-            .references(() => guild.id, { onDelete: 'cascade' }),
-        userId: bigint('user_id', { mode: 'bigint' })
-            .notNull()
-            .references(() => user.id, { onDelete: 'cascade' }),
-        isAdmin: boolean('is_admin').notNull(),
-    },
-    ({ userId, guildId }) => [uniqueIndex('user_to_guild_unique_idx').on(userId, guildId)],
-);
-
-export type Permission = typeof permission.$inferSelect;
-export type NewPermission = typeof permission.$inferInsert;
-
 export const channel = app.table(
     'channel',
     {
