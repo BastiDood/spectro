@@ -29,6 +29,13 @@
       "when": 1733270987862,
       "tag": "0003_enforce-non-null-on-discriminator",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1733517216744,
+      "tag": "0004_simplify-permission-model",
+      "breakpoints": true
     }
   ]
 }
