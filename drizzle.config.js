@@ -5,6 +5,6 @@ assert(typeof process.env.POSTGRES_DATABASE_URL !== 'undefined', 'missing postgr
 
 export default defineConfig({
     dialect: 'postgresql',
-    schema: './src/lib/server/database/models/*.ts',
+    schema: './src/lib/server/database/models/index.ts',
     dbCredentials: { url: process.env.POSTGRES_DATABASE_URL },
 });
