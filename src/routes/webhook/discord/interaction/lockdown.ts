@@ -2,7 +2,7 @@ import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { channel } from '$lib/server/database/models/app';
+import { channel } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 import { excludesMask } from './util';
 

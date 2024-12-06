@@ -4,7 +4,7 @@ import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 
-import { channel } from '$lib/server/database/models/app';
+import { channel } from '$lib/server/database/models';
 import { sql } from 'drizzle-orm';
 
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';

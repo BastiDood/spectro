@@ -2,7 +2,7 @@ import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { guild } from '$lib/server/database/models/app';
+import { guild } from '$lib/server/database/models';
 
 export async function handleApplicationAuthorized(db: Database, logger: Logger, createdAt: Date, guildId: Snowflake) {
     const { rowCount } = await db
