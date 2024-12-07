@@ -71,6 +71,12 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
             contexts: [0],
             options: [
                 {
+                    type: 7,
+                    name: 'channel',
+                    required: true,
+                    description: 'The channel to which all confession logs and approval requests will be sent.',
+                },
+                {
                     type: 3,
                     name: 'label',
                     description: 'A label to use for the confession. Defaults to "Confession".',
