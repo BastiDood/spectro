@@ -28,14 +28,18 @@
         You may <strong>anonymously reply</strong> to any message (in a confessions-enabled channel) by right-clicking
         on that message and invoking the <code>Apps &gt; Reply Anonymously command.</code>
     </p>
-    <code class="text-lg">/setup [label] [color] [approval]</code>
+    <code class="text-lg">/setup &lt;channel&gt; [label] [color] [approval]</code>
     <div class="alert alert-info text-info-content">Moderators and above only.</div>
     <p>
-        <strong>Enables confessions for the current channel.</strong> Optionally, you may set a <code>label</code> to be
-        used for the embed title (e.g., "Confession" by default). You may also set the RGB <code>color </code> hex code
-        that will be used for the embeds. Finally, you may set whether to require prior <code>approval</code> before publishing
-        a confession to a channel (e.g., no approval required by default). Running this command again will simply overwrite
-        the affected previous settings.
+        <strong
+            >Enables confessions for the current channel. All confession logs will be sent to the provided <code
+                >channel</code
+            >.</strong
+        >
+        Optionally, you may set a <code>label</code> to be used for the embed title (e.g., "Confession" by default). You
+        may also set the RGB <code>color </code> hex code that will be used for the embeds. Finally, you may set whether
+        to require prior <code>approval</code> before publishing a confession to a channel (e.g., no approval required by
+        default). Running this command again will simply overwrite the affected previous settings.
     </p>
     <code class="text-lg">/lockdown</code>
     <div class="alert alert-info text-info-content">Moderators and above only.</div>
