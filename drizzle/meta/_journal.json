@@ -43,6 +43,13 @@
       "when": 1733518728927,
       "tag": "0005_remove-user-and-guild-cache",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1733593923197,
+      "tag": "0006_configure-logs-channel",
+      "breakpoints": true
     }
   ]
 }

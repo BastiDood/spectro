@@ -74,7 +74,7 @@ const HEX_COLOR = /^[0-9a-f]{6}$/i;
 export async function handleSetup(
     db: Database,
     logger: Logger,
-    resolvedChannels: Resolved['channels'],
+    resolvedChannels: NonNullable<Resolved['channels']>,
     guildId: Snowflake,
     channelId: Snowflake,
     permissions: Snowflake,
@@ -118,7 +118,7 @@ export async function handleSetup(
         }
 
     assert(typeof channel !== 'undefined');
-    strictEqual(resolvedChannels?.[channel.toString()]?.type, ChannelType.GuildText);
+    strictEqual(resolvedChannels[channel.toString()]?.type, ChannelType.GuildText);
 
     try {
         const result = await enableConfessions(
