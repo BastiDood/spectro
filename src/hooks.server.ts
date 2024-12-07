@@ -17,8 +17,6 @@ export async function handle({ event, resolve }) {
             clientAddress: event.getClientAddress(),
             method: event.request.method,
             url: event.url,
-            params: event.params,
-            headers: Object.fromEntries(event.request.headers.entries()),
         }),
     };
 
