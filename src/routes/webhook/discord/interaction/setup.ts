@@ -13,8 +13,9 @@ import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { MANAGE_CHANNELS } from '$lib/server/models/discord/permission';
-import { excludesMask } from './util';
+
 import { ChannelType } from '$lib/server/models/discord/channel';
+import { excludesMask } from './util';
 
 abstract class SetupError extends Error {
     constructor(message?: string) {
