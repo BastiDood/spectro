@@ -9,10 +9,12 @@ import { sql } from 'drizzle-orm';
 
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
+import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { MANAGE_CHANNELS } from '$lib/server/models/discord/permission';
 import { excludesMask } from './util';
+import { ChannelType } from '$lib/server/models/discord/channel';
 
 abstract class SetupError extends Error {
     constructor(message?: string) {
@@ -72,6 +74,7 @@ const HEX_COLOR = /^[0-9a-f]{6}$/i;
 export async function handleSetup(
     db: Database,
     logger: Logger,
+    resolvedChannels: Resolved['channels'],
     guildId: Snowflake,
     channelId: Snowflake,
     permissions: Snowflake,
@@ -115,6 +118,7 @@ export async function handleSetup(
         }
 
     assert(typeof channel !== 'undefined');
+    strictEqual(resolvedChannels?.[channel.toString()]?.type, ChannelType.GuildText);
 
     try {
         const result = await enableConfessions(

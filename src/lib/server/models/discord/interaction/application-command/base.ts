@@ -1,4 +1,6 @@
-import { type InferOutput, object, string } from 'valibot';
+import { type InferOutput, object, optional, string } from 'valibot';
+
+import { Resolved } from '$lib/server/models/discord/resolved';
 
 export const enum InteractionApplicationCommandType {
     ChatInput = 1,
@@ -7,6 +9,6 @@ export const enum InteractionApplicationCommandType {
     PrimaryEntryPoint = 4,
 }
 
-export const InteractionApplicationCommandBase = object({ name: string() });
+export const InteractionApplicationCommandBase = object({ name: string(), resolved: optional(Resolved) });
 
 export type InteractionApplicationCommandBase = InferOutput<typeof InteractionApplicationCommandBase>;

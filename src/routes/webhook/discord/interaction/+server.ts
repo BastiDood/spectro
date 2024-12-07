@@ -65,6 +65,7 @@ async function handleInteraction(
                                 data: handleHelp(logger, interaction.data.options ?? []),
                             };
                         case 'setup':
+                            assert(typeof interaction.data.resolved?.channels !== 'undefined');
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
@@ -75,6 +76,7 @@ async function handleInteraction(
                                     content: await handleSetup(
                                         db,
                                         logger,
+                                        interaction.data.resolved.channels,
                                         interaction.guild_id,
                                         interaction.channel_id,
                                         interaction.member.permissions,
