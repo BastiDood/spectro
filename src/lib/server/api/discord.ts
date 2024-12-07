@@ -13,6 +13,30 @@ import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
+async function sendMessage(logger: Logger, channelId: bigint, data: CreateMessage, botToken: string) {
+    const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
+    const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
+        body,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': body.length.toString(),
+            Authorization: `Bot ${botToken}`,
+        },
+    });
+
+    const json = await response.json();
+    if (response.status === 200) {
+        logger.info({ createMessage: json });
+        return parse(Message, json);
+    }
+
+    logger.error({ statusCode: response.status, discordError: json }, 'message dispatch failed');
+    const { code, message } = parse(DiscordError, json);
+    logger.error({ sendMessageError: message });
+    return code;
+}
+
 export async function dispatchConfessionViaHttp(
     logger: Logger,
     channelId: Snowflake,
@@ -47,25 +71,5 @@ export async function dispatchConfessionViaHttp(
             fail_if_not_exists: false,
         };
 
-    const body = JSON.stringify(params, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
-    const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
-        body,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json;charset=utf-8',
-            'Content-Length': body.length.toString(),
-            Authorization: `Bot ${botToken}`,
-        },
-    });
-
-    const json = await response.json();
-    if (response.status === 200) {
-        logger.info({ createMessage: json }, 'message created');
-        return parse(Message, json);
-    }
-
-    logger.error({ statusCode: response.status, discordError: json }, 'message dispatch failed');
-    const { code, message } = parse(DiscordError, json);
-    logger.error(message);
-    return code;
+    return await sendMessage(logger, channelId, params, botToken);
 }
