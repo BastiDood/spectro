@@ -32,6 +32,7 @@ class InsufficientPermissionError extends SetupError {
 async function enableConfessions(
     db: Database,
     logger: Logger,
+    logChannelId: Snowflake,
     guildId: Snowflake,
     channelId: Snowflake,
     permissions: bigint,
@@ -52,6 +53,7 @@ async function enableConfessions(
         .values({
             id: channelId,
             guildId,
+            logChannelId,
             label,
             isApprovalRequired,
             color: color?.toString(2).padStart(24, '0'),
@@ -76,6 +78,8 @@ export async function handleSetup(
     options: InteractionApplicationCommandChatInputOption[],
 ) {
     // eslint-disable-next-line init-declarations
+    let channel: Snowflake | undefined;
+    // eslint-disable-next-line init-declarations
     let label: string | undefined;
     // eslint-disable-next-line init-declarations
     let color: number | undefined;
@@ -84,6 +88,9 @@ export async function handleSetup(
 
     for (const option of options)
         switch (option.type) {
+            case InteractionApplicationCommandChatInputOptionType.Channel:
+                channel = option.value;
+                break;
             case InteractionApplicationCommandChatInputOptionType.String:
                 switch (option.name) {
                     case 'label':
@@ -107,10 +114,13 @@ export async function handleSetup(
                 break;
         }
 
+    assert(typeof channel !== 'undefined');
+
     try {
         const result = await enableConfessions(
             db,
             logger,
+            channel,
             guildId,
             channelId,
             permissions,

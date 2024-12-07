@@ -22,6 +22,8 @@ export const channel = app.table(
         guildId: bigint('guild_id', { mode: 'bigint' })
             .notNull()
             .references(() => guild.id, { onDelete: 'cascade' }),
+        // TODO: Eventually add the `notNull` constraint once all guilds have transitioned.
+        logChannelId: bigint('log_channel_id', { mode: 'bigint' }),
         disabledAt: timestamp('disabled_at', { withTimezone: true }),
         color: bit('color', { dimensions: 24 }),
         isApprovalRequired: boolean('is_approval_required').notNull().default(false),
