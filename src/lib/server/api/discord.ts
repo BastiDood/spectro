@@ -1,9 +1,13 @@
-import { APP_ICON_URL } from '$lib/server/constants';
+import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import type { Logger } from 'pino';
 
+import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { EmbedType } from '$lib/server/models/discord/embed';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
@@ -15,6 +19,8 @@ const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
 async function sendMessage(logger: Logger, channelId: bigint, data: CreateMessage, botToken: string) {
     const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
+
+    const start = performance.now();
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
         body,
         method: 'POST',
@@ -24,8 +30,10 @@ async function sendMessage(logger: Logger, channelId: bigint, data: CreateMessag
             Authorization: `Bot ${botToken}`,
         },
     });
-
     const json = await response.json();
+    const sendMessageTimeMillis = performance.now() - start;
+    logger.info({ sendMessageTimeMillis });
+
     if (response.status === 200) {
         logger.info({ createMessage: json });
         return parse(Message, json);
@@ -39,11 +47,11 @@ async function sendMessage(logger: Logger, channelId: bigint, data: CreateMessag
 
 export async function dispatchConfessionViaHttp(
     logger: Logger,
+    timestamp: Date,
     channelId: Snowflake,
     confessionId: bigint,
     label: string,
     color: number | undefined,
-    timestamp: Date,
     description: string,
     replyToMessageId: Snowflake | null,
     botToken = DISCORD_BOT_TOKEN,
@@ -72,4 +80,161 @@ export async function dispatchConfessionViaHttp(
         };
 
     return await sendMessage(logger, channelId, params, botToken);
+}
+
+export interface ExternalChannelReference {
+    channelId: bigint;
+    messageId: bigint;
+}
+
+export async function logPendingConfessionViaHttp(
+    logger: Logger,
+    timestamp: Date,
+    channelId: Snowflake,
+    internalId: bigint,
+    confessionId: bigint,
+    authorId: Snowflake,
+    label: string,
+    description: string,
+    botToken = DISCORD_BOT_TOKEN,
+) {
+    const customId = internalId.toString();
+    return await sendMessage(
+        logger,
+        channelId,
+        {
+            flags: MessageFlags.SuppressNotifications,
+            allowed_mentions: { parse: [AllowedMentionType.Users] },
+            embeds: [
+                {
+                    type: EmbedType.Rich,
+                    title: `${label} #${confessionId}`,
+                    color: Color.Pending,
+                    timestamp,
+                    description,
+                    footer: {
+                        text: 'Spectro Logs',
+                        icon_url: APP_ICON_URL,
+                    },
+                    fields: [
+                        {
+                            name: 'Authored by',
+                            value: `||<@${authorId}>||`,
+                            inline: true,
+                        },
+                    ],
+                },
+            ],
+            components: [
+                {
+                    type: MessageComponentType.ActionRow,
+                    components: [
+                        {
+                            type: MessageComponentType.Button,
+                            style: MessageComponentButtonStyle.Success,
+                            emoji: { id: null, name: '✔️' },
+                            label: 'Approve',
+                            custom_id: customId,
+                        },
+                        {
+                            type: MessageComponentType.Button,
+                            style: MessageComponentButtonStyle.Danger,
+                            emoji: { id: null, name: '✖️️' },
+                            label: 'Reject',
+                            custom_id: customId,
+                        },
+                    ],
+                },
+            ],
+        },
+        botToken,
+    );
+}
+
+export async function logApprovedConfessionViaHttp(
+    logger: Logger,
+    timestamp: Date,
+    channelId: Snowflake,
+    confessionId: bigint,
+    authorId: Snowflake,
+    label: string,
+    description: string,
+    botToken = DISCORD_BOT_TOKEN,
+) {
+    return await sendMessage(
+        logger,
+        channelId,
+        {
+            flags: MessageFlags.SuppressNotifications,
+            allowed_mentions: { parse: [AllowedMentionType.Users] },
+            embeds: [
+                {
+                    type: EmbedType.Rich,
+                    title: `${label} #${confessionId}`,
+                    color: Color.Success,
+                    timestamp,
+                    description,
+                    footer: {
+                        text: 'Spectro Logs',
+                        icon_url: APP_ICON_URL,
+                    },
+                    fields: [
+                        {
+                            name: 'Authored by',
+                            value: `||<@${authorId}>||`,
+                            inline: true,
+                        },
+                    ],
+                },
+            ],
+        },
+        botToken,
+    );
+}
+
+export async function logResentConfessionViaHttp(
+    logger: Logger,
+    timestamp: Date,
+    channelId: Snowflake,
+    confessionId: bigint,
+    authorId: Snowflake,
+    moderatorId: Snowflake,
+    label: string,
+    description: string,
+    botToken = DISCORD_BOT_TOKEN,
+) {
+    return await sendMessage(
+        logger,
+        channelId,
+        {
+            flags: MessageFlags.SuppressNotifications,
+            allowed_mentions: { parse: [AllowedMentionType.Users] },
+            embeds: [
+                {
+                    type: EmbedType.Rich,
+                    title: `${label} #${confessionId}`,
+                    color: Color.Replay,
+                    timestamp,
+                    description,
+                    footer: {
+                        text: 'Spectro Logs',
+                        icon_url: APP_ICON_URL,
+                    },
+                    fields: [
+                        {
+                            name: 'Authored by',
+                            value: `||<@${authorId}>||`,
+                            inline: true,
+                        },
+                        {
+                            name: 'Resent by',
+                            value: `<@${moderatorId}>`,
+                            inline: true,
+                        },
+                    ],
+                },
+            ],
+        },
+        botToken,
+    );
 }

@@ -111,7 +111,9 @@ async function handleInteraction(
                                     content: await handleResend(
                                         db,
                                         logger,
+                                        timestamp,
                                         interaction.channel_id,
+                                        interaction.member.user.id,
                                         interaction.member.permissions,
                                         interaction.data.options,
                                     ),

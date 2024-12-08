@@ -24,14 +24,14 @@ abstract class SetupError extends Error {
     }
 }
 
-class InsufficientPermissionError extends SetupError {
+class InsufficientPermissionSetupError extends SetupError {
     constructor() {
         super('You need the **"Manage Channels"** permission to set up confessions for this channel.');
-        this.name = 'InsufficientPermissionError';
+        this.name = 'InsufficientPermissionSetupError';
     }
 }
 
-/** @throws {InsufficientPermissionError} */
+/** @throws {InsufficientPermissionSetupError} */
 async function enableConfessions(
     db: Database,
     logger: Logger,
@@ -43,7 +43,7 @@ async function enableConfessions(
     color: number | undefined,
     isApprovalRequired: boolean | undefined,
 ) {
-    if (excludesMask(permissions, MANAGE_CHANNELS)) throw new InsufficientPermissionError();
+    if (excludesMask(permissions, MANAGE_CHANNELS)) throw new InsufficientPermissionSetupError();
 
     const set: PgUpdateSetSource<typeof channel> = { disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}` };
     if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;

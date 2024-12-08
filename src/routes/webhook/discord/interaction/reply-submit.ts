@@ -1,17 +1,23 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
+import { UnexpectedDiscordErrorCode } from './error';
 
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { MessageComponents } from '$lib/server/models/discord/message/component';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { type Database, insertConfession } from '$lib/server/database';
+import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
 import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import { excludesMask } from './util';
+
+import {
+    dispatchConfessionViaHttp,
+    logApprovedConfessionViaHttp,
+    logPendingConfessionViaHttp,
+} from '$lib/server/api/discord';
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
 
 abstract class ReplySubmitError extends Error {
     constructor(message?: string) {
@@ -20,40 +26,40 @@ abstract class ReplySubmitError extends Error {
     }
 }
 
-class InsufficentPermissionError extends ReplySubmitError {
+class InsufficentPermissionReplySubmitError extends ReplySubmitError {
     constructor() {
         super('You need the **"Send Messages"** permission to submit an anonymous reply in this channel.');
-        this.name = 'InsufficentPermissionError';
+        this.name = 'InsufficentPermissionReplySubmitError';
     }
 }
 
-class DisabledChannelError extends ReplySubmitError {
+class DisabledChannelReplySubmitError extends ReplySubmitError {
     constructor(public disabledAt: Date) {
         const timestamp = Math.floor(disabledAt.valueOf() / 1000);
         super(`This channel has temporarily disabled confessions since <t:${timestamp}:R>.`);
-        this.name = 'DisabledChannelError';
+        this.name = 'DisabledChannelReplySubmitError';
     }
 }
 
-class MissingAccessError extends ReplySubmitError {
+class MissingLogChannelReplySubmitError extends ReplySubmitError {
+    constructor() {
+        super('Spectro cannot submit replies until the moderators have configured a confession log.');
+        this.name = 'MissingLogChannelReplySubmitError';
+    }
+}
+
+class MissingChannelAccessReplySubmitError extends ReplySubmitError {
     constructor() {
         super('Spectro does not have the permission to send messages to this channel.');
-        this.name = 'MissingAccessError';
-    }
-}
-
-class MessageDeliveryError extends ReplySubmitError {
-    constructor(public code: number) {
-        super(`The confession message failed delivery with error code ${code}.`);
-        this.name = 'MessageDeliveryError';
+        this.name = 'MissingChannelAccessReplySubmitError';
     }
 }
 
 /**
- * @throws {InsufficentPermissionError}
- * @throws {DisabledChannelError}
- * @throws {MissingAccessError}
- * @throws {MessageDeliveryError}
+ * @throws {InsufficentPermissionReplySubmitError}
+ * @throws {DisabledChannelReplySubmitError}
+ * @throws {MissingLogChannelReplySubmitError}
+ * @throws {MissingChannelAccessReplySubmitError}
  */
 async function submitReply(
     db: Database,
@@ -65,25 +71,34 @@ async function submitReply(
     permissions: bigint,
     content: string,
 ) {
-    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionError();
+    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionReplySubmitError();
 
     const channel = await db.query.channel.findFirst({
-        columns: { guildId: true, disabledAt: true, isApprovalRequired: true, label: true, color: true },
+        columns: {
+            logChannelId: true,
+            guildId: true,
+            disabledAt: true,
+            isApprovalRequired: true,
+            label: true,
+            color: true,
+        },
         where({ id }, { eq }) {
             return eq(id, channelId);
         },
     });
 
     assert(typeof channel !== 'undefined');
-    const { guildId, disabledAt, label, color, isApprovalRequired } = channel;
+    const { logChannelId, guildId, disabledAt, label, color, isApprovalRequired } = channel;
+    const hex = color === null ? undefined : Number.parseInt(color, 2);
 
     const child = logger.child({ channel });
     child.info('channel for reply submission found');
 
-    if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
+    if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelReplySubmitError(disabledAt);
+    if (logChannelId === null) throw new MissingLogChannelReplySubmitError();
 
     if (isApprovalRequired) {
-        const confessionId = await insertConfession(
+        const { internalId, confessionId } = await insertConfession(
             db,
             timestamp,
             guildId,
@@ -93,47 +108,97 @@ async function submitReply(
             null,
             parentMessageId,
         );
-        child.info({ confessionId }, 'reply submitted but pending approval');
-        return `Your confession (${label} #${confessionId}) has been submitted, but its publication is pending approval.`;
-    }
 
-    const hex = color === null ? undefined : Number.parseInt(color, 2);
-    const confessionId = await db.transaction(async tx => {
-        const confessionId = await insertConfession(
-            tx,
-            timestamp,
-            guildId,
-            channelId,
-            authorId,
-            content,
-            timestamp,
-            parentMessageId,
-        );
+        child.info({ internalId, confessionId }, 'reply pending approval submitted');
 
-        const message = await dispatchConfessionViaHttp(
+        const discordErrorCode = await logPendingConfessionViaHttp(
             child,
-            channelId,
-            confessionId,
-            label,
-            hex,
             timestamp,
+            logChannelId,
+            internalId,
+            confessionId,
+            authorId,
+            label,
             content,
-            parentMessageId,
         );
 
-        if (typeof message === 'number')
-            switch (message) {
+        if (typeof discordErrorCode === 'number')
+            switch (discordErrorCode) {
+                case DiscordErrorCode.UnknownChannel:
+                    if (await resetLogChannel(db, logChannelId))
+                        child.error('log channel reset due to unknown channel');
+                    else child.warn('log channel previously reset due to unknown channel');
+                    return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro has detected that the log channel had been deleted.`;
                 case DiscordErrorCode.MissingAccess:
-                    throw new MissingAccessError();
+                    child.warn('insufficient channel permissions for the log channel');
+                    return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro couldn't log the confession due to insufficient log channel permissions.`;
                 default:
-                    throw new MessageDeliveryError(message);
+                    child.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
+                    return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the developers and the moderators that Spectro couldn't log the reply due to an unexpected error (${discordErrorCode}) from Discord.`;
             }
 
-        return confessionId;
-    });
+        child.info('reply pending approval has been logged');
+        return `${label} #${confessionId} has been submitted, but its publication is pending approval.`;
+    }
 
-    child.info({ confessionId }, 'reply published');
-    return `Your confession (${label} #${confessionId}) has been published.`;
+    const { internalId, confessionId } = await insertConfession(
+        db,
+        timestamp,
+        guildId,
+        channelId,
+        authorId,
+        content,
+        timestamp,
+        parentMessageId,
+    );
+
+    child.info({ internalId, confessionId }, 'reply submitted');
+
+    const message = await dispatchConfessionViaHttp(
+        child,
+        timestamp,
+        channelId,
+        confessionId,
+        label,
+        hex,
+        content,
+        parentMessageId,
+    );
+
+    if (typeof message === 'number')
+        switch (message) {
+            case DiscordErrorCode.MissingAccess:
+                throw new MissingChannelAccessReplySubmitError();
+            default:
+                throw new UnexpectedDiscordErrorCode(message);
+        }
+
+    const discordErrorCode = await logApprovedConfessionViaHttp(
+        child,
+        timestamp,
+        logChannelId,
+        confessionId,
+        authorId,
+        label,
+        content,
+    );
+
+    if (typeof discordErrorCode === 'number')
+        switch (discordErrorCode) {
+            case DiscordErrorCode.UnknownChannel:
+                if (await resetLogChannel(db, logChannelId)) child.error('log channel reset due to unknown channel');
+                else child.warn('log channel previously reset due to unknown channel');
+                return `${label} #${confessionId} has been published, but Spectro couldn't log the reply because the log channel had been deleted. Kindly notify the moderators about the configuration issue.`;
+            case DiscordErrorCode.MissingAccess:
+                child.warn('insufficient channel permissions to confession log channel');
+                return `${label} #${confessionId} has been published, but Spectro couldn't log the reply due to insufficient channel permissions. Kindly notify the moderators about the configuration issue.`;
+            default:
+                child.fatal({ discordErrorCode }, 'unexpected error code when logging replies');
+                return `${label} #${confessionId} has been published, but Spectro couldn't log the reply due to an unexpected error (${discordErrorCode}) from Discord. Kindly notify the developers and the moderators about this issue.`;
+        }
+
+    child.info('reply published');
+    return `${label} #${confessionId} has been published.`;
 }
 
 export async function handleReplySubmit(

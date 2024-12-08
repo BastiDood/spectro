@@ -19,40 +19,40 @@ abstract class ReplyModalError extends Error {
     }
 }
 
-class InsufficentPermissionError extends ReplyModalError {
+class InsufficentPermissionReplyModalError extends ReplyModalError {
     constructor() {
         super('You need the **"Send Messages"** permission to anonymously reply in this channel.');
-        this.name = 'InsufficentPermissionError';
+        this.name = 'InsufficentPermissionReplyModalError';
     }
 }
 
-class UnknownChannelError extends ReplyModalError {
+class UnknownChannelReplyModalError extends ReplyModalError {
     constructor() {
         super('This channel has not been set up for confessions yet.');
-        this.name = 'UnknownChannelError';
+        this.name = 'UnknownChannelReplyModalError';
     }
 }
 
-class DisabledChannelError extends ReplyModalError {
+class DisabledChannelReplyModalError extends ReplyModalError {
     constructor(public disabledAt: Date) {
         const timestamp = Math.floor(disabledAt.valueOf() / 1000);
         super(`This channel has temporarily disabled confessions (including replies) since <t:${timestamp}:R>.`);
-        this.name = 'DisabledChannelError';
+        this.name = 'DisabledChannelReplyModalError';
     }
 }
 
-class ApprovalRequiredError extends ReplyModalError {
+class ApprovalRequiredReplyModalError extends ReplyModalError {
     constructor() {
         super('You cannot (yet) reply to a confession in a channel that requires moderator approval.');
-        this.name = 'ApprovalRequiredError';
+        this.name = 'ApprovalRequiredReplyModalError';
     }
 }
 
 /**
- * @throws {InsufficentPermissionError}
- * @throws {UnknownChannelError}
- * @throws {DisabledChannelError}
- * @throws {ApprovalRequiredError}
+ * @throws {InsufficentPermissionReplyModalError}
+ * @throws {UnknownChannelReplyModalError}
+ * @throws {DisabledChannelReplyModalError}
+ * @throws {ApprovalRequiredReplyModalError}
  */
 async function renderReplyModal(
     db: Database,
@@ -62,7 +62,7 @@ async function renderReplyModal(
     messageId: Snowflake,
     permissions: bigint,
 ) {
-    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionError();
+    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionReplyModalError();
 
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
@@ -71,15 +71,15 @@ async function renderReplyModal(
         },
     });
 
-    if (typeof channel === 'undefined') throw new UnknownChannelError();
+    if (typeof channel === 'undefined') throw new UnknownChannelReplyModalError();
     const { disabledAt, isApprovalRequired } = channel;
 
     const child = logger.child({ channel });
     child.info('channel for reply modal found');
 
-    if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelError(disabledAt);
+    if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelReplyModalError(disabledAt);
 
-    if (isApprovalRequired) throw new ApprovalRequiredError();
+    if (isApprovalRequired) throw new ApprovalRequiredReplyModalError();
 
     child.info('reply modal prompted');
     return {

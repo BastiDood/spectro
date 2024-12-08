@@ -1,9 +1,7 @@
-import type { Database } from '$lib/server/database';
+import { type Database, disableConfessionChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { channel } from '$lib/server/database/models';
-import { eq } from 'drizzle-orm';
 import { excludesMask } from './util';
 
 import { MANAGE_CHANNELS } from '$lib/server/models/discord/permission';
@@ -15,39 +13,23 @@ abstract class LockdownError extends Error {
     }
 }
 
-class InsufficientPermissionError extends LockdownError {
+class InsufficientPermissionLockdownError extends LockdownError {
     constructor() {
         super('You need the **"Manage Channels"** permission to disable confessions for this channel.');
-        this.name = 'InsufficientPermissionError';
+        this.name = 'InsufficientPermissionLockdownError';
     }
 }
 
-class MissingRowCountError extends LockdownError {
-    constructor() {
-        super('An update operation did not return the number of affected rows. Please report this bug.');
-        this.name = 'MissingRowCountError';
-    }
-}
-
-class UnexpectedRowCountError extends LockdownError {
-    constructor(public count: number) {
-        super(`An unexpected number of rows (${count}) were returned when updating channels. Please report this bug.`);
-        this.name = 'UnexpectedRowCountError';
-    }
-}
-
-class ChannelNotSetupError extends LockdownError {
+class ChannelNotSetupLockdownError extends LockdownError {
     constructor() {
         super('This has not yet been set up for confessions.');
-        this.name = 'ChannelNotSetupError';
+        this.name = 'ChannelNotSetupLockdownError';
     }
 }
 
 /**
- * @throws {InsufficientPermissionError}
- * @throws {MissingRowCountError}
- * @throws {UnexpectedRowCountError}
- * @throws {ChannelNotSetupError}
+ * @throws {InsufficientPermissionLockdownError}
+ * @throws {ChannelNotSetupLockdownError}
  */
 async function disableConfessions(
     db: Database,
@@ -56,21 +38,14 @@ async function disableConfessions(
     channelId: Snowflake,
     permissions: bigint,
 ) {
-    if (excludesMask(permissions, MANAGE_CHANNELS)) throw new InsufficientPermissionError();
+    if (excludesMask(permissions, MANAGE_CHANNELS)) throw new InsufficientPermissionLockdownError();
 
-    const { rowCount } = await db.update(channel).set({ disabledAt }).where(eq(channel.id, channelId));
-    switch (rowCount) {
-        case null:
-            throw new MissingRowCountError();
-        case 0:
-            throw new ChannelNotSetupError();
-        case 1:
-            break;
-        default:
-            throw new UnexpectedRowCountError(rowCount);
+    if (await disableConfessionChannel(db, channelId, disabledAt)) {
+        logger.info('confessions disabled');
+        return;
     }
 
-    logger.info('confessions disabled');
+    throw new ChannelNotSetupLockdownError();
 }
 
 export async function handleLockdown(

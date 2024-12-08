@@ -1,6 +1,7 @@
 import { type InferOutput, check, number, object, pipe, safeInteger, string } from 'valibot';
 
 export const enum DiscordErrorCode {
+    UnknownChannel = 10003,
     MissingAccess = 50001,
 }
 

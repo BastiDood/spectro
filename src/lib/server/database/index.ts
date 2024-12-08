@@ -1,5 +1,7 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
+import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from './error';
+
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -25,7 +27,7 @@ const CONFESSION_PARENT_MESSAGE_ID = sql.raw(schema.confession.parentMessageId.n
 
 const GUILD_LAST_CONFESSION_ID = sql.raw(schema.guild.lastConfessionId.name);
 
-export function updateLastConfession(db: Interface, guildId: Snowflake) {
+function updateLastConfession(db: Interface, guildId: Snowflake) {
     return db
         .update(schema.guild)
         .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
@@ -47,10 +49,50 @@ export async function insertConfession(
     const {
         rows: [result, ...otherResults],
     } = await db.execute(
-        sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId} FROM _guild RETURNING ${schema.confession.confessionId} _confession_id`,
+        sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
     );
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
+    assert(typeof result._internal_id === 'string');
     assert(typeof result._confession_id === 'string');
-    return BigInt(result._confession_id);
+    return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
+}
+
+/**
+ * @throws {MissingRowCountDatabaseError}
+ * @throws {UnexpectedRowCountDatabaseError}
+ */
+export async function disableConfessionChannel(db: Interface, channelId: Snowflake, disabledAt: Date) {
+    const { rowCount } = await db.update(schema.channel).set({ disabledAt }).where(eq(schema.channel.id, channelId));
+    switch (rowCount) {
+        case null:
+            throw new MissingRowCountDatabaseError();
+        case 0:
+            return false;
+        case 1:
+            return true;
+        default:
+            throw new UnexpectedRowCountDatabaseError(rowCount);
+    }
+}
+
+/**
+ * @throws {MissingRowCountDatabaseError}
+ * @throws {UnexpectedRowCountDatabaseError}
+ */
+export async function resetLogChannel(db: Interface, channelId: Snowflake) {
+    const { rowCount } = await db
+        .update(schema.channel)
+        .set({ logChannelId: null })
+        .where(eq(schema.channel.id, channelId));
+    switch (rowCount) {
+        case null:
+            throw new MissingRowCountDatabaseError();
+        case 0:
+            return false;
+        case 1:
+            return true;
+        default:
+            throw new UnexpectedRowCountDatabaseError(rowCount);
+    }
 }
