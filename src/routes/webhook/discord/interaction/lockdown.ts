@@ -31,7 +31,7 @@ export async function handleLockdown(db: Database, logger: Logger, disabledAt: D
         return 'Confessions have been temporarily disabled for this channel.';
     } catch (err) {
         if (err instanceof LockdownError) {
-            logger.error(err);
+            logger.error(err, err.message);
             return err.message;
         }
         throw err;

@@ -1,4 +1,5 @@
 import { GuildMember } from '$lib/server/models/discord/guild-member';
+import { Message } from '$lib/server/models/discord/message';
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { type InferOutput, literal, object, optional, string } from 'valibot';
@@ -19,6 +20,7 @@ export const InteractionBase = object({
     channel_id: optional(Snowflake),
     token: string(),
     member: optional(GuildMember),
+    message: optional(Message),
 });
 
 export type InteractionBase = InferOutput<typeof InteractionBase>;

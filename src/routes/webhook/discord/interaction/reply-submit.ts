@@ -16,10 +16,20 @@ import {
 } from '$lib/server/api/discord';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 
+import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
+import { hasAllPermissions } from './util';
+
 abstract class ReplySubmitError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ReplySubmitError';
+    }
+}
+
+class InsufficientPermissionsReplySubmitError extends ReplySubmitError {
+    constructor() {
+        super('Your **"Send Messages"** permission has since been revoked.');
+        this.name = 'InsufficientPermissionsReplySubmitError';
     }
 }
 
@@ -46,6 +56,7 @@ class MissingChannelAccessReplySubmitError extends ReplySubmitError {
 }
 
 /**
+ * @throws {InsufficientPermissionsReplySubmitError}
  * @throws {DisabledChannelReplySubmitError}
  * @throws {MissingLogChannelReplySubmitError}
  * @throws {MissingChannelAccessReplySubmitError}
@@ -54,11 +65,14 @@ async function submitReply(
     db: Database,
     logger: Logger,
     timestamp: Date,
-    channelId: Snowflake,
+    permissions: bigint,
+    confessionChannelId: Snowflake,
     parentMessageId: Snowflake,
     authorId: Snowflake,
     content: string,
 ) {
+    if (!hasAllPermissions(permissions, SEND_MESSAGES)) throw new InsufficientPermissionsReplySubmitError();
+
     const channel = await db.query.channel.findFirst({
         columns: {
             logChannelId: true,
@@ -69,7 +83,7 @@ async function submitReply(
             color: true,
         },
         where({ id }, { eq }) {
-            return eq(id, channelId);
+            return eq(id, confessionChannelId);
         },
     });
 
@@ -88,7 +102,7 @@ async function submitReply(
             db,
             timestamp,
             guildId,
-            channelId,
+            confessionChannelId,
             authorId,
             content,
             null,
@@ -111,7 +125,7 @@ async function submitReply(
         if (typeof discordErrorCode === 'number')
             switch (discordErrorCode) {
                 case DiscordErrorCode.UnknownChannel:
-                    if (await resetLogChannel(db, logChannelId))
+                    if (await resetLogChannel(db, confessionChannelId))
                         child.error('log channel reset due to unknown channel');
                     else child.warn('log channel previously reset due to unknown channel');
                     return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro has detected that the log channel had been deleted.`;
@@ -131,7 +145,7 @@ async function submitReply(
         db,
         timestamp,
         guildId,
-        channelId,
+        confessionChannelId,
         authorId,
         content,
         timestamp,
@@ -143,7 +157,7 @@ async function submitReply(
     const message = await dispatchConfessionViaHttp(
         child,
         timestamp,
-        channelId,
+        confessionChannelId,
         confessionId,
         label,
         hex,
@@ -193,6 +207,7 @@ export async function handleReplySubmit(
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
+    permissions: bigint,
     [row, ...otherRows]: MessageComponents,
 ) {
     strictEqual(otherRows.length, 0);
@@ -207,10 +222,19 @@ export async function handleReplySubmit(
     const parentMessageId = BigInt(component.custom_id);
 
     try {
-        return await submitReply(db, logger, timestamp, channelId, parentMessageId, authorId, component.value);
+        return await submitReply(
+            db,
+            logger,
+            timestamp,
+            permissions,
+            channelId,
+            parentMessageId,
+            authorId,
+            component.value,
+        );
     } catch (err) {
         if (err instanceof ReplySubmitError) {
-            logger.error(err);
+            logger.error(err, err.message);
             return err.message;
         }
         throw err;

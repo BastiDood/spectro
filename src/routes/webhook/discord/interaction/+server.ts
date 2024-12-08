@@ -1,4 +1,4 @@
-import assert, { fail } from 'node:assert/strict';
+import assert, { fail, strictEqual } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
@@ -8,6 +8,7 @@ import { InteractionApplicationCommandType } from '$lib/server/models/discord/in
 import type { InteractionCallback } from '$lib/server/models/discord/interaction-callback';
 import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
 import { InteractionType } from '$lib/server/models/discord/interaction/base';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
 import { error, json } from '@sveltejs/kit';
@@ -17,6 +18,7 @@ import { verifyAsync } from '@noble/ed25519';
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 
+import { handleApproval } from './approval';
 import { handleConfess } from './confess';
 import { handleHelp } from './help';
 import { handleInfo } from './info';
@@ -35,6 +37,7 @@ async function handleInteraction(
     timestamp: Date,
     interaction: Interaction,
 ): Promise<InteractionCallback> {
+    // eslint-disable-next-line default-case
     switch (interaction.type) {
         case InteractionType.Ping:
             return { type: InteractionCallbackType.Pong };
@@ -150,6 +153,25 @@ async function handleInteraction(
                     break;
             }
             break;
+        case InteractionType.MessageComponent:
+            assert(typeof interaction.message !== 'undefined');
+            assert(typeof interaction.member?.user !== 'undefined');
+            assert(typeof interaction.member.permissions !== 'undefined');
+            strictEqual(interaction.data.type, MessageComponentType.Button);
+            return {
+                type: InteractionCallbackType.ChannelMessageWithSource,
+                data: await handleApproval(
+                    db,
+                    logger,
+                    timestamp,
+                    interaction.data.style,
+                    interaction.message.channel_id,
+                    interaction.message.id,
+                    BigInt(interaction.data.custom_id),
+                    interaction.member.user.id,
+                    interaction.member.permissions,
+                ),
+            };
         case InteractionType.ModalSubmit:
             switch (interaction.data.custom_id) {
                 case 'reply':
@@ -157,7 +179,6 @@ async function handleInteraction(
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.member.permissions !== 'undefined');
-                    assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -168,6 +189,7 @@ async function handleInteraction(
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.member.user.id,
+                                interaction.member.permissions,
                                 interaction.data.components,
                             ),
                         },
@@ -176,9 +198,6 @@ async function handleInteraction(
                     fail(`unexpected modal submit ${interaction.data.custom_id}`);
                     break;
             }
-            break;
-        default:
-            fail(`unexpected interaction type ${interaction.type}`);
             break;
     }
 }

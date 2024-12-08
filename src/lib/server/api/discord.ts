@@ -17,7 +17,7 @@ import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
-async function sendMessage(logger: Logger, channelId: bigint, data: CreateMessage, botToken: string) {
+async function sendMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string) {
     const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
 
     const start = performance.now();
@@ -132,15 +132,15 @@ export async function logPendingConfessionViaHttp(
                         {
                             type: MessageComponentType.Button,
                             style: MessageComponentButtonStyle.Success,
-                            emoji: { id: null, name: '✔️' },
-                            label: 'Approve',
+                            emoji: { id: null, name: '️🖊️' },
+                            label: 'Publish',
                             custom_id: customId,
                         },
                         {
                             type: MessageComponentType.Button,
                             style: MessageComponentButtonStyle.Danger,
-                            emoji: { id: null, name: '✖️️' },
-                            label: 'Reject',
+                            emoji: { id: null, name: '🗑️' },
+                            label: 'Delete',
                             custom_id: customId,
                         },
                     ],
@@ -228,6 +228,134 @@ export async function logResentConfessionViaHttp(
                         },
                         {
                             name: 'Resent by',
+                            value: `<@${moderatorId}>`,
+                            inline: true,
+                        },
+                    ],
+                },
+            ],
+        },
+        botToken,
+    );
+}
+
+async function editMessage(
+    logger: Logger,
+    channelId: Snowflake,
+    messageId: Snowflake,
+    data: Partial<CreateMessage>,
+    botToken: string,
+) {
+    const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
+
+    const start = performance.now();
+    const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages/${messageId}`, {
+        body,
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': body.length.toString(),
+            Authorization: `Bot ${botToken}`,
+        },
+    });
+    const json = await response.json();
+    const editMessageTimeMillis = performance.now() - start;
+    logger.info({ editMessageTimeMillis });
+
+    if (response.status === 200) {
+        logger.info({ createMessage: json });
+        return parse(Message, json);
+    }
+
+    logger.error({ statusCode: response.status, discordError: json }, 'message edit failed');
+    const { code, message } = parse(DiscordError, json);
+    logger.error({ editMessageError: message });
+    return code;
+}
+
+export async function approveConfessionLog(
+    logger: Logger,
+    timestamp: Date,
+    channelId: Snowflake,
+    messageId: Snowflake,
+    label: string,
+    confessionId: bigint,
+    authorId: Snowflake,
+    moderatorId: Snowflake,
+    description: string,
+    botToken = DISCORD_BOT_TOKEN,
+) {
+    return await editMessage(
+        logger,
+        channelId,
+        messageId,
+        {
+            embeds: [
+                {
+                    type: EmbedType.Rich,
+                    title: `${label} #${confessionId}`,
+                    color: Color.Success,
+                    timestamp,
+                    description,
+                    footer: {
+                        text: 'Spectro Logs',
+                        icon_url: APP_ICON_URL,
+                    },
+                    fields: [
+                        {
+                            name: 'Authored by',
+                            value: `||<@${authorId}>||`,
+                            inline: true,
+                        },
+                        {
+                            name: 'Approved by',
+                            value: `<@${moderatorId}>`,
+                            inline: true,
+                        },
+                    ],
+                },
+            ],
+        },
+        botToken,
+    );
+}
+
+export async function rejectConfessionLog(
+    logger: Logger,
+    timestamp: Date,
+    logChannelId: Snowflake,
+    logMessageId: Snowflake,
+    label: string,
+    confessionId: bigint,
+    authorId: Snowflake,
+    moderatorId: Snowflake,
+    description: string,
+    botToken = DISCORD_BOT_TOKEN,
+) {
+    return await editMessage(
+        logger,
+        logChannelId,
+        logMessageId,
+        {
+            embeds: [
+                {
+                    type: EmbedType.Rich,
+                    title: `${label} #${confessionId}`,
+                    color: Color.Failure,
+                    timestamp,
+                    description,
+                    footer: {
+                        text: 'Spectro Logs',
+                        icon_url: APP_ICON_URL,
+                    },
+                    fields: [
+                        {
+                            name: 'Rejected by',
+                            value: `||<@${authorId}>||`,
+                            inline: true,
+                        },
+                        {
+                            name: 'Deleted by',
                             value: `<@${moderatorId}>`,
                             inline: true,
                         },

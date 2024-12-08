@@ -5,6 +5,9 @@ import { UnexpectedDiscordErrorCode } from './error';
 import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
+import { and, eq } from 'drizzle-orm';
+import { channel, confession } from '$lib/server/database/models';
+
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
@@ -21,18 +24,8 @@ abstract class ResendError extends Error {
 
 class ConfessionNotFoundResendError extends ResendError {
     constructor(public confessionId: bigint) {
-        super(`Confession #${confessionId} does not exist in this guild.`);
+        super(`Confession #${confessionId} does not exist in this channel.`);
         this.name = 'ConfessionNotFoundResendError';
-    }
-}
-
-class WrongChannelResendError extends ResendError {
-    constructor(
-        public channelId: Snowflake,
-        public confessionId: bigint,
-    ) {
-        super(`Confession #${confessionId} can only be resent in <#${channelId}>.`);
-        this.name = 'WrongChannelResendError';
     }
 }
 
@@ -59,7 +52,6 @@ class MissingChannelAccessResendError extends ResendError {
 
 /**
  * @throws {ConfessionNotFoundResendError}
- * @throws {WrongChannelResendError}
  * @throws {NotApprovedResendError}
  * @throws {MissingLogChannelResendError}
  * @throws {MissingChannelAccessResendError}
@@ -68,48 +60,41 @@ async function resendConfession(
     db: Database,
     logger: Logger,
     timestamp: Date,
-    channelId: Snowflake,
+    confessionChannelId: Snowflake,
     confessionId: bigint,
     moderatorId: Snowflake,
 ) {
-    const confession = await db.query.confession.findFirst({
-        with: { channel: { columns: { logChannelId: true, label: true, color: true } } },
-        columns: {
-            parentMessageId: true,
-            channelId: true,
-            authorId: true,
-            createdAt: true,
-            content: true,
-            approvedAt: true,
-        },
-        where(table, { eq }) {
-            return eq(table.confessionId, confessionId);
-        },
-    });
+    const [result, ...others] = await db
+        .select({
+            logChannelId: channel.logChannelId,
+            label: channel.label,
+            color: channel.color,
+            parentMessageId: confession.parentMessageId,
+            authorId: confession.authorId,
+            createdAt: confession.createdAt,
+            content: confession.content,
+            approvedAt: confession.approvedAt,
+        })
+        .from(confession)
+        .innerJoin(channel, eq(confession.channelId, channel.id))
+        .where(and(eq(confession.channelId, confessionChannelId), eq(confession.confessionId, confessionId)))
+        .limit(1);
+    strictEqual(others.length, 0);
 
-    if (typeof confession === 'undefined') throw new ConfessionNotFoundResendError(confessionId);
-    const {
-        parentMessageId,
-        channelId: confessionChannelId,
-        authorId,
-        approvedAt,
-        createdAt,
-        content,
-        channel: { logChannelId, label, color },
-    } = confession;
+    if (typeof result === 'undefined') throw new ConfessionNotFoundResendError(confessionId);
+    const { parentMessageId, authorId, approvedAt, createdAt, content, logChannelId, label, color } = result;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
     const child = logger.child({ confession });
     child.info('confession to be resent found');
 
-    if (channelId !== confessionChannelId) throw new WrongChannelResendError(confessionChannelId, confessionId);
     if (approvedAt === null) throw new NotApprovedResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
     const message = await dispatchConfessionViaHttp(
         child,
         createdAt,
-        channelId,
+        confessionChannelId,
         confessionId,
         label,
         hex,
@@ -140,7 +125,8 @@ async function resendConfession(
     if (typeof discordErrorCode === 'number')
         switch (discordErrorCode) {
             case DiscordErrorCode.UnknownChannel:
-                if (await resetLogChannel(db, logChannelId)) child.error('log channel reset due to unknown channel');
+                if (await resetLogChannel(db, confessionChannelId))
+                    child.error('log channel reset due to unknown channel');
                 else child.warn('log channel previously reset due to unknown channel');
                 return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession because the log channel had been deleted.`;
             case DiscordErrorCode.MissingAccess:
@@ -169,11 +155,10 @@ export async function handleResend(
 
     const confessionId = BigInt(option.value);
     try {
-        await resendConfession(db, logger, timestamp, channelId, confessionId, moderatorId);
-        return 'The confession has been resent to this channel.';
+        return await resendConfession(db, logger, timestamp, channelId, confessionId, moderatorId);
     } catch (err) {
         if (err instanceof ResendError) {
-            logger.error(err);
+            logger.error(err, err.message);
             return err.message;
         }
         throw err;

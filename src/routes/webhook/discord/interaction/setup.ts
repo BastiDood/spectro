@@ -24,7 +24,11 @@ async function enableConfessions(
     color: number | undefined,
     isApprovalRequired: boolean | undefined,
 ) {
-    const set: PgUpdateSetSource<typeof channel> = { disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}` };
+    const set: PgUpdateSetSource<typeof channel> = {
+        logChannelId: sql`excluded.${sql.raw(channel.logChannelId.name)}`,
+        disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}`,
+    };
+
     if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
     if (typeof color !== 'undefined') set.color = sql`excluded.${sql.raw(channel.color.name)}`;
     if (typeof isApprovalRequired !== 'undefined')
@@ -45,6 +49,9 @@ async function enableConfessions(
         .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
+
+    // TODO: Send a test message to the log channel.
+    // TODO: Send a test message to the confession channel.
 
     logger.info('confessions enabled');
     return result;
@@ -100,7 +107,6 @@ export async function handleSetup(
     strictEqual(resolvedChannels[channel.toString()]?.type, ChannelType.GuildText);
 
     const result = await enableConfessions(db, logger, channel, guildId, channelId, label, color, isApprovalRequired);
-
     return result.isApprovalRequired
         ? `Only approved confessions (labelled **${result.label}**) are now enabled for this channel.`
         : `Any confessions (labelled **${result.label}**) are now enabled for this channel.`;

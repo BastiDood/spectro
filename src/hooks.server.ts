@@ -34,8 +34,10 @@ export function handleError({ error, event }) {
             event.locals.ctx.logger.fatal({ valibotError: error, valibotErrorPaths }, 'valibot validation failed');
         } else if (error instanceof AssertionError) {
             event.locals.ctx.logger.fatal({ nodeAssertionError: error }, 'assertion error encountered');
+        } else if (error instanceof Error) {
+            event.locals.ctx.logger.fatal(error, error.message);
         } else {
-            event.locals.ctx.logger.fatal(error, 'unknown error encountered');
+            event.locals.ctx.logger.fatal(error);
         }
     }
     throw error;

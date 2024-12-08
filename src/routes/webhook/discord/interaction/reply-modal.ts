@@ -103,7 +103,7 @@ export async function handleReplyModal(
         return await renderReplyModal(db, logger, timestamp, channelId, messageId);
     } catch (err) {
         if (err instanceof ReplyModalError) {
-            logger.error(err);
+            logger.error(err, err.message);
             return {
                 type: InteractionCallbackType.ChannelMessageWithSource,
                 data: { flags: MessageFlags.Ephemeral, content: err.message },
