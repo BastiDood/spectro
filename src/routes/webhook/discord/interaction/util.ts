@@ -9,6 +9,6 @@ export function parsePublic(arg?: InteractionApplicationCommandChatInputOption) 
     return arg.value;
 }
 
-export function excludesMask(permissions: bigint, mask: bigint) {
-    return (permissions & mask) === 0n;
+export function hasAllPermissions(permissions: bigint, mask: bigint) {
+    return (permissions & mask) === mask;
 }

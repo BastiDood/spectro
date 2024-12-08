@@ -9,20 +9,10 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 
-import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
-import { excludesMask } from './util';
-
 abstract class ReplyModalError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ReplyError';
-    }
-}
-
-class InsufficentPermissionReplyModalError extends ReplyModalError {
-    constructor() {
-        super('You need the **"Send Messages"** permission to anonymously reply in this channel.');
-        this.name = 'InsufficentPermissionReplyModalError';
     }
 }
 
@@ -49,7 +39,6 @@ class ApprovalRequiredReplyModalError extends ReplyModalError {
 }
 
 /**
- * @throws {InsufficentPermissionReplyModalError}
  * @throws {UnknownChannelReplyModalError}
  * @throws {DisabledChannelReplyModalError}
  * @throws {ApprovalRequiredReplyModalError}
@@ -60,10 +49,7 @@ async function renderReplyModal(
     timestamp: Date,
     channelId: Snowflake,
     messageId: Snowflake,
-    permissions: bigint,
 ) {
-    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionReplyModalError();
-
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
         where({ id }, { eq }) {
@@ -112,10 +98,9 @@ export async function handleReplyModal(
     timestamp: Date,
     channelId: Snowflake,
     messageId: Snowflake,
-    permissions: bigint,
 ) {
     try {
-        return await renderReplyModal(db, logger, timestamp, channelId, messageId, permissions);
+        return await renderReplyModal(db, logger, timestamp, channelId, messageId);
     } catch (err) {
         if (err instanceof ReplyModalError) {
             logger.error(err);

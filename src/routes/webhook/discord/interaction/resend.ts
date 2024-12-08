@@ -10,22 +10,12 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
-import { excludesMask } from './util';
-
 import { dispatchConfessionViaHttp, logResentConfessionViaHttp } from '$lib/server/api/discord';
 
 abstract class ResendError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ResendError';
-    }
-}
-
-class InsufficientPermissionResendError extends ResendError {
-    constructor() {
-        super('You need the **"Manage Messages"** permission to resend confessions for this channel.');
-        this.name = 'InsufficientPermissionResendError';
     }
 }
 
@@ -68,7 +58,6 @@ class MissingChannelAccessResendError extends ResendError {
 }
 
 /**
- * @throws {InsufficientPermissionResendError}
  * @throws {ConfessionNotFoundResendError}
  * @throws {WrongChannelResendError}
  * @throws {NotApprovedResendError}
@@ -80,14 +69,9 @@ async function resendConfession(
     logger: Logger,
     timestamp: Date,
     channelId: Snowflake,
-    permissions: bigint,
     confessionId: bigint,
     moderatorId: Snowflake,
 ) {
-    // The moderator must have been able to delete the message to begin with. We thus
-    // require the `MANAGE_MESSAGES` permission to ensure that they are still a moderator.
-    if (excludesMask(permissions, MANAGE_MESSAGES)) throw new InsufficientPermissionResendError();
-
     const confession = await db.query.confession.findFirst({
         with: { channel: { columns: { logChannelId: true, label: true, color: true } } },
         columns: {
@@ -177,7 +161,6 @@ export async function handleResend(
     timestamp: Date,
     channelId: Snowflake,
     moderatorId: Snowflake,
-    permissions: bigint,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
 ) {
     strictEqual(options.length, 0);
@@ -186,7 +169,7 @@ export async function handleResend(
 
     const confessionId = BigInt(option.value);
     try {
-        await resendConfession(db, logger, timestamp, channelId, permissions, confessionId, moderatorId);
+        await resendConfession(db, logger, timestamp, channelId, confessionId, moderatorId);
         return 'The confession has been resent to this channel.';
     } catch (err) {
         if (err instanceof ResendError) {

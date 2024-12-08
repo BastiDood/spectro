@@ -26,6 +26,9 @@ import { handleReplySubmit } from './reply-submit';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
 
+import { MANAGE_CHANNELS, MANAGE_MESSAGES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
+import { hasAllPermissions } from './util';
+
 async function handleInteraction(
     db: Database,
     logger: Logger, // TODO: Fine-grained database-level performance logs.
@@ -44,6 +47,7 @@ async function handleInteraction(
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.user !== 'undefined');
                             assert(typeof interaction.member.permissions !== 'undefined');
+                            assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -54,7 +58,6 @@ async function handleInteraction(
                                         timestamp,
                                         interaction.channel_id,
                                         interaction.member.user.id,
-                                        interaction.member.permissions,
                                         interaction.data.options,
                                     ),
                                 },
@@ -69,6 +72,7 @@ async function handleInteraction(
                             assert(typeof interaction.guild_id !== 'undefined');
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
+                            assert(hasAllPermissions(interaction.member.permissions, MANAGE_CHANNELS));
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -79,7 +83,6 @@ async function handleInteraction(
                                         interaction.data.resolved.channels,
                                         interaction.guild_id,
                                         interaction.channel_id,
-                                        interaction.member.permissions,
                                         interaction.data.options ?? [],
                                     ),
                                 },
@@ -87,23 +90,19 @@ async function handleInteraction(
                         case 'lockdown':
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
+                            assert(hasAllPermissions(interaction.member.permissions, MANAGE_CHANNELS));
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
                                     flags: MessageFlags.Ephemeral,
-                                    content: await handleLockdown(
-                                        db,
-                                        logger,
-                                        timestamp,
-                                        interaction.channel_id,
-                                        interaction.member.permissions,
-                                    ),
+                                    content: await handleLockdown(db, logger, timestamp, interaction.channel_id),
                                 },
                             };
                         case 'resend':
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
+                            assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
                             return {
                                 type: InteractionCallbackType.ChannelMessageWithSource,
                                 data: {
@@ -114,7 +113,6 @@ async function handleInteraction(
                                         timestamp,
                                         interaction.channel_id,
                                         interaction.member.user.id,
-                                        interaction.member.permissions,
                                         interaction.data.options,
                                     ),
                                 },
@@ -134,13 +132,13 @@ async function handleInteraction(
                         case 'Reply Anonymously':
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
+                            assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
                             return await handleReplyModal(
                                 db,
                                 logger,
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.data.target_id,
-                                interaction.member.permissions,
                             );
                         default:
                             fail(`unexpected interaction application command message name ${interaction.data.name}`);
@@ -159,6 +157,7 @@ async function handleInteraction(
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.member.permissions !== 'undefined');
+                    assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
                     return {
                         type: InteractionCallbackType.ChannelMessageWithSource,
                         data: {
@@ -169,7 +168,6 @@ async function handleInteraction(
                                 timestamp,
                                 interaction.channel_id,
                                 interaction.member.user.id,
-                                interaction.member.permissions,
                                 interaction.data.components,
                             ),
                         },

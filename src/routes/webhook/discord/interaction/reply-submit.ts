@@ -9,9 +9,6 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
-import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
-import { excludesMask } from './util';
-
 import {
     dispatchConfessionViaHttp,
     logApprovedConfessionViaHttp,
@@ -23,13 +20,6 @@ abstract class ReplySubmitError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ReplySubmitError';
-    }
-}
-
-class InsufficentPermissionReplySubmitError extends ReplySubmitError {
-    constructor() {
-        super('You need the **"Send Messages"** permission to submit an anonymous reply in this channel.');
-        this.name = 'InsufficentPermissionReplySubmitError';
     }
 }
 
@@ -56,7 +46,6 @@ class MissingChannelAccessReplySubmitError extends ReplySubmitError {
 }
 
 /**
- * @throws {InsufficentPermissionReplySubmitError}
  * @throws {DisabledChannelReplySubmitError}
  * @throws {MissingLogChannelReplySubmitError}
  * @throws {MissingChannelAccessReplySubmitError}
@@ -68,11 +57,8 @@ async function submitReply(
     channelId: Snowflake,
     parentMessageId: Snowflake,
     authorId: Snowflake,
-    permissions: bigint,
     content: string,
 ) {
-    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionReplySubmitError();
-
     const channel = await db.query.channel.findFirst({
         columns: {
             logChannelId: true,
@@ -207,7 +193,6 @@ export async function handleReplySubmit(
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
-    permissions: bigint,
     [row, ...otherRows]: MessageComponents,
 ) {
     strictEqual(otherRows.length, 0);
@@ -222,16 +207,7 @@ export async function handleReplySubmit(
     const parentMessageId = BigInt(component.custom_id);
 
     try {
-        return await submitReply(
-            db,
-            logger,
-            timestamp,
-            channelId,
-            parentMessageId,
-            authorId,
-            permissions,
-            component.value,
-        );
+        return await submitReply(db, logger, timestamp, channelId, parentMessageId, authorId, component.value);
     } catch (err) {
         if (err instanceof ReplySubmitError) {
             logger.error(err);

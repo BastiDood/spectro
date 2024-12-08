@@ -11,7 +11,6 @@ import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/mo
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
-import { excludesMask } from './util';
 
 import {
     dispatchConfessionViaHttp,
@@ -23,13 +22,6 @@ abstract class ConfessError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ConfessError';
-    }
-}
-
-class InsufficentPermissionConfessError extends ConfessError {
-    constructor() {
-        super('You need the **"Send Messages"** permission to submit a confession to this channel.');
-        this.name = 'InsufficentPermissionConfessError';
     }
 }
 
@@ -63,7 +55,6 @@ class MissingChannelAccessConfessError extends ConfessError {
 }
 
 /**
- * @throws {InsufficentPermissionConfessError}
  * @throws {UnknownChannelConfessError}
  * @throws {DisabledChannelConfessError}
  * @throws {MissingLogConfessError}
@@ -75,11 +66,8 @@ async function submitConfession(
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
-    permissions: bigint,
     description: string,
 ) {
-    if (excludesMask(permissions, SEND_MESSAGES)) throw new InsufficentPermissionConfessError();
-
     const channel = await db.query.channel.findFirst({
         columns: {
             logChannelId: true,
@@ -214,14 +202,13 @@ export async function handleConfess(
     timestamp: Date,
     channelId: Snowflake,
     authorId: Snowflake,
-    permissions: bigint,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
 ) {
     strictEqual(options.length, 0);
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        return await submitConfession(db, logger, timestamp, channelId, authorId, permissions, option.value);
+        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value);
     } catch (err) {
         if (err instanceof ConfessError) {
             logger.error(err);

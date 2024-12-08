@@ -12,39 +12,18 @@ import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/mo
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { MANAGE_CHANNELS } from '$lib/server/models/discord/permission';
-
 import { ChannelType } from '$lib/server/models/discord/channel';
-import { excludesMask } from './util';
 
-abstract class SetupError extends Error {
-    constructor(message?: string) {
-        super(message);
-        this.name = 'SetupError';
-    }
-}
-
-class InsufficientPermissionSetupError extends SetupError {
-    constructor() {
-        super('You need the **"Manage Channels"** permission to set up confessions for this channel.');
-        this.name = 'InsufficientPermissionSetupError';
-    }
-}
-
-/** @throws {InsufficientPermissionSetupError} */
 async function enableConfessions(
     db: Database,
     logger: Logger,
     logChannelId: Snowflake,
     guildId: Snowflake,
     channelId: Snowflake,
-    permissions: bigint,
     label: string | undefined,
     color: number | undefined,
     isApprovalRequired: boolean | undefined,
 ) {
-    if (excludesMask(permissions, MANAGE_CHANNELS)) throw new InsufficientPermissionSetupError();
-
     const set: PgUpdateSetSource<typeof channel> = { disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}` };
     if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
     if (typeof color !== 'undefined') set.color = sql`excluded.${sql.raw(channel.color.name)}`;
@@ -78,7 +57,6 @@ export async function handleSetup(
     resolvedChannels: NonNullable<Resolved['channels']>,
     guildId: Snowflake,
     channelId: Snowflake,
-    permissions: Snowflake,
     options: InteractionApplicationCommandChatInputOption[],
 ) {
     // eslint-disable-next-line init-declarations
@@ -121,26 +99,9 @@ export async function handleSetup(
     assert(typeof channel !== 'undefined');
     strictEqual(resolvedChannels[channel.toString()]?.type, ChannelType.GuildText);
 
-    try {
-        const result = await enableConfessions(
-            db,
-            logger,
-            channel,
-            guildId,
-            channelId,
-            permissions,
-            label,
-            color,
-            isApprovalRequired,
-        );
-        return result.isApprovalRequired
-            ? `Only approved confessions (labelled **${result.label}**) are now enabled for this channel.`
-            : `Any confessions (labelled **${result.label}**) are now enabled for this channel.`;
-    } catch (err) {
-        if (err instanceof SetupError) {
-            logger.error(err);
-            return err.message;
-        }
-        throw err;
-    }
+    const result = await enableConfessions(db, logger, channel, guildId, channelId, label, color, isApprovalRequired);
+
+    return result.isApprovalRequired
+        ? `Only approved confessions (labelled **${result.label}**) are now enabled for this channel.`
+        : `Any confessions (labelled **${result.label}**) are now enabled for this channel.`;
 }
