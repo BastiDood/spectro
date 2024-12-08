@@ -10,8 +10,6 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
-
 import {
     dispatchConfessionViaHttp,
     logApprovedConfessionViaHttp,
