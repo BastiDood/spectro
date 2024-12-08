@@ -19,3 +19,12 @@ export const MessageComponentButtonNormal = object({
 });
 
 export type MessageComponentButtonNormal = InferOutput<typeof MessageComponentButtonNormal>;
+
+// HACK: Deserializing requires `component_type` instead of `type`. Wtf Discord?
+export const DeserializedMessageComponentButtonNormal = object({
+    ...MessageComponentButtonBase.entries,
+    component_type: literal(MessageComponentType.Button),
+    custom_id: string(),
+});
+
+export type DeserializedMessageComponentButtonNormal = InferOutput<typeof DeserializedMessageComponentButtonNormal>;

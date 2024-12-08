@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
-import { Interaction } from '$lib/server/models/discord/interaction';
+import { DeserializedInteraction } from '$lib/server/models/discord/interaction';
 import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
 import type { InteractionCallback } from '$lib/server/models/discord/interaction-callback';
 import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
@@ -35,7 +35,7 @@ async function handleInteraction(
     db: Database,
     logger: Logger, // TODO: Fine-grained database-level performance logs.
     timestamp: Date,
-    interaction: Interaction,
+    interaction: DeserializedInteraction,
 ): Promise<InteractionCallback> {
     // eslint-disable-next-line default-case
     switch (interaction.type) {
@@ -157,17 +157,16 @@ async function handleInteraction(
             assert(typeof interaction.message !== 'undefined');
             assert(typeof interaction.member?.user !== 'undefined');
             assert(typeof interaction.member.permissions !== 'undefined');
-            strictEqual(interaction.data.type, MessageComponentType.Button);
+            strictEqual(interaction.data.component_type, MessageComponentType.Button);
             return {
                 type: InteractionCallbackType.ChannelMessageWithSource,
                 data: await handleApproval(
                     db,
                     logger,
                     timestamp,
-                    interaction.data.style,
+                    interaction.data.custom_id,
                     interaction.message.channel_id,
                     interaction.message.id,
-                    BigInt(interaction.data.custom_id),
                     interaction.member.user.id,
                     interaction.member.permissions,
                 ),
@@ -223,8 +222,8 @@ export async function POST({ locals: { ctx }, request }) {
         const interaction = JSON.parse(text);
         assert(typeof ctx !== 'undefined');
         const logger = ctx.logger.child({ interaction });
-        ctx.logger.info('interaction received');
-        const parsed = parse(Interaction, interaction);
+        logger.info('interaction received');
+        const parsed = parse(DeserializedInteraction, interaction);
 
         const start = performance.now();
         const response = await handleInteraction(ctx.db, logger, datetime, parsed);

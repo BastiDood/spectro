@@ -12,3 +12,13 @@ export const InteractionDataMessageComponentStringSelect = object({
 export type InteractionDataMessageComponentStringSelect = InferOutput<
     typeof InteractionDataMessageComponentStringSelect
 >;
+
+export const DeserializedInteractionDataMessageComponentStringSelect = object({
+    ...InteractionDataMessageComponentBase.entries,
+    component_type: literal(MessageComponentType.StringSelect),
+    values: array(string()),
+});
+
+export type DeserializedInteractionDataMessageComponentStringSelect = InferOutput<
+    typeof InteractionDataMessageComponentStringSelect
+>;

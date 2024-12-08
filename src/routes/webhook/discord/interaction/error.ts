@@ -13,3 +13,10 @@ export class UnexpectedMessageComponentButtonStyle extends Error {
         this.name = 'UnexpectedMessageComponentButtonStyle';
     }
 }
+
+export class MalformedCustomIdFormat extends Error {
+    constructor(public key: string) {
+        super(`malformed custom id has key ${key}`);
+        this.name = 'MalformedCustomIdFormat';
+    }
+}

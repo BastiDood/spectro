@@ -1,8 +1,17 @@
 import { type InferOutput, variant } from 'valibot';
 
-import { InteractionDataMessageComponentButtonLink } from './link';
-import { InteractionDataMessageComponentButtonNormal } from './normal';
-import { InteractionDataMessageComponentButtonPremium } from './premium';
+import {
+    DeserializedInteractionDataMessageComponentButtonLink,
+    InteractionDataMessageComponentButtonLink,
+} from './link';
+import {
+    DeserializedInteractionDataMessageComponentButtonNormal,
+    InteractionDataMessageComponentButtonNormal,
+} from './normal';
+import {
+    DeserializedInteractionDataMessageComponentButtonPremium,
+    InteractionDataMessageComponentButtonPremium,
+} from './premium';
 
 export const InteractionDataMessageComponentButton = variant('style', [
     InteractionDataMessageComponentButtonLink,
@@ -11,3 +20,13 @@ export const InteractionDataMessageComponentButton = variant('style', [
 ]);
 
 export type InteractionMessageComponentButton = InferOutput<typeof InteractionDataMessageComponentButton>;
+
+export const DeserializedInteractionDataMessageComponentButton = variant('component_type', [
+    DeserializedInteractionDataMessageComponentButtonLink,
+    DeserializedInteractionDataMessageComponentButtonNormal,
+    DeserializedInteractionDataMessageComponentButtonPremium,
+]);
+
+export type DeserializedInteractionMessageComponentButton = InferOutput<
+    typeof DeserializedInteractionDataMessageComponentButton
+>;

@@ -6,10 +6,9 @@ import type { Logger } from 'pino';
 import { channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
-import { UnexpectedDiscordErrorCode, UnexpectedMessageComponentButtonStyle } from './error';
+import { MalformedCustomIdFormat, UnexpectedDiscordErrorCode } from './error';
 
 import type { Message } from '$lib/server/models/discord/message';
-import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
@@ -182,24 +181,29 @@ export async function handleApproval(
     db: Database,
     logger: Logger,
     timestamp: Date,
-    style: MessageComponentButtonStyle,
+    customId: string,
     logChannelId: Snowflake,
     logMessageId: Snowflake,
-    internalId: bigint,
     userId: Snowflake,
     permissions: bigint,
 ): Promise<Partial<Message>> {
+    const [key, id, ...rest] = customId.split(':');
+    strictEqual(rest.length, 0);
+    assert(typeof id !== 'undefined');
+    const internalId = BigInt(id);
+    assert(typeof key !== 'undefined');
+
     // eslint-disable-next-line init-declarations
     let isApproved: boolean;
-    switch (style) {
-        case MessageComponentButtonStyle.Success:
+    switch (key) {
+        case 'publish':
             isApproved = true;
             break;
-        case MessageComponentButtonStyle.Danger:
+        case 'delete':
             isApproved = false;
             break;
         default:
-            throw new UnexpectedMessageComponentButtonStyle(style);
+            throw new MalformedCustomIdFormat(key);
     }
 
     try {

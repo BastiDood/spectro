@@ -1,7 +1,10 @@
 import { type InferOutput, object } from 'valibot';
 
+import {
+    DeserializedMessageComponentButtonLink,
+    MessageComponentButtonLink,
+} from '$lib/server/models/discord/message/component/button/link';
 import { InteractionDataMessageComponentBase } from '$lib/server/models/discord/interaction/message-component/base';
-import { MessageComponentButtonLink } from '$lib/server/models/discord/message/component/button/link';
 
 export const InteractionDataMessageComponentButtonLink = object({
     ...InteractionDataMessageComponentBase.entries,
@@ -9,3 +12,12 @@ export const InteractionDataMessageComponentButtonLink = object({
 });
 
 export type InteractionDataMessageComponentButtonLink = InferOutput<typeof InteractionDataMessageComponentButtonLink>;
+
+export const DeserializedInteractionDataMessageComponentButtonLink = object({
+    ...InteractionDataMessageComponentBase.entries,
+    ...DeserializedMessageComponentButtonLink.entries,
+});
+
+export type DeserializedInteractionDataMessageComponentButtonLink = InferOutput<
+    typeof DeserializedInteractionDataMessageComponentButtonLink
+>;

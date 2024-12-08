@@ -26,7 +26,6 @@ async function sendMessage(logger: Logger, channelId: Snowflake, data: CreateMes
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': body.length.toString(),
             Authorization: `Bot ${botToken}`,
         },
     });
@@ -132,16 +131,16 @@ export async function logPendingConfessionViaHttp(
                         {
                             type: MessageComponentType.Button,
                             style: MessageComponentButtonStyle.Success,
-                            emoji: { id: null, name: '️🖊️' },
                             label: 'Publish',
-                            custom_id: customId,
+                            emoji: { name: '\u{2712}\u{fe0f}' },
+                            custom_id: `publish:${customId}`,
                         },
                         {
                             type: MessageComponentType.Button,
                             style: MessageComponentButtonStyle.Danger,
-                            emoji: { id: null, name: '🗑️' },
                             label: 'Delete',
-                            custom_id: customId,
+                            emoji: { name: '\u{1f5d1}\u{fe0f}' },
+                            custom_id: `delete:${customId}`,
                         },
                     ],
                 },
@@ -254,7 +253,6 @@ async function editMessage(
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
-            'Content-Length': body.length.toString(),
             Authorization: `Bot ${botToken}`,
         },
     });
@@ -290,6 +288,7 @@ export async function approveConfessionLog(
         channelId,
         messageId,
         {
+            components: [],
             embeds: [
                 {
                     type: EmbedType.Rich,
@@ -337,6 +336,7 @@ export async function rejectConfessionLog(
         logChannelId,
         logMessageId,
         {
+            components: [],
             embeds: [
                 {
                     type: EmbedType.Rich,

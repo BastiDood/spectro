@@ -31,7 +31,7 @@ export function handleError({ error, event }) {
     if (typeof event.locals.ctx !== 'undefined') {
         if (isValiError(error)) {
             const valibotErrorPaths = error.issues.map(issue => getDotPath(issue)).filter(path => path !== null);
-            event.locals.ctx.logger.fatal({ valibotError: error, valibotErrorPaths }, 'valibot validation failed');
+            event.locals.ctx.logger.fatal({ valibotErrorPaths }, 'valibot validation failed');
         } else if (error instanceof AssertionError) {
             event.locals.ctx.logger.fatal({ nodeAssertionError: error }, 'assertion error encountered');
         } else if (error instanceof Error) {

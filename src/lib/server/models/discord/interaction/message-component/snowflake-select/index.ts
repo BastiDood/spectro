@@ -18,3 +18,18 @@ export const InteractionDataMessageComponentSnowflakeSelect = object({
 export type InteractionDataMessageComponentSnowflakeSelect = InferOutput<
     typeof InteractionDataMessageComponentSnowflakeSelect
 >;
+
+export const DeserializedInteractionDataMessageComponentSnowflakeSelect = object({
+    ...InteractionDataMessageComponentBase.entries,
+    component_type: union([
+        literal(MessageComponentType.UserSelect),
+        literal(MessageComponentType.RoleSelect),
+        literal(MessageComponentType.MentionableSelect),
+        literal(MessageComponentType.ChannelSelect),
+    ]),
+    values: array(Snowflake),
+});
+
+export type DeserializedInteractionDataMessageComponentSnowflakeSelect = InferOutput<
+    typeof DeserializedInteractionDataMessageComponentSnowflakeSelect
+>;
