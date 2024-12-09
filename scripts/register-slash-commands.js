@@ -25,7 +25,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
                 {
                     type: 5,
                     name: 'public',
-                    description: 'Send the help message publicly. Disabled by default.',
+                    description: 'Send the information page publicly. Disabled by default.',
                 },
             ],
         },
