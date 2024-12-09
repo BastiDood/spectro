@@ -1,11 +1,11 @@
 app = 'spectro'
-primary_region = 'sin'
+primary_region = 'hkg'
 
 [[vm]]
 size = 'shared-cpu-1x'
 
 [deploy]
-strategy = "bluegreen"
+strategy = 'bluegreen'
 
 [http_service]
 processes = ['app']
