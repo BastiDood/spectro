@@ -31,13 +31,13 @@ export function handleError({ error, event }) {
     if (typeof event.locals.ctx !== 'undefined') {
         if (isValiError(error)) {
             const valibotErrorPaths = error.issues.map(issue => getDotPath(issue)).filter(path => path !== null);
-            event.locals.ctx.logger.fatal({ valibotErrorPaths }, 'valibot validation failed');
+            event.locals.ctx.logger.fatal({ valibotErrorPaths }, error.message);
         } else if (error instanceof AssertionError) {
-            event.locals.ctx.logger.fatal({ nodeAssertionError: error }, 'assertion error encountered');
+            event.locals.ctx.logger.fatal({ nodeAssertionError: error }, error.message);
         } else if (error instanceof Error) {
-            event.locals.ctx.logger.fatal(error, error.message);
+            event.locals.ctx.logger.fatal({ error }, error.message);
         } else {
-            event.locals.ctx.logger.fatal(error);
+            event.locals.ctx.logger.fatal({ unknownError: error });
         }
     }
     throw error;

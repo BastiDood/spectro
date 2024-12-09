@@ -44,14 +44,13 @@ export async function POST({ locals: { ctx }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        const event = JSON.parse(text);
         assert(typeof ctx !== 'undefined');
+        const event = parse(Webhook, JSON.parse(text));
         const logger = ctx.logger.child({ event });
         logger.info('webhook event received');
-        const parsed = parse(Webhook, event);
 
         const start = performance.now();
-        await handleWebhook(ctx.db, logger, datetime, parsed);
+        await handleWebhook(ctx.db, logger, datetime, event);
         const webhookTimeMillis = performance.now() - start;
         logger.info({ webhookTimeMillis }, 'webhook event processed');
 

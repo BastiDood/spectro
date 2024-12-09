@@ -219,14 +219,13 @@ export async function POST({ locals: { ctx }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        const interaction = JSON.parse(text);
         assert(typeof ctx !== 'undefined');
+        const interaction = parse(DeserializedInteraction, JSON.parse(text));
         const logger = ctx.logger.child({ interaction });
-        logger.info('interaction received');
-        const parsed = parse(DeserializedInteraction, interaction);
+        logger.info({ interaction }, 'interaction received');
 
         const start = performance.now();
-        const response = await handleInteraction(ctx.db, logger, datetime, parsed);
+        const response = await handleInteraction(ctx.db, logger, datetime, interaction);
         const interactionTimeMillis = performance.now() - start;
         logger.info({ interactionTimeMillis }, 'interaction processed');
 
