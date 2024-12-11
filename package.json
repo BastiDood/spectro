@@ -27,13 +27,13 @@
     "dependencies": {
         "@axiomhq/pino": "^1.3.0",
         "@iconify/icons-simple-icons": "^1.2.74",
-        "@iconify/svelte": "^4.0.2",
+        "@iconify/svelte": "^4.1.0",
         "@noble/ed25519": "^2.1.0",
-        "@sveltejs/kit": "^2.9.0",
+        "@sveltejs/kit": "^2.10.1",
         "drizzle-orm": "^0.37.0",
         "pg": "^8.13.1",
         "pino": "^9.5.0",
-        "svelte": "^5.8.1",
+        "svelte": "^5.10.1",
         "valibot": "1.0.0-beta.9"
     },
     "devDependencies": {
@@ -43,10 +43,10 @@
         "@sveltejs/adapter-node": "^5.2.9",
         "@sveltejs/vite-plugin-svelte": "^5.0.1",
         "@tailwindcss/typography": "^0.5.15",
-        "@types/node": "^22.10.1",
+        "@types/node": "^22.10.2",
         "@types/pg": "^8.11.10",
         "autoprefixer": "^10.4.20",
-        "daisyui": "^4.12.14",
+        "daisyui": "^4.12.20",
         "dotenv-cli": "^7.4.4",
         "drizzle-kit": "^0.29.1",
         "eslint": "^9.16.0",
@@ -64,7 +64,7 @@
         "svelte-eslint-parser": "^0.43.0",
         "tailwindcss": "^3.4.16",
         "typescript": "^5.7.2",
-        "typescript-eslint": "^8.17.0",
+        "typescript-eslint": "^8.18.0",
         "typescript-svelte-plugin": "^0.3.44",
         "vite": "^6.0.3",
         "vite-plugin-tailwind-purgecss": "^0.3.5"
