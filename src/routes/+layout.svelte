@@ -3,7 +3,7 @@
 
     import GitHub from '@iconify/icons-simple-icons/github';
     import Icon from '@iconify/svelte';
-    import LogoMark from '$lib/brand/logomark/logomark.png';
+    import LogoMark from '$lib/brand/logomark/48-logomark.png';
     import banner from '$lib/brand/link-preview.png?url';
     import favicon from '$lib/brand/favicon.ico?url';
 
