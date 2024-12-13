@@ -88,7 +88,6 @@ export default tsEslint.config(
             'no-useless-constructor': 'error',
             'no-useless-rename': 'error',
             'no-var': 'error',
-            'no-void': 'error',
             'operator-assignment': 'error',
             'prefer-arrow-callback': 'warn',
             'prefer-const': 'error',
