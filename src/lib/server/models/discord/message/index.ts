@@ -15,6 +15,7 @@ export const Message = object({
 export type Message = InferOutput<typeof Message>;
 
 export interface CreateMessage {
+    content?: Message['content'];
     flags?: Message['flags'];
     allowed_mentions?: Partial<AllowedMentions>;
     embeds?: Message['embeds'];

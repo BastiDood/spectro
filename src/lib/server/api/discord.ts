@@ -17,7 +17,7 @@ import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
-async function sendMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string) {
+async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string) {
     const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
 
     const start = performance.now();
@@ -30,17 +30,17 @@ async function sendMessage(logger: Logger, channelId: Snowflake, data: CreateMes
         },
     });
     const json = await response.json();
-    const sendMessageTimeMillis = performance.now() - start;
-    logger.info({ sendMessageTimeMillis });
+    const createMessageTimeMillis = performance.now() - start;
+
+    const child = logger.child({ createMessageTimeMillis });
 
     if (response.status === 200) {
-        logger.info({ createMessage: json });
+        child.info({ createMessage: json });
         return parse(Message, json);
     }
 
-    logger.error({ statusCode: response.status, discordError: json }, 'message dispatch failed');
     const { code, message } = parse(DiscordError, json);
-    logger.error({ sendMessageError: message });
+    child.error({ statusCode: response.status }, message);
     return code;
 }
 
@@ -78,7 +78,7 @@ export async function dispatchConfessionViaHttp(
             fail_if_not_exists: false,
         };
 
-    return await sendMessage(logger, channelId, params, botToken);
+    return await createMessage(logger, channelId, params, botToken);
 }
 
 export interface ExternalChannelReference {
@@ -98,7 +98,7 @@ export async function logPendingConfessionViaHttp(
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const customId = internalId.toString();
-    return await sendMessage(
+    return await createMessage(
         logger,
         channelId,
         {
@@ -160,7 +160,7 @@ export async function logApprovedConfessionViaHttp(
     description: string,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    return await sendMessage(
+    return await createMessage(
         logger,
         channelId,
         {
@@ -202,7 +202,7 @@ export async function logResentConfessionViaHttp(
     description: string,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    return await sendMessage(
+    return await createMessage(
         logger,
         channelId,
         {
@@ -236,4 +236,37 @@ export async function logResentConfessionViaHttp(
         },
         botToken,
     );
+}
+
+export async function editOriginalInteractionResponse(
+    logger: Logger,
+    appId: Snowflake,
+    token: string,
+    data: CreateMessage,
+    botToken = DISCORD_BOT_TOKEN,
+) {
+    const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
+
+    const start = performance.now();
+    const response = await fetch(`${DISCORD_API_BASE_URL}/webhooks/${appId}/${token}/messages/@original`, {
+        body,
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bot ${botToken}`,
+        },
+    });
+    const json = await response.json();
+    const editOriginalInteractionTimeMillis = performance.now() - start;
+
+    const child = logger.child({ editOriginalInteractionTimeMillis });
+
+    if (response.status === 200) {
+        child.info({ editOriginalInteractionResponse: json });
+        return parse(Message, json);
+    }
+
+    const { code, message } = parse(DiscordError, json);
+    child.error({ statusCode: response.status }, message);
+    return code;
 }

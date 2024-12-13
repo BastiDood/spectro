@@ -1,6 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
 import { UnexpectedDiscordErrorCode } from './errors';
+import { doDeferredResponse } from './util';
 
 import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
@@ -43,23 +44,17 @@ class MissingLogChannelResendError extends ResendError {
     }
 }
 
-class MissingChannelAccessResendError extends ResendError {
-    constructor() {
-        super('Spectro does not have the permission to resend confessions to this channel.');
-        this.name = 'MissingChannelAccessResendError';
-    }
-}
-
 /**
  * @throws {ConfessionNotFoundResendError}
  * @throws {NotApprovedResendError}
  * @throws {MissingLogChannelResendError}
- * @throws {MissingChannelAccessResendError}
  */
 async function resendConfession(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    appId: Snowflake,
+    token: string,
     confessionChannelId: Snowflake,
     confessionId: bigint,
     moderatorId: Snowflake,
@@ -91,60 +86,64 @@ async function resendConfession(
     if (approvedAt === null) throw new NotApprovedResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
-    const message = await dispatchConfessionViaHttp(
-        child,
-        createdAt,
-        confessionChannelId,
-        confessionId,
-        label,
-        hex,
-        content,
-        parentMessageId,
-    );
+    // Promise is ignored so that it runs in the background
+    void doDeferredResponse(child, appId, token, async () => {
+        const message = await dispatchConfessionViaHttp(
+            child,
+            createdAt,
+            confessionChannelId,
+            confessionId,
+            label,
+            hex,
+            content,
+            parentMessageId,
+        );
 
-    if (typeof message === 'number')
-        switch (message) {
-            case DiscordErrorCode.MissingAccess:
-                throw new MissingChannelAccessResendError();
-            default:
-                throw new UnexpectedDiscordErrorCode(message);
-        }
+        if (typeof message === 'number')
+            switch (message) {
+                case DiscordErrorCode.MissingAccess:
+                    return 'Spectro does not have the permission to resend confessions to this channel.';
+                default:
+                    throw new UnexpectedDiscordErrorCode(message);
+            }
 
-    child.info('confession resent to the confession channel');
-    const discordErrorCode = await logResentConfessionViaHttp(
-        child,
-        timestamp,
-        logChannelId,
-        confessionId,
-        authorId,
-        moderatorId,
-        label,
-        content,
-    );
+        child.info('confession resent to the confession channel');
+        const discordErrorCode = await logResentConfessionViaHttp(
+            child,
+            timestamp,
+            logChannelId,
+            confessionId,
+            authorId,
+            moderatorId,
+            label,
+            content,
+        );
 
-    if (typeof discordErrorCode === 'number')
-        switch (discordErrorCode) {
-            case DiscordErrorCode.UnknownChannel:
-                if (await resetLogChannel(db, confessionChannelId))
-                    child.error('log channel reset due to unknown channel');
-                else child.warn('log channel previously reset due to unknown channel');
-                return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession because the log channel had been deleted.`;
-            case DiscordErrorCode.MissingAccess:
-                child.warn('insufficient channel permissions for the log channel');
-                return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession due to insufficient log channel permissions.`;
-            default:
-                child.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
-                return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. You can retry this command later to ensure that it's properly logged.`;
-        }
+        if (typeof discordErrorCode === 'number')
+            switch (discordErrorCode) {
+                case DiscordErrorCode.UnknownChannel:
+                    if (await resetLogChannel(db, confessionChannelId))
+                        child.error('log channel reset due to unknown channel');
+                    else child.warn('log channel previously reset due to unknown channel');
+                    return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession because the log channel had been deleted.`;
+                case DiscordErrorCode.MissingAccess:
+                    child.warn('insufficient channel permissions for the log channel');
+                    return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession due to insufficient log channel permissions.`;
+                default:
+                    child.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
+                    return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. You can retry this command later to ensure that it's properly logged.`;
+            }
 
-    child.info('resent confession forwarded to the log channel');
-    return `${label} #${confessionId} has been resent.`;
+        return `${label} #${confessionId} has been resent.`;
+    });
 }
 
 export async function handleResend(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    appId: Snowflake,
+    token: string,
     channelId: Snowflake,
     moderatorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
@@ -155,7 +154,7 @@ export async function handleResend(
 
     const confessionId = BigInt(option.value);
     try {
-        return await resendConfession(db, logger, timestamp, channelId, confessionId, moderatorId);
+        await resendConfession(db, logger, timestamp, appId, token, channelId, confessionId, moderatorId);
     } catch (err) {
         if (err instanceof ResendError) {
             logger.error(err, err.message);

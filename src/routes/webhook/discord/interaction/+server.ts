@@ -51,19 +51,19 @@ async function handleInteraction(
                             assert(typeof interaction.member?.user !== 'undefined');
                             assert(typeof interaction.member.permissions !== 'undefined');
                             assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
+                            await handleConfess(
+                                db,
+                                logger,
+                                timestamp,
+                                interaction.application_id,
+                                interaction.token,
+                                interaction.channel_id,
+                                interaction.member.user.id,
+                                interaction.data.options,
+                            );
                             return {
-                                type: InteractionCallbackType.ChannelMessageWithSource,
-                                data: {
-                                    flags: MessageFlags.Ephemeral,
-                                    content: await handleConfess(
-                                        db,
-                                        logger,
-                                        timestamp,
-                                        interaction.channel_id,
-                                        interaction.member.user.id,
-                                        interaction.data.options,
-                                    ),
-                                },
+                                type: InteractionCallbackType.DeferredChannelMessageWithSource,
+                                data: { flags: MessageFlags.Ephemeral },
                             };
                         case 'help':
                             return {
@@ -106,19 +106,19 @@ async function handleInteraction(
                             assert(typeof interaction.data.options !== 'undefined');
                             assert(typeof interaction.member?.permissions !== 'undefined');
                             assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
+                            await handleResend(
+                                db,
+                                logger,
+                                timestamp,
+                                interaction.application_id,
+                                interaction.token,
+                                interaction.channel_id,
+                                interaction.member.user.id,
+                                interaction.data.options,
+                            );
                             return {
-                                type: InteractionCallbackType.ChannelMessageWithSource,
-                                data: {
-                                    flags: MessageFlags.Ephemeral,
-                                    content: await handleResend(
-                                        db,
-                                        logger,
-                                        timestamp,
-                                        interaction.channel_id,
-                                        interaction.member.user.id,
-                                        interaction.data.options,
-                                    ),
-                                },
+                                type: InteractionCallbackType.DeferredChannelMessageWithSource,
+                                data: { flags: MessageFlags.Ephemeral },
                             };
                         case 'info':
                             return {
@@ -173,20 +173,20 @@ async function handleInteraction(
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.member.permissions !== 'undefined');
+                    await handleReplySubmit(
+                        db,
+                        logger,
+                        timestamp,
+                        interaction.application_id,
+                        interaction.token,
+                        interaction.channel_id,
+                        interaction.member.user.id,
+                        interaction.member.permissions,
+                        interaction.data.components,
+                    );
                     return {
-                        type: InteractionCallbackType.ChannelMessageWithSource,
-                        data: {
-                            flags: MessageFlags.Ephemeral,
-                            content: await handleReplySubmit(
-                                db,
-                                logger,
-                                timestamp,
-                                interaction.channel_id,
-                                interaction.member.user.id,
-                                interaction.member.permissions,
-                                interaction.data.components,
-                            ),
-                        },
+                        type: InteractionCallbackType.DeferredChannelMessageWithSource,
+                        data: { flags: MessageFlags.Ephemeral },
                     };
                 default:
                     fail(`unexpected modal submit ${interaction.data.custom_id}`);

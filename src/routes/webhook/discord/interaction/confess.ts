@@ -1,6 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
 import { UnexpectedDiscordErrorCode } from './errors';
+import { doDeferredResponse } from './util';
 
 import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
@@ -45,23 +46,17 @@ class MissingLogConfessError extends ConfessError {
     }
 }
 
-class MissingChannelAccessConfessError extends ConfessError {
-    constructor() {
-        super('Spectro does not have the permission to send messages to this channel.');
-        this.name = 'MissingChannelAccessConfessError';
-    }
-}
-
 /**
  * @throws {UnknownChannelConfessError}
  * @throws {DisabledChannelConfessError}
  * @throws {MissingLogConfessError}
- * @throws {MissingChannelAccessConfessError}
  */
 async function submitConfession(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    appId: Snowflake,
+    token: string,
     confessionChannelId: Snowflake,
     authorId: Snowflake,
     description: string,
@@ -104,34 +99,39 @@ async function submitConfession(
 
         child.info({ internalId, confessionId }, 'confession pending approval submitted');
 
-        const discordErrorCode = await logPendingConfessionViaHttp(
-            child,
-            timestamp,
-            logChannelId,
-            internalId,
-            confessionId,
-            authorId,
-            label,
-            description,
-        );
+        // Promise is ignored so that it runs in the background
+        void doDeferredResponse(child, appId, token, async () => {
+            const discordErrorCode = await logPendingConfessionViaHttp(
+                child,
+                timestamp,
+                logChannelId,
+                internalId,
+                confessionId,
+                authorId,
+                label,
+                description,
+            );
 
-        if (typeof discordErrorCode === 'number')
-            switch (discordErrorCode) {
-                case DiscordErrorCode.UnknownChannel:
-                    if (await resetLogChannel(db, logChannelId))
-                        child.error('log channel reset due to unknown channel');
-                    else child.warn('log channel previously reset due to unknown channel');
-                    return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro has detected that the log channel had been deleted.`;
-                case DiscordErrorCode.MissingAccess:
-                    child.error('insufficient channel permissions for the log channel');
-                    return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro couldn't log the confession due to insufficient log channel permissions.`;
-                default:
-                    child.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
-                    return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the developers and the moderators that Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord.`;
-            }
+            if (typeof discordErrorCode === 'number')
+                switch (discordErrorCode) {
+                    case DiscordErrorCode.UnknownChannel:
+                        if (await resetLogChannel(db, logChannelId))
+                            child.error('log channel reset due to unknown channel');
+                        else child.warn('log channel previously reset due to unknown channel');
+                        return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro has detected that the log channel had been deleted.`;
+                    case DiscordErrorCode.MissingAccess:
+                        child.error('insufficient channel permissions for the log channel');
+                        return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro couldn't log the confession due to insufficient log channel permissions.`;
+                    default:
+                        child.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
+                        return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the developers and the moderators that Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord.`;
+                }
+
+            return `${label} #${confessionId} has been submitted, but its publication is pending approval.`;
+        });
 
         child.info('confession pending approval has been logged');
-        return `${label} #${confessionId} has been submitted, but its publication is pending approval.`;
+        return `Submitting ${label} #${confessionId}...`;
     }
 
     const { internalId, confessionId } = await insertConfession(
@@ -147,58 +147,62 @@ async function submitConfession(
 
     child.info({ internalId, confessionId }, 'confession submitted');
 
-    const message = await dispatchConfessionViaHttp(
-        logger,
-        timestamp,
-        confessionChannelId,
-        confessionId,
-        label,
-        hex,
-        description,
-        null,
-    );
+    // Promise is ignored so that it runs in the background
+    void doDeferredResponse(child, appId, token, async () => {
+        const message = await dispatchConfessionViaHttp(
+            logger,
+            timestamp,
+            confessionChannelId,
+            confessionId,
+            label,
+            hex,
+            description,
+            null,
+        );
 
-    if (typeof message === 'number')
-        switch (message) {
-            case DiscordErrorCode.MissingAccess:
-                throw new MissingChannelAccessConfessError();
-            default:
-                throw new UnexpectedDiscordErrorCode(message);
-        }
+        if (typeof message === 'number')
+            switch (message) {
+                case DiscordErrorCode.MissingAccess:
+                    return 'Spectro does not have the permission to send messages in this channel.';
+                default:
+                    throw new UnexpectedDiscordErrorCode(message);
+            }
 
-    const discordErrorCode = await logApprovedConfessionViaHttp(
-        child,
-        timestamp,
-        logChannelId,
-        confessionId,
-        authorId,
-        label,
-        description,
-    );
+        const discordErrorCode = await logApprovedConfessionViaHttp(
+            child,
+            timestamp,
+            logChannelId,
+            confessionId,
+            authorId,
+            label,
+            description,
+        );
 
-    if (typeof discordErrorCode === 'number')
-        switch (discordErrorCode) {
-            case DiscordErrorCode.UnknownChannel:
-                if (await resetLogChannel(db, confessionChannelId))
-                    child.error('log channel reset due to unknown channel');
-                else child.warn('log channel previously reset due to unknown channel');
-                return `${label} #${confessionId} has been published, but Spectro couldn't log the confession because the log channel had been deleted. Kindly notify the moderators about the configuration issue.`;
-            case DiscordErrorCode.MissingAccess:
-                child.warn('insufficient channel permissions to confession log channel');
-                return `${label} #${confessionId} has been published, but Spectro couldn't log the confession due to insufficient channel permissions. Kindly notify the moderators about the configuration issue.`;
-            default:
-                child.fatal({ discordErrorCode }, 'unexpected error code when logging replies');
-                return `${label} #${confessionId} has been published, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. Kindly notify the developers and the moderators about this issue.`;
-        }
+        if (typeof discordErrorCode === 'number')
+            switch (discordErrorCode) {
+                case DiscordErrorCode.UnknownChannel:
+                    if (await resetLogChannel(db, confessionChannelId))
+                        child.error('log channel reset due to unknown channel');
+                    else child.warn('log channel previously reset due to unknown channel');
+                    return `${label} #${confessionId} has been published, but Spectro couldn't log the confession because the log channel had been deleted. Kindly notify the moderators about the configuration issue.`;
+                case DiscordErrorCode.MissingAccess:
+                    child.warn('insufficient channel permissions to confession log channel');
+                    return `${label} #${confessionId} has been published, but Spectro couldn't log the confession due to insufficient channel permissions. Kindly notify the moderators about the configuration issue.`;
+                default:
+                    child.fatal({ discordErrorCode }, 'unexpected error code when logging replies');
+                    return `${label} #${confessionId} has been published, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. Kindly notify the developers and the moderators about this issue.`;
+            }
 
-    child.info('confession published');
-    return `${label} #${confessionId} has been published.`;
+        return `${label} #${confessionId} has been published.`;
+    });
 }
 
 export async function handleConfess(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    appId: Snowflake,
+    token: string,
     channelId: Snowflake,
     authorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
@@ -207,7 +211,7 @@ export async function handleConfess(
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value);
+        await submitConfession(db, logger, timestamp, appId, token, channelId, authorId, option.value);
     } catch (err) {
         if (err instanceof ConfessError) {
             logger.error(err, err.message);
