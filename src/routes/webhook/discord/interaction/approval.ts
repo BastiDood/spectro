@@ -227,9 +227,9 @@ export async function handleApproval(
         const payload = await submitVerdict(db, logger, timestamp, isApproved, internalId, userId, permissions);
         return typeof payload === 'string'
             ? {
-                type: InteractionCallbackType.ChannelMessageWithSource,
-                data: { flags: MessageFlags.Ephemeral, content: payload },
-            }
+                  type: InteractionCallbackType.ChannelMessageWithSource,
+                  data: { flags: MessageFlags.Ephemeral, content: payload },
+              }
             : { type: InteractionCallbackType.UpdateMessage, data: { components: [], embeds: [payload] } };
     } catch (err) {
         if (err instanceof ApprovalError) {
