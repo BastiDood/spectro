@@ -1,6 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { UnexpectedDiscordErrorCode } from './error';
+import { UnexpectedDiscordErrorCode } from './errors';
 
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { MessageComponents } from '$lib/server/models/discord/message/component';

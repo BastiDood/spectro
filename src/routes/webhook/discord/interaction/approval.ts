@@ -3,7 +3,7 @@ import assert, { strictEqual } from 'node:assert/strict';
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 
-import { MalformedCustomIdFormat } from './error';
+import { MalformedCustomIdFormat } from './errors';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
@@ -227,9 +227,9 @@ export async function handleApproval(
         const payload = await submitVerdict(db, logger, timestamp, isApproved, internalId, userId, permissions);
         return typeof payload === 'string'
             ? {
-                  type: InteractionCallbackType.ChannelMessageWithSource,
-                  data: { flags: MessageFlags.Ephemeral, content: payload },
-              }
+                type: InteractionCallbackType.ChannelMessageWithSource,
+                data: { flags: MessageFlags.Ephemeral, content: payload },
+            }
             : { type: InteractionCallbackType.UpdateMessage, data: { components: [], embeds: [payload] } };
     } catch (err) {
         if (err instanceof ApprovalError) {

@@ -1,6 +1,6 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { UnexpectedDiscordErrorCode } from './error';
+import { UnexpectedDiscordErrorCode } from './errors';
 
 import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
