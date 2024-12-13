@@ -158,19 +158,14 @@ async function handleInteraction(
             assert(typeof interaction.member?.user !== 'undefined');
             assert(typeof interaction.member.permissions !== 'undefined');
             strictEqual(interaction.data.component_type, MessageComponentType.Button);
-            return {
-                type: InteractionCallbackType.ChannelMessageWithSource,
-                data: await handleApproval(
-                    db,
-                    logger,
-                    timestamp,
-                    interaction.data.custom_id,
-                    interaction.message.channel_id,
-                    interaction.message.id,
-                    interaction.member.user.id,
-                    interaction.member.permissions,
-                ),
-            };
+            return await handleApproval(
+                db,
+                logger,
+                timestamp,
+                interaction.data.custom_id,
+                interaction.member.user.id,
+                interaction.member.permissions,
+            );
         case InteractionType.ModalSubmit:
             switch (interaction.data.custom_id) {
                 case 'reply':

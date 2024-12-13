@@ -1,21 +1,25 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
+import { APP_ICON_URL, Color } from '$lib/server/constants';
+import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
+
+import { MalformedCustomIdFormat } from './error';
+
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
+
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 
 import { channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
-import { MalformedCustomIdFormat, UnexpectedDiscordErrorCode } from './error';
-
-import type { Message } from '$lib/server/models/discord/message';
+import { Embed, EmbedType } from '$lib/server/models/discord/embed';
+import type { InteractionCallback } from '$lib/server/models/discord/interaction-callback';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { approveConfessionLog, dispatchConfessionViaHttp, rejectConfessionLog } from '$lib/server/api/discord';
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
-
-import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
+import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
 import { hasAllPermissions } from './util';
 
 abstract class ApprovalError extends Error {
@@ -57,124 +61,139 @@ async function submitVerdict(
     logger: Logger,
     timestamp: Date,
     isApproved: boolean,
-    logChannelId: Snowflake,
-    logMessageId: Snowflake,
     internalId: bigint,
     moderatorId: Snowflake,
     permissions: bigint,
-) {
-    if (!hasAllPermissions(permissions, MANAGE_MESSAGES)) throw new InsufficientPermissionsApprovalError();
-    return await db.transaction(async tx => {
-        const [details, ...rest] = await tx
-            .select({
-                disabledAt: channel.disabledAt,
-                label: channel.label,
-                color: channel.color,
-                parentMessageId: confession.parentMessageId,
-                confessionChannelId: confession.channelId,
-                confessionId: confession.confessionId,
-                authorId: confession.authorId,
-                createdAt: confession.createdAt,
-                approvedAt: confession.approvedAt,
-                content: confession.content,
-            })
-            .from(confession)
-            .innerJoin(channel, eq(confession.channelId, channel.id))
-            .where(eq(confession.internalId, internalId))
-            .limit(1)
-            .for('update');
-        strictEqual(rest.length, 0);
-        assert(typeof details !== 'undefined');
-        const {
-            approvedAt,
-            createdAt,
-            disabledAt,
-            authorId,
-            confessionChannelId,
-            confessionId,
-            parentMessageId,
-            color,
-            label,
-            content,
-        } = details;
-        const hex = color === null ? undefined : Number.parseInt(color, 2);
-
-        const child = logger.child({ details });
-        child.info('fetched confession details for approval');
-
-        if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelConfessError(disabledAt);
-
-        if (approvedAt !== null) throw new AlreadyApprovedApprovalError(approvedAt);
-        const { rowCount } = await tx
-            .update(confession)
-            .set({ approvedAt: timestamp })
-            .where(eq(confession.internalId, internalId));
-        strictEqual(rowCount, 1);
-
-        if (isApproved) {
-            const log = await approveConfessionLog(
-                child,
+): Promise<Embed | string> {
+    if (hasAllPermissions(permissions, MANAGE_MESSAGES))
+        return await db.transaction(async tx => {
+            const [details, ...rest] = await tx
+                .select({
+                    disabledAt: channel.disabledAt,
+                    label: channel.label,
+                    color: channel.color,
+                    parentMessageId: confession.parentMessageId,
+                    confessionChannelId: confession.channelId,
+                    confessionId: confession.confessionId,
+                    authorId: confession.authorId,
+                    createdAt: confession.createdAt,
+                    approvedAt: confession.approvedAt,
+                    content: confession.content,
+                })
+                .from(confession)
+                .innerJoin(channel, eq(confession.channelId, channel.id))
+                .where(eq(confession.internalId, internalId))
+                .limit(1)
+                .for('update');
+            strictEqual(rest.length, 0);
+            assert(typeof details !== 'undefined');
+            const {
+                approvedAt,
                 createdAt,
-                logChannelId,
-                logMessageId,
-                label,
-                confessionId,
+                disabledAt,
                 authorId,
-                moderatorId,
-                content,
-            );
-
-            if (typeof log === 'number') throw new UnexpectedDiscordErrorCode(log);
-
-            const discordErrorCode = await dispatchConfessionViaHttp(
-                child,
-                createdAt,
                 confessionChannelId,
                 confessionId,
-                label,
-                hex,
-                content,
                 parentMessageId,
-            );
+                color,
+                label,
+                content,
+            } = details;
+            const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-            if (typeof discordErrorCode === 'number')
-                switch (discordErrorCode) {
-                    case DiscordErrorCode.UnknownChannel:
-                        child.error('confession channel no longer exists');
-                        return `${label} #${confessionId} has been approved internally, but the confession channel no longer exists.`;
-                    case DiscordErrorCode.MissingAccess:
-                        child.warn('insufficient channel permissions for the confession channel');
-                        return `${label} #${confessionId} has been approved internally, but Spectro does not have the permission to send messages to the confession channel. The confession can be resent once this has been resolved.`;
-                    default:
-                        child.fatal(
-                            { discordErrorCode },
-                            'unexpected error code when publishing to the confession channel',
-                        );
-                        return `${label} #${confessionId} has been approved internally, but Spectro encountered an unexpected error (${discordErrorCode}) from Discord while publishing to the confession channel. Kindly inform the developers and the moderators about this issue.`;
-                }
+            const child = logger.child({ details });
+            child.info('fetched confession details for approval');
 
-            return `${label} #${confessionId} has been approved and published.`;
-        }
+            if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelConfessError(disabledAt);
 
-        const log = await rejectConfessionLog(
-            child,
-            createdAt,
-            logChannelId,
-            logMessageId,
-            label,
-            confessionId,
-            authorId,
-            moderatorId,
-            content,
-        );
+            if (approvedAt !== null) throw new AlreadyApprovedApprovalError(approvedAt);
 
-        if (typeof log === 'number') throw new UnexpectedDiscordErrorCode(log);
+            if (isApproved) {
+                const { rowCount } = await tx
+                    .update(confession)
+                    .set({ approvedAt: timestamp })
+                    .where(eq(confession.internalId, internalId));
+                strictEqual(rowCount, 1);
 
-        await tx.delete(confession).where(eq(confession.internalId, internalId));
-        child.warn('deleted confession due to rejection');
+                const discordErrorCode = await dispatchConfessionViaHttp(
+                    child,
+                    createdAt,
+                    confessionChannelId,
+                    confessionId,
+                    label,
+                    hex,
+                    content,
+                    parentMessageId,
+                );
 
-        return `${label} #${confessionId} has been rejected. The confession has been deleted from Spectro's internal logs.`;
-    });
+                if (typeof discordErrorCode === 'number')
+                    switch (discordErrorCode) {
+                        case DiscordErrorCode.UnknownChannel:
+                            child.error('confession channel no longer exists');
+                            return `${label} #${confessionId} has been approved internally, but the confession channel no longer exists.`;
+                        case DiscordErrorCode.MissingAccess:
+                            child.warn('insufficient channel permissions for the confession channel');
+                            return `${label} #${confessionId} has been approved internally, but Spectro does not have the permission to send messages to the confession channel. The confession can be resent once this has been resolved.`;
+                        default:
+                            child.fatal(
+                                { discordErrorCode },
+                                'unexpected error code when publishing to the confession channel',
+                            );
+                            return `${label} #${confessionId} has been approved internally, but Spectro encountered an unexpected error (${discordErrorCode}) from Discord while publishing to the confession channel. Kindly inform the developers and the moderators about this issue.`;
+                    }
+
+                return {
+                    type: EmbedType.Rich,
+                    title: `${label} #${confessionId}`,
+                    color: Color.Success,
+                    timestamp,
+                    description: content,
+                    footer: {
+                        text: 'Spectro Logs',
+                        icon_url: APP_ICON_URL,
+                    },
+                    fields: [
+                        {
+                            name: 'Authored by',
+                            value: `||<@${authorId}>||`,
+                            inline: true,
+                        },
+                        {
+                            name: 'Approved by',
+                            value: `<@${moderatorId}>`,
+                            inline: true,
+                        },
+                    ],
+                };
+            }
+
+            await tx.delete(confession).where(eq(confession.internalId, internalId));
+            child.warn('deleted confession due to rejection');
+            return {
+                type: EmbedType.Rich,
+                title: `${label} #${confessionId}`,
+                color: Color.Failure,
+                timestamp,
+                description: content,
+                footer: {
+                    text: 'Spectro Logs',
+                    icon_url: APP_ICON_URL,
+                },
+                fields: [
+                    {
+                        name: 'Authored by',
+                        value: `||<@${authorId}>||`,
+                        inline: true,
+                    },
+                    {
+                        name: 'Deleted by',
+                        value: `<@${moderatorId}>`,
+                        inline: true,
+                    },
+                ],
+            };
+        });
+    throw new InsufficientPermissionsApprovalError();
 }
 
 export async function handleApproval(
@@ -182,11 +201,9 @@ export async function handleApproval(
     logger: Logger,
     timestamp: Date,
     customId: string,
-    logChannelId: Snowflake,
-    logMessageId: Snowflake,
     userId: Snowflake,
     permissions: bigint,
-): Promise<Partial<Message>> {
+): Promise<InteractionCallback> {
     const [key, id, ...rest] = customId.split(':');
     strictEqual(rest.length, 0);
     assert(typeof id !== 'undefined');
@@ -207,22 +224,20 @@ export async function handleApproval(
     }
 
     try {
-        const content = await submitVerdict(
-            db,
-            logger,
-            timestamp,
-            isApproved,
-            logChannelId,
-            logMessageId,
-            internalId,
-            userId,
-            permissions,
-        );
-        return { content };
+        const payload = await submitVerdict(db, logger, timestamp, isApproved, internalId, userId, permissions);
+        return typeof payload === 'string'
+            ? {
+                type: InteractionCallbackType.ChannelMessageWithSource,
+                data: { flags: MessageFlags.Ephemeral, content: payload },
+            }
+            : { type: InteractionCallbackType.UpdateMessage, data: { components: [], embeds: [payload] } };
     } catch (err) {
         if (err instanceof ApprovalError) {
             logger.error(err, err.message);
-            return { flags: MessageFlags.Ephemeral, content: err.message };
+            return {
+                type: InteractionCallbackType.ChannelMessageWithSource,
+                data: { flags: MessageFlags.Ephemeral, content: err.message },
+            };
         }
         throw err;
     }
