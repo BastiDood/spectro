@@ -3,8 +3,8 @@
 </script>
 
 <div class="prose max-w-full p-10">
-    <h1 class="border-b border-neutral pb-6 font-medium">Documentation</h1>
-    <div class="alert alert-warning text-warning-content">
+    <h1 class="font-medium">Documentation</h1>
+    <div class="alert alert-warning gap-2 text-sm text-warning-content">
         <Icon icon="tabler:barrier-block-filled" height="24" />
         This page is a work in progress.
     </div>
