@@ -1,4 +1,5 @@
 import assert, { strictEqual } from 'node:assert/strict';
+import process from 'node:process';
 
 import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from './error';
 
@@ -7,12 +8,15 @@ import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { eq, sql } from 'drizzle-orm';
+import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 
 import * as schema from './models';
 
-export const db = drizzle(POSTGRES_DATABASE_URL, { schema });
+const pool = new Pool({ connectionString: POSTGRES_DATABASE_URL });
+process.once('sveltekit:shutdown', () => void pool.end());
 
+export const db = drizzle(pool, { schema });
 export type Database = typeof db;
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type Interface = Database | Transaction;
