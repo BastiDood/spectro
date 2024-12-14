@@ -123,7 +123,7 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
                     required: true,
                     name: 'confession',
                     min_value: 1,
-                    description: 'A label to use for the confession. Defaults to "Confession".',
+                    description: 'Confession ID to resend.',
                 },
             ],
         },
