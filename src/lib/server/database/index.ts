@@ -7,13 +7,12 @@ import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { eq, sql } from 'drizzle-orm';
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-
 import * as schema from './models';
+import { eq, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
 
-const pool = new Pool({ connectionString: POSTGRES_DATABASE_URL });
+const pool = new pg.Pool({ connectionString: POSTGRES_DATABASE_URL });
 process.once('sveltekit:shutdown', () => void pool.end());
 
 export const db = drizzle(pool, { schema });
