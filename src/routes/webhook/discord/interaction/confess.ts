@@ -126,10 +126,11 @@ async function submitConfession(
                         return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the developers and the moderators that Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord.`;
                 }
 
+            logger.info('confession pending approval has been logged');
             return `${label} #${confessionId} has been submitted, but its publication is pending approval.`;
         });
 
-        logger.info('confession pending approval has been logged');
+        logger.info('confession pending approval has been submitted');
         return `Submitting ${label} #${confessionId}...`;
     }
 
@@ -194,6 +195,8 @@ async function submitConfession(
 
         return `${label} #${confessionId} has been published.`;
     });
+
+    logger.info('auto-approved confession has been published');
 }
 
 export async function handleConfess(

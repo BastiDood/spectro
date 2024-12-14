@@ -30,10 +30,10 @@ class ConfessionNotFoundResendError extends ResendError {
     }
 }
 
-class NotApprovedResendError extends ResendError {
+class PendingApprovalResendError extends ResendError {
     constructor(public confessionId: bigint) {
         super(`Confession #${confessionId} has not yet been approved for publication in this channel.`);
-        this.name = 'NotApprovedResendError';
+        this.name = 'PendingApprovalResendError';
     }
 }
 
@@ -46,7 +46,7 @@ class MissingLogChannelResendError extends ResendError {
 
 /**
  * @throws {ConfessionNotFoundResendError}
- * @throws {NotApprovedResendError}
+ * @throws {PendingApprovalResendError}
  * @throws {MissingLogChannelResendError}
  */
 async function resendConfession(
@@ -82,7 +82,7 @@ async function resendConfession(
 
     logger.info({ confession }, 'confession to be resent found');
 
-    if (approvedAt === null) throw new NotApprovedResendError(confessionId);
+    if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
     // Promise is ignored so that it runs in the background
@@ -133,8 +133,11 @@ async function resendConfession(
                     return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. You can retry this command later to ensure that it's properly logged.`;
             }
 
+        logger.info('confession resend has been published');
         return `${label} #${confessionId} has been resent.`;
     });
+
+    logger.info('confession resend has been submitted');
 }
 
 export async function handleResend(

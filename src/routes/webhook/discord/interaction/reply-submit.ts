@@ -136,7 +136,7 @@ async function submitReply(
             return `${label} #${confessionId} has been submitted, but its publication is pending approval.`;
         });
 
-        logger.info('reply pending approval has been logged');
+        logger.info('reply pending approval has been submitted');
         return `Submitting ${label} #${confessionId}...`;
     }
 
