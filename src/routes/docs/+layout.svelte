@@ -31,7 +31,6 @@
         <div
             class="menu menu-lg sticky min-h-full flex-nowrap bg-base-300 px-6 py-4 md:menu-md md:top-10 md:min-h-min md:rounded-box"
         >
-            <li><a href="#getting-started" onclick={hideSidebar}>Getting Started</a></li>
             <li>
                 <a href="#basic-usage" onclick={hideSidebar}>Basic Usage</a>
                 <ul>

@@ -13,14 +13,7 @@
         channels. However, for the sake of moderation, confessions are still logged for later viewing.
     </p>
 
-    <h2 id="getting-started">Getting Started</h2>
-    <h3>Invite Spectro to Discord</h3>
-    <p class="text-pink-500">Instructions to add Spectro to Discord here.</p>
-    <p>
-        Once Spectro has been added, you can use the <code>/help</code> and <code>/info</code> commands to learn more about
-        the bot.
-    </p>
-    <h3>Using Spectro</h3>
+    <h2 id="basic-usage">Basic Usage</h2>
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
         <code class="rounded-md bg-base-300 px-4 py-2 text-lg text-primary drop-shadow-md"
             >/help <div
@@ -51,13 +44,6 @@
         viewing the source code. By default, the information page is shown privately, but you can enable the
         <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
-    <p>
-        To begin setting up channels for confessions, see <a href="#channel-setup" class="link link-primary"
-            >Channel Setup</a
-        >.
-    </p>
-
-    <h2 id="basic-usage">Basic Usage</h2>
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
         <code id="confess" class="scroll-mt-10 rounded-md bg-base-300 px-3 py-1.5 text-lg text-primary drop-shadow-md"
             >/confess <div
