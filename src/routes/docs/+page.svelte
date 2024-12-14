@@ -1,6 +1,16 @@
-<script>
+<script lang="ts">
     import Icon from '@iconify/svelte';
 </script>
+
+{#snippet commandOption(option: string, required: boolean, desc: string)}
+    <div class="badge {required ? 'badge-secondary' : 'badge-neutral'} tooltip tooltip-accent" data-tip={desc}>
+        {option}
+    </div>
+{/snippet}
+
+{#snippet permissionBadge(perms: string)}
+    <div class="badge badge-info badge-outline place-self-center">Required permissions: {perms}</div>
+{/snippet}
 
 <div class="prose max-w-full p-10 prose-headings:scroll-mt-10 prose-h2:border-b prose-h2:border-neutral prose-h2:pb-3">
     <h1 class="font-medium">Documentation</h1>
@@ -14,30 +24,28 @@
     </p>
 
     <h2 id="basic-usage">Basic Usage</h2>
+
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
-        <code class="rounded-md bg-base-300 px-4 py-2 text-lg text-primary drop-shadow-md"
-            >/help <div
-                class="badge badge-neutral tooltip tooltip-accent"
-                data-tip="Message visibility: public (optional)"
-            >
-                preview
-            </div></code
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
+            /help
+            {@render commandOption('preview', false, 'Message visibility: public (optional)')}
+        </div>
     </div>
     <p class="mb-10">
         <strong>Open the help page to show a list of commands.</strong> By default, the help page is shown privately,
         but you can enable the
         <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
+
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
-        <code class="rounded-md bg-base-300 px-4 py-2 text-lg text-primary drop-shadow-md"
-            >/info <div
-                class="badge badge-neutral tooltip tooltip-accent"
-                data-tip="Message visibility: public (optional)"
-            >
-                preview
-            </div></code
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
+            /info
+            {@render commandOption('preview', false, 'Message visibility: public (optional)')}
+        </div>
     </div>
     <p class="mb-10">
         <strong>View important information and links about Spectro,</strong> including links for reporting bugs and
@@ -45,25 +53,26 @@
         <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
-        <code id="confess" class="scroll-mt-10 rounded-md bg-base-300 px-3 py-1.5 text-lg text-primary drop-shadow-md"
-            >/confess <div
-                class="badge badge-secondary tooltip tooltip-accent"
-                data-tip="Content of the confession message"
-            >
-                content
-            </div></code
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-        <div class="badge badge-info badge-outline place-self-center">Required permissions: Send Messages</div>
+            /confess
+            {@render commandOption('content', true, 'Content of the confession message')}
+        </div>
+        {@render permissionBadge('Send Messages')}
     </div>
     <p class="mb-10">
         <strong>Send a confession to the current channel.</strong> This command fails if the current channel has not yet
         been configured to receive confessions.
     </p>
+
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
-        <code id="reply" class="scroll-mt-10 rounded-md bg-base-300 px-3 py-1.5 text-lg text-primary drop-shadow-md"
-            >Apps &gt; Reply Anonymously</code
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-        <div class="badge badge-info badge-outline place-self-center">Required permissions: Send Messages</div>
+            Apps &gt; Reply Anonymously
+        </div>
+        {@render permissionBadge('Send Messages')}
     </div>
     <p class="mb-10">
         <strong>Anonymously reply</strong> to any message (in a confessions-enabled channel) by
@@ -73,36 +82,17 @@
 
     <h2 id="moderation">Moderation</h2>
     <h3 id="channel-setup" class="scroll-mt-10">Channel Setup</h3>
-    <div></div>
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
-        <code class="rounded-md bg-base-300 px-3 py-1.5 text-lg text-primary drop-shadow-md"
-            >/setup
-            <div
-                class="badge badge-secondary tooltip tooltip-accent"
-                data-tip="Moderator-only channel for confession logs"
-            >
-                channel
-            </div>
-            <div
-                class="badge badge-neutral tooltip tooltip-accent"
-                data-tip="Custom title for confession messages (optional)"
-            >
-                label
-            </div>
-            <div
-                class="badge badge-neutral tooltip tooltip-accent"
-                data-tip="Custom hex color for confession messages (optional)"
-            >
-                color
-            </div>
-            <div
-                class="badge badge-neutral tooltip tooltip-accent"
-                data-tip="Require approvals: true or false (default)"
-            >
-                approval
-            </div>
-        </code>
-        <div class="badge badge-info badge-outline place-self-center">Required permissions: Manage Channels</div>
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            /setup
+            {@render commandOption('channel', true, 'Moderator-only channel for confession logs')}
+            {@render commandOption('label', false, 'Custom title for confession messages (optional)')}
+            {@render commandOption('color', false, 'Custom hex color for confession messages (optional)')}
+            {@render commandOption('approval', false, 'Require approvals: true or false (default)')}
+        </div>
+        {@render permissionBadge('Manage Channels')}
     </div>
     <p>
         <strong>Enable confessions for the current channel where the command is being run.</strong> All confessions,
@@ -121,20 +111,26 @@
 
     <h3 id="manage-confessions" class="scroll-mt-10">Manage Confessions</h3>
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
-        <code class="rounded-md bg-base-300 px-3 py-1.5 text-lg text-primary drop-shadow-md">/lockdown</code>
-        <div class="badge badge-info badge-outline place-self-center">Required permissions: Manage Channels</div>
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            /lockdown
+        </div>
+        {@render permissionBadge('Manage Channels')}
     </div>
+
     <p class="mb-10">
         <strong>Temporarily disable anonymous confessions for the current channel.</strong> Previous settings are
         preserved for the next time <code>/setup</code> is run.
     </p>
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
-        <code class="rounded-md bg-base-300 px-3 py-1.5 text-lg text-primary drop-shadow-md"
-            >/resend <div class="badge badge-secondary tooltip tooltip-accent" data-tip="ID of confession to resend">
-                id
-            </div></code
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-        <div class="badge badge-info badge-outline place-self-center">Required permissions: Manage Messages</div>
+            /resend
+            {@render commandOption('id', true, 'ID of confession to resend')}
+        </div>
+        {@render permissionBadge('Manage Messages')}
     </div>
     <p class="mb-10">
         <strong>Resend an existing confession by its <code>id</code>.</strong> This is useful for times when a confession
