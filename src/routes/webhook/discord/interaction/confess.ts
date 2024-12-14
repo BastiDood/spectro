@@ -193,10 +193,9 @@ async function submitConfession(
                     return `${label} #${confessionId} has been published, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. Kindly notify the developers and the moderators about this issue.`;
             }
 
+        logger.info('auto-approved confession has been published');
         return `${label} #${confessionId} has been published.`;
     });
-
-    logger.info('auto-approved confession has been published');
 }
 
 export async function handleConfess(

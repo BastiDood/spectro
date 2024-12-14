@@ -85,6 +85,8 @@ async function resendConfession(
     if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
+    logger.info('confession resend has been submitted');
+
     // Promise is ignored so that it runs in the background
     void doDeferredResponse(logger, appId, token, async () => {
         const message = await dispatchConfessionViaHttp(
@@ -136,8 +138,6 @@ async function resendConfession(
         logger.info('confession resend has been published');
         return `${label} #${confessionId} has been resent.`;
     });
-
-    logger.info('confession resend has been submitted');
 }
 
 export async function handleResend(
