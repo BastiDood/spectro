@@ -52,7 +52,7 @@
         viewing the source code. By default, the information page is shown privately, but you can enable the
         <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
-    <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+    <div id="confess" class="flex scroll-mt-10 flex-col items-center gap-2 lg:flex-row lg:items-start">
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
@@ -66,7 +66,7 @@
         been configured to receive confessions.
     </p>
 
-    <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+    <div id="reply" class="flex scroll-mt-10 flex-col items-center gap-2 lg:flex-row lg:items-start">
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
