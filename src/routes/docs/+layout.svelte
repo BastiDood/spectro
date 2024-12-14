@@ -21,12 +21,12 @@
     <div
         role="none"
         onclick={hideSidebar}
-        class="{isSidebarHidden ? 'hidden' : ''} fixed inset-0 z-10 bg-base-200 opacity-60"
+        class:hidden={isSidebarHidden}
+        class="fixed inset-0 z-10 bg-base-200 opacity-60"
     ></div>
     <div
-        class="{isSidebarHidden
-            ? 'hidden'
-            : ''} absolute top-0 z-20 h-full overflow-y-auto drop-shadow-[3px_3px_0px_rgba(247,149,29,0.35)] md:static md:block md:px-4"
+        class:hidden={isSidebarHidden}
+        class="absolute top-0 z-20 h-full overflow-y-auto drop-shadow-[3px_3px_0px_rgba(247,149,29,0.35)] md:static md:block md:px-4"
     >
         <div
             class="menu menu-lg sticky min-h-full flex-nowrap bg-base-300 px-6 py-4 md:menu-md md:top-10 md:min-h-min md:rounded-box"
