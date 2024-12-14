@@ -24,7 +24,7 @@
                 </a>
             </div>
             <div class="navbar-end">
-                <a href="https://github.com/BastiDood/spectro">
+                <a rel="external" href="https://github.com/BastiDood/spectro">
                     <Icon icon={GitHub} width="32" />
                 </a>
             </div>
