@@ -12,10 +12,6 @@
         <strong>Spectro</strong> enables your community members to post anonymous confessions and replies to moderator-configured
         channels. However, for the sake of moderation, confessions are still logged for later viewing.
     </p>
-    <h2 id="features">Features</h2>
-    <h3>Confessions</h3>
-    <h3>Anonymous Replies</h3>
-    <h3>Confession Logs</h3>
 
     <h2 id="getting-started">Getting Started</h2>
     <h3>Invite Spectro to Discord</h3>

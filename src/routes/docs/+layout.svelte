@@ -2,12 +2,10 @@
     const { children } = $props();
 </script>
 
-<div class="flex flex-row overflow-y-auto">
+<div class="grid grid-cols-[auto_1fr] overflow-y-auto">
     <div
-        class="menu sticky top-10 m-10 w-2/5 flex-nowrap overflow-y-auto rounded-box bg-base-300 p-6 drop-shadow-[3px_3px_0px_rgba(247,149,29,0.35)]"
+        class="md:visible menu h-min sticky top-10 ml-5 flex-nowrap overflow-y-auto rounded-box bg-base-300 p-6 drop-shadow-[3px_3px_0px_rgba(247,149,29,0.35)]"
     >
-        <li class="menu-title text-secondary-content">Spectro Docs</li>
-        <li><a href="#features">Features</a></li>
         <li><a href="#getting-started">Getting Started</a></li>
         <li>
             <a href="#basic-usage">Basic Usage</a>
