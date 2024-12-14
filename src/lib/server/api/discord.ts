@@ -34,8 +34,9 @@ async function createMessage(logger: Logger, channelId: Snowflake, data: CreateM
     const child = logger.child({ createMessageTimeMillis });
 
     if (response.status === 200) {
-        child.info({ createMessage: json });
-        return parse(Message, json);
+        const parsed = parse(Message, json);
+        child.info({ createMessage: parsed });
+        return parsed;
     }
 
     const { code, message } = parse(DiscordError, json);
@@ -260,8 +261,9 @@ export async function editOriginalInteractionResponse(
     const child = logger.child({ editOriginalInteractionTimeMillis });
 
     if (response.status === 200) {
-        child.info({ editOriginalInteractionResponse: json });
-        return parse(Message, json);
+        const parsed = parse(Message, json);
+        child.info({ editOriginalInteractionResponse: parsed });
+        return parsed;
     }
 
     const { code, message } = parse(DiscordError, json);

@@ -17,7 +17,10 @@ export async function doDeferredResponse(
 ) {
     // HACK: Waiting for our server to respond to Discord.
     await setTimeout(1000);
+    const start = performance.now();
     await editOriginalInteractionResponse(logger, appId, token, { content: await callback() });
+    const deferredResponseTimeMillis = performance.now() - start;
+    logger.info({ deferredResponseTimeMillis }, 'deferred response complete');
 }
 
 export function parsePublic(arg?: InteractionApplicationCommandChatInputOption) {
