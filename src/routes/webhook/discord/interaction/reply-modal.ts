@@ -60,14 +60,12 @@ async function renderReplyModal(
     if (typeof channel === 'undefined') throw new UnknownChannelReplyModalError();
     const { disabledAt, isApprovalRequired } = channel;
 
-    const child = logger.child({ channel });
-    child.info('channel for reply modal found');
+    logger.info({ channel }, 'channel for reply modal found');
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelReplyModalError(disabledAt);
-
     if (isApprovalRequired) throw new ApprovalRequiredReplyModalError();
 
-    child.info('reply modal prompted');
+    logger.info('reply modal prompted');
     return {
         type: InteractionCallbackType.Modal,
         data: {

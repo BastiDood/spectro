@@ -31,7 +31,6 @@ async function createMessage(logger: Logger, channelId: Snowflake, data: CreateM
     });
     const json = await response.json();
     const createMessageTimeMillis = performance.now() - start;
-
     const child = logger.child({ createMessageTimeMillis });
 
     if (response.status === 200) {
@@ -258,7 +257,6 @@ export async function editOriginalInteractionResponse(
     });
     const json = await response.json();
     const editOriginalInteractionTimeMillis = performance.now() - start;
-
     const child = logger.child({ editOriginalInteractionTimeMillis });
 
     if (response.status === 200) {

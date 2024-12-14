@@ -80,16 +80,15 @@ async function resendConfession(
     const { parentMessageId, authorId, approvedAt, createdAt, content, logChannelId, label, color } = result;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-    const child = logger.child({ confession });
-    child.info('confession to be resent found');
+    logger.info({ confession }, 'confession to be resent found');
 
     if (approvedAt === null) throw new NotApprovedResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
     // Promise is ignored so that it runs in the background
-    void doDeferredResponse(child, appId, token, async () => {
+    void doDeferredResponse(logger, appId, token, async () => {
         const message = await dispatchConfessionViaHttp(
-            child,
+            logger,
             createdAt,
             confessionChannelId,
             confessionId,
@@ -107,9 +106,9 @@ async function resendConfession(
                     throw new UnexpectedDiscordErrorCode(message);
             }
 
-        child.info('confession resent to the confession channel');
+        logger.info('confession resent to the confession channel');
         const discordErrorCode = await logResentConfessionViaHttp(
-            child,
+            logger,
             timestamp,
             logChannelId,
             confessionId,
@@ -123,14 +122,14 @@ async function resendConfession(
             switch (discordErrorCode) {
                 case DiscordErrorCode.UnknownChannel:
                     if (await resetLogChannel(db, confessionChannelId))
-                        child.error('log channel reset due to unknown channel');
-                    else child.warn('log channel previously reset due to unknown channel');
+                        logger.error('log channel reset due to unknown channel');
+                    else logger.warn('log channel previously reset due to unknown channel');
                     return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession because the log channel had been deleted.`;
                 case DiscordErrorCode.MissingAccess:
-                    child.warn('insufficient channel permissions for the log channel');
+                    logger.warn('insufficient channel permissions for the log channel');
                     return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession due to insufficient log channel permissions.`;
                 default:
-                    child.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
+                    logger.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
                     return `${label} #${confessionId} has been resent, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. You can retry this command later to ensure that it's properly logged.`;
             }
 

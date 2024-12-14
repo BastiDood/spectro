@@ -85,8 +85,7 @@ async function submitReply(
     const { logChannelId, guildId, disabledAt, label, color, isApprovalRequired } = channel;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-    const child = logger.child({ channel });
-    child.info('channel for reply submission found');
+    logger.info({ channel }, 'channel for reply submission found');
 
     if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelReplySubmitError(disabledAt);
     if (logChannelId === null) throw new MissingLogChannelReplySubmitError();
@@ -103,12 +102,12 @@ async function submitReply(
             parentMessageId,
         );
 
-        child.info({ internalId, confessionId }, 'reply pending approval submitted');
+        logger.info({ internalId, confessionId }, 'reply pending approval submitted');
 
         // Promise is ignored so that it runs in the background
-        void doDeferredResponse(child, appId, token, async () => {
+        void doDeferredResponse(logger, appId, token, async () => {
             const discordErrorCode = await logPendingConfessionViaHttp(
-                child,
+                logger,
                 timestamp,
                 logChannelId,
                 internalId,
@@ -122,22 +121,22 @@ async function submitReply(
                 switch (discordErrorCode) {
                     case DiscordErrorCode.UnknownChannel:
                         if (await resetLogChannel(db, confessionChannelId))
-                            child.error('log channel reset due to unknown channel');
-                        else child.warn('log channel previously reset due to unknown channel');
+                            logger.error('log channel reset due to unknown channel');
+                        else logger.warn('log channel previously reset due to unknown channel');
                         return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro has detected that the log channel had been deleted.`;
                     case DiscordErrorCode.MissingAccess:
-                        child.warn('insufficient channel permissions for the log channel');
+                        logger.warn('insufficient channel permissions for the log channel');
                         return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro couldn't log the confession due to insufficient log channel permissions.`;
                     default:
-                        child.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
+                        logger.fatal({ discordErrorCode }, 'unexpected error code when logging resent confession');
                         return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the developers and the moderators that Spectro couldn't log the reply due to an unexpected error (${discordErrorCode}) from Discord.`;
                 }
 
-            child.info('reply pending approval has been logged');
+            logger.info('reply pending approval has been logged');
             return `${label} #${confessionId} has been submitted, but its publication is pending approval.`;
         });
 
-        child.info('reply pending approval has been logged');
+        logger.info('reply pending approval has been logged');
         return `Submitting ${label} #${confessionId}...`;
     }
 
@@ -152,12 +151,12 @@ async function submitReply(
         parentMessageId,
     );
 
-    child.info({ internalId, confessionId }, 'reply submitted');
+    logger.info({ internalId, confessionId }, 'reply submitted');
 
     // Promise is ignored so that it runs in the background
-    void doDeferredResponse(child, appId, token, async () => {
+    void doDeferredResponse(logger, appId, token, async () => {
         const message = await dispatchConfessionViaHttp(
-            child,
+            logger,
             timestamp,
             confessionChannelId,
             confessionId,
@@ -176,7 +175,7 @@ async function submitReply(
             }
 
         const discordErrorCode = await logApprovedConfessionViaHttp(
-            child,
+            logger,
             timestamp,
             logChannelId,
             confessionId,
@@ -189,14 +188,14 @@ async function submitReply(
             switch (discordErrorCode) {
                 case DiscordErrorCode.UnknownChannel:
                     if (await resetLogChannel(db, logChannelId))
-                        child.error('log channel reset due to unknown channel');
-                    else child.warn('log channel previously reset due to unknown channel');
+                        logger.error('log channel reset due to unknown channel');
+                    else logger.warn('log channel previously reset due to unknown channel');
                     return `${label} #${confessionId} has been published, but Spectro couldn't log the reply because the log channel had been deleted. Kindly notify the moderators about the configuration issue.`;
                 case DiscordErrorCode.MissingAccess:
-                    child.warn('insufficient channel permissions to confession log channel');
+                    logger.warn('insufficient channel permissions to confession log channel');
                     return `${label} #${confessionId} has been published, but Spectro couldn't log the reply due to insufficient channel permissions. Kindly notify the moderators about the configuration issue.`;
                 default:
-                    child.fatal({ discordErrorCode }, 'unexpected error code when logging replies');
+                    logger.fatal({ discordErrorCode }, 'unexpected error code when logging replies');
                     return `${label} #${confessionId} has been published, but Spectro couldn't log the reply due to an unexpected error (${discordErrorCode}) from Discord. Kindly notify the developers and the moderators about this issue.`;
             }
 

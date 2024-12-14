@@ -102,8 +102,7 @@ async function submitVerdict(
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-        const child = logger.child({ details });
-        child.info('fetched confession details for approval');
+        logger.info({ details }, 'fetched confession details for approval');
 
         if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelConfessError(disabledAt);
 
@@ -117,7 +116,7 @@ async function submitVerdict(
             strictEqual(rowCount, 1);
 
             const discordErrorCode = await dispatchConfessionViaHttp(
-                child,
+                logger,
                 createdAt,
                 confessionChannelId,
                 confessionId,
@@ -130,13 +129,13 @@ async function submitVerdict(
             if (typeof discordErrorCode === 'number')
                 switch (discordErrorCode) {
                     case DiscordErrorCode.UnknownChannel:
-                        child.error('confession channel no longer exists');
+                        logger.error('confession channel no longer exists');
                         return `${label} #${confessionId} has been approved internally, but the confession channel no longer exists.`;
                     case DiscordErrorCode.MissingAccess:
-                        child.warn('insufficient channel permissions for the confession channel');
+                        logger.warn('insufficient channel permissions for the confession channel');
                         return `${label} #${confessionId} has been approved internally, but Spectro does not have the permission to send messages to the confession channel. The confession can be resent once this has been resolved.`;
                     default:
-                        child.fatal(
+                        logger.fatal(
                             { discordErrorCode },
                             'unexpected error code when publishing to the confession channel',
                         );
@@ -169,7 +168,7 @@ async function submitVerdict(
         }
 
         await tx.delete(confession).where(eq(confession.internalId, internalId));
-        child.warn('deleted confession due to rejection');
+        logger.warn('deleted confession due to rejection');
         return {
             type: EmbedType.Rich,
             title: `${label} #${confessionId}`,
