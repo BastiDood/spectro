@@ -3,9 +3,9 @@
 </script>
 
 {#snippet commandOption(option: string, required: boolean, desc: string)}
-    <div class="badge {required ? 'badge-secondary' : 'badge-neutral'} tooltip tooltip-accent" data-tip={desc}>
+    <span class="badge {required ? 'badge-secondary' : 'badge-neutral'} tooltip tooltip-accent" data-tip={desc}>
         {option}
-    </div>
+    </span>
 {/snippet}
 
 {#snippet permissionBadge(perms: string)}
@@ -29,7 +29,7 @@
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-            /help
+            <span>/help</span>
             {@render commandOption('preview', false, 'Message visibility: public (optional)')}
         </div>
     </div>
@@ -43,7 +43,7 @@
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-            /info
+            <span>/info</span>
             {@render commandOption('preview', false, 'Message visibility: public (optional)')}
         </div>
     </div>
@@ -56,7 +56,7 @@
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-            /confess
+            <span>/confess</span>
             {@render commandOption('content', true, 'Content of the confession message')}
         </div>
         {@render permissionBadge('Send Messages')}
@@ -70,7 +70,7 @@
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-            Apps &gt; Reply Anonymously
+            <span>Apps &gt; Reply Anonymously</span>
         </div>
         {@render permissionBadge('Send Messages')}
     </div>
@@ -86,7 +86,7 @@
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-            /setup
+            <span>/setup</span>
             {@render commandOption('channel', true, 'Moderator-only channel for confession logs')}
             {@render commandOption('label', false, 'Custom title for confession messages (optional)')}
             {@render commandOption('color', false, 'Custom hex color for confession messages (optional)')}
@@ -114,7 +114,7 @@
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-            /lockdown
+            <span>/lockdown</span>
         </div>
         {@render permissionBadge('Manage Channels')}
     </div>
@@ -127,7 +127,7 @@
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-            /resend
+            <span>/resend</span>
             {@render commandOption('id', true, 'ID of confession to resend')}
         </div>
         {@render permissionBadge('Manage Messages')}
