@@ -1,10 +1,20 @@
-<script>
+<script lang="ts">
     import Icon from '@iconify/svelte';
 </script>
 
-<div class="prose max-w-full p-10">
-    <h1 class="border-b border-neutral pb-6 font-medium">Documentation</h1>
-    <div class="alert alert-warning text-warning-content">
+{#snippet commandOption(option: string, required: boolean, desc: string)}
+    <span class="badge {required ? 'badge-secondary' : 'badge-neutral'} tooltip tooltip-accent" data-tip={desc}>
+        {option}
+    </span>
+{/snippet}
+
+{#snippet permissionBadge(perms: string)}
+    <div class="badge badge-info badge-outline place-self-center">Required permissions: {perms}</div>
+{/snippet}
+
+<div class="prose max-w-full p-10 prose-headings:scroll-mt-10 prose-h2:border-b prose-h2:border-neutral prose-h2:pb-3">
+    <h1 class="font-medium">Documentation</h1>
+    <div class="alert alert-warning gap-2 text-sm text-warning-content">
         <Icon icon="tabler:barrier-block-filled" height="24" />
         This page is a work in progress.
     </div>
@@ -12,44 +22,118 @@
         <strong>Spectro</strong> enables your community members to post anonymous confessions and replies to moderator-configured
         channels. However, for the sake of moderation, confessions are still logged for later viewing.
     </p>
-    <h2 class="border-b border-neutral pb-2">Commands</h2>
-    <code class="text-lg">/help [preview]</code>
-    <p>
-        <strong>Open the help page.</strong> By default, the help page is shown privately, but you can enable the
+
+    <h2 id="basic-usage">Basic Usage</h2>
+
+    <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            <span>/help</span>
+            {@render commandOption('preview', false, 'Message visibility: public (optional)')}
+        </div>
+    </div>
+    <p class="mb-10">
+        <strong>Open the help page to show a list of commands.</strong> By default, the help page is shown privately,
+        but you can enable the
         <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
-    <code class="text-lg">/confess &lt;content&gt;</code>
-    <p>
-        <strong>Send a confession to a channel.</strong> This command fails if the current channel has not yet been configured
-        to receive confessions.
-    </p>
-    <code class="text-lg">Apps &gt; Reply Anonymously</code>
-    <p>
-        You may <strong>anonymously reply</strong> to any message (in a confessions-enabled channel) by right-clicking
-        on that message and invoking the <code>Apps &gt; Reply Anonymously command.</code>
-    </p>
-    <code class="text-lg">/setup &lt;channel&gt; [label] [color] [approval]</code>
-    <div class="alert alert-info text-info-content">Moderators and above only.</div>
-    <p>
-        <strong
-            >Enables confessions for the current channel. All confession logs will be sent to the provided <code
-                >channel</code
-            >.</strong
+
+    <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
-        Optionally, you may set a <code>label</code> to be used for the embed title (e.g., "Confession" by default). You
-        may also set the RGB <code>color </code> hex code that will be used for the embeds. Finally, you may set whether
-        to require prior <code>approval</code> before publishing a confession to a channel (e.g., no approval required by
-        default). Running this command again will simply overwrite the affected previous settings.
+            <span>/info</span>
+            {@render commandOption('preview', false, 'Message visibility: public (optional)')}
+        </div>
+    </div>
+    <p class="mb-10">
+        <strong>View important information and links about Spectro,</strong> including links for reporting bugs and
+        viewing the source code. By default, the information page is shown privately, but you can enable the
+        <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
-    <code class="text-lg">/lockdown</code>
-    <div class="alert alert-info text-info-content">Moderators and above only.</div>
-    <p>
-        <strong>Temporarily disables anonymous confessions for the channel.</strong> Previous settings are preserved for
-        the next time <code>/setup</code> is run.
+    <div id="confess" class="flex scroll-mt-10 flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            <span>/confess</span>
+            {@render commandOption('content', true, 'Content of the confession message')}
+        </div>
+        {@render permissionBadge('Send Messages')}
+    </div>
+    <p class="mb-10">
+        <strong>Send a confession to the current channel.</strong> This command fails if the current channel has not yet
+        been configured to receive confessions.
     </p>
-    <code class="text-lg">/resend &lt;id&gt;</code>
+
+    <div id="reply" class="flex scroll-mt-10 flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            <span>Apps &gt; Reply Anonymously</span>
+        </div>
+        {@render permissionBadge('Send Messages')}
+    </div>
+    <p class="mb-10">
+        <strong>Anonymously reply</strong> to any message (in a confessions-enabled channel) by
+        <strong>right-clicking</strong>
+        on that message and invoking the <code class="whitespace-nowrap">Apps &gt; Reply Anonymously</code> command.
+    </p>
+
+    <h2 id="moderation">Moderation</h2>
+    <h3 id="channel-setup" class="scroll-mt-10">Channel Setup</h3>
+    <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            <span>/setup</span>
+            {@render commandOption('channel', true, 'Moderator-only channel for confession logs')}
+            {@render commandOption('label', false, 'Custom title for confession messages (optional)')}
+            {@render commandOption('color', false, 'Custom hex color for confession messages (optional)')}
+            {@render commandOption('approval', false, 'Require approvals: true or false (default)')}
+        </div>
+        {@render permissionBadge('Manage Channels')}
+    </div>
     <p>
-        <strong>Resends an existing confession by its <code>id</code>.</strong> This is useful for times when a confession
+        <strong>Enable confessions for the current channel where the command is being run.</strong> All confessions,
+        along with the sender's username, will be logged in a separate provided
+        <code>channel</code> ideally only accessed by server moderators. You may set whether to require moderator
+        <code>approval</code>
+        before publishing a confession (not required by default). If enabled, confessions can be approved or rejected in
+        the logs
+        <code>channel</code>. Running this command again will simply overwrite the affected previous settings.
+    </p>
+    <p class="mb-10">
+        <strong>Customization.</strong>
+        Optionally, you can set a <code>label</code> to be used for the embed title (e.g., "Confession" by default). You
+        may also set the RGB <code>color </code> hex code that will be used for the embeds.
+    </p>
+
+    <h3 id="manage-confessions" class="scroll-mt-10">Manage Confessions</h3>
+    <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            <span>/lockdown</span>
+        </div>
+        {@render permissionBadge('Manage Channels')}
+    </div>
+
+    <p class="mb-10">
+        <strong>Temporarily disable anonymous confessions for the current channel.</strong> Previous settings are
+        preserved for the next time <code>/setup</code> is run.
+    </p>
+    <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div
+            class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+        >
+            <span>/resend</span>
+            {@render commandOption('id', true, 'ID of confession to resend')}
+        </div>
+        {@render permissionBadge('Manage Messages')}
+    </div>
+    <p class="mb-10">
+        <strong>Resend an existing confession by its <code>id</code>.</strong> This is useful for times when a confession
         message has been accidentally deleted. Note that the current channel settings are still enforced.
     </p>
 </div>

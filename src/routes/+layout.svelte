@@ -15,19 +15,22 @@
     <meta property="og:image" content="https://spectro.fly.dev{banner}" />
 </svelte:head>
 
-<header class="sticky top-0 bg-base-100 p-1 pl-4 pr-10 shadow-sm">
-    <nav class="navbar">
-        <div class="navbar-start">
-            <a href="/">
-                <img src={LogoMark} alt="Spectro logo" class="w-12" />
-            </a>
-        </div>
-        <div class="navbar-end">
-            <a href="https://github.com/BastiDood/spectro">
-                <Icon icon={GitHub} width="32" />
-            </a>
-        </div>
-    </nav>
-</header>
-
-{@render children()}
+<div class="flex h-screen flex-col">
+    <header class="sticky top-0 z-10">
+        <nav class="navbar h-20 bg-base-200 p-4 shadow-sm lg:pr-10">
+            <div class="navbar-start">
+                <a href="/">
+                    <img src={LogoMark} alt="Spectro logo" class="w-12" />
+                </a>
+            </div>
+            <div class="navbar-end">
+                <a rel="external" href="https://github.com/BastiDood/spectro">
+                    <Icon icon={GitHub} width="32" />
+                </a>
+            </div>
+        </nav>
+    </header>
+    <main class="flex min-h-0 grow justify-center">
+        {@render children()}
+    </main>
+</div>
