@@ -5,8 +5,8 @@ import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
 import { DeserializedInteraction } from '$lib/server/models/discord/interaction';
 import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
-import type { InteractionCallback } from '$lib/server/models/discord/interaction-callback';
-import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { InteractionType } from '$lib/server/models/discord/interaction/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
@@ -36,11 +36,11 @@ async function handleInteraction(
     logger: Logger, // TODO: Fine-grained database-level performance logs.
     timestamp: Date,
     interaction: DeserializedInteraction,
-): Promise<InteractionCallback> {
+): Promise<InteractionResponse> {
     // eslint-disable-next-line default-case
     switch (interaction.type) {
         case InteractionType.Ping:
-            return { type: InteractionCallbackType.Pong };
+            return { type: InteractionResponseType.Pong };
         case InteractionType.ApplicationCommand:
             switch (interaction.data.type) {
                 case InteractionApplicationCommandType.ChatInput:
@@ -62,12 +62,12 @@ async function handleInteraction(
                                 interaction.data.options,
                             );
                             return {
-                                type: InteractionCallbackType.DeferredChannelMessageWithSource,
+                                type: InteractionResponseType.DeferredChannelMessageWithSource,
                                 data: { flags: MessageFlags.Ephemeral },
                             };
                         case 'help':
                             return {
-                                type: InteractionCallbackType.ChannelMessageWithSource,
+                                type: InteractionResponseType.ChannelMessageWithSource,
                                 data: handleHelp(logger, interaction.data.options ?? []),
                             };
                         case 'setup':
@@ -77,7 +77,7 @@ async function handleInteraction(
                             assert(typeof interaction.member?.permissions !== 'undefined');
                             assert(hasAllPermissions(interaction.member.permissions, MANAGE_CHANNELS));
                             return {
-                                type: InteractionCallbackType.ChannelMessageWithSource,
+                                type: InteractionResponseType.ChannelMessageWithSource,
                                 data: {
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleSetup(
@@ -95,7 +95,7 @@ async function handleInteraction(
                             assert(typeof interaction.member?.permissions !== 'undefined');
                             assert(hasAllPermissions(interaction.member.permissions, MANAGE_CHANNELS));
                             return {
-                                type: InteractionCallbackType.ChannelMessageWithSource,
+                                type: InteractionResponseType.ChannelMessageWithSource,
                                 data: {
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleLockdown(db, logger, timestamp, interaction.channel_id),
@@ -117,12 +117,12 @@ async function handleInteraction(
                                 interaction.data.options,
                             );
                             return {
-                                type: InteractionCallbackType.DeferredChannelMessageWithSource,
+                                type: InteractionResponseType.DeferredChannelMessageWithSource,
                                 data: { flags: MessageFlags.Ephemeral },
                             };
                         case 'info':
                             return {
-                                type: InteractionCallbackType.ChannelMessageWithSource,
+                                type: InteractionResponseType.ChannelMessageWithSource,
                                 data: handleInfo(logger, interaction.data.options ?? []),
                             };
                         default:
@@ -185,7 +185,7 @@ async function handleInteraction(
                         interaction.data.components,
                     );
                     return {
-                        type: InteractionCallbackType.DeferredChannelMessageWithSource,
+                        type: InteractionResponseType.DeferredChannelMessageWithSource,
                         data: { flags: MessageFlags.Ephemeral },
                     };
                 default:

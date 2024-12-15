@@ -16,11 +16,11 @@ import { channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
 import { Embed, EmbedType } from '$lib/server/models/discord/embed';
-import type { InteractionCallback } from '$lib/server/models/discord/interaction-callback';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 
 abstract class ApprovalError extends Error {
     constructor(message?: string) {
@@ -202,7 +202,7 @@ export async function handleApproval(
     customId: string,
     userId: Snowflake,
     permissions: bigint,
-): Promise<InteractionCallback> {
+): Promise<InteractionResponse> {
     const [key, id, ...rest] = customId.split(':');
     strictEqual(rest.length, 0);
     assert(typeof id !== 'undefined');
@@ -226,15 +226,15 @@ export async function handleApproval(
         const payload = await submitVerdict(db, logger, timestamp, isApproved, internalId, userId, permissions);
         return typeof payload === 'string'
             ? {
-                  type: InteractionCallbackType.ChannelMessageWithSource,
+                  type: InteractionResponseType.ChannelMessageWithSource,
                   data: { flags: MessageFlags.Ephemeral, content: payload },
               }
-            : { type: InteractionCallbackType.UpdateMessage, data: { components: [], embeds: [payload] } };
+            : { type: InteractionResponseType.UpdateMessage, data: { components: [], embeds: [payload] } };
     } catch (err) {
         if (err instanceof ApprovalError) {
             logger.error(err, err.message);
             return {
-                type: InteractionCallbackType.ChannelMessageWithSource,
+                type: InteractionResponseType.ChannelMessageWithSource,
                 data: { flags: MessageFlags.Ephemeral, content: err.message },
             };
         }

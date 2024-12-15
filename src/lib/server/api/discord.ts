@@ -5,6 +5,7 @@ import type { Logger } from 'pino';
 
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { EmbedType } from '$lib/server/models/discord/embed';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';

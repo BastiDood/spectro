@@ -1,6 +1,6 @@
-import type { InteractionCallbackMessage } from '$lib/server/models/discord/interaction-callback/message';
-import type { InteractionCallbackModal } from '$lib/server/models/discord/interaction-callback/modal';
-import { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
+import type { InteractionResponseMessage } from '$lib/server/models/discord/interaction-response/message';
+import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentTextInputStyle } from '$lib/server/models/discord/message/component/text-input';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
@@ -67,7 +67,7 @@ async function renderReplyModal(
 
     logger.info('reply modal prompted');
     return {
-        type: InteractionCallbackType.Modal,
+        type: InteractionResponseType.Modal,
         data: {
             custom_id: 'reply',
             title: 'Reply to a Message',
@@ -87,7 +87,7 @@ async function renderReplyModal(
                 },
             ],
         },
-    } satisfies InteractionCallbackModal;
+    } satisfies InteractionResponseModal;
 }
 
 export async function handleReplyModal(
@@ -103,9 +103,9 @@ export async function handleReplyModal(
         if (err instanceof ReplyModalError) {
             logger.error(err, err.message);
             return {
-                type: InteractionCallbackType.ChannelMessageWithSource,
+                type: InteractionResponseType.ChannelMessageWithSource,
                 data: { flags: MessageFlags.Ephemeral, content: err.message },
-            } satisfies InteractionCallbackMessage;
+            } satisfies InteractionResponseMessage;
         }
         throw err;
     }

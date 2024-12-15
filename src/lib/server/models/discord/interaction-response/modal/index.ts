@@ -1,8 +1,8 @@
-import type { InteractionCallbackType } from '$lib/server/models/discord/interaction-callback/base';
+import type { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import type { MessageComponentActionRow } from '$lib/server/models/discord/message/component/action-row';
 
-export interface InteractionCallbackModal {
-    type: InteractionCallbackType.Modal;
+export interface InteractionResponseModal {
+    type: InteractionResponseType.Modal;
     data: {
         custom_id: string;
         title: string;

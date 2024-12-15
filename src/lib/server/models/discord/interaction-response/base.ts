@@ -1,4 +1,4 @@
-export const enum InteractionCallbackType {
+export const enum InteractionResponseType {
     /** Acknowledge a ping interaction. */
     Pong = 1,
     /** Respond to an interaction with a message. */
