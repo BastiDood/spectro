@@ -36,7 +36,6 @@ export default tsEslint.config(
             'no-unreachable-loop': 'error',
             'no-unused-private-class-members': 'error',
             'no-unused-vars': 'off',
-            'no-use-before-define': 'error',
             'require-atomic-updates': 'error',
             'block-scoped-var': 'error',
             'class-methods-use-this': 'error',
