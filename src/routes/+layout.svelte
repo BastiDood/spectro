@@ -1,5 +1,7 @@
 <script>
     import './app.css';
+    import { ORIGIN } from '$lib/server/env/svelte';
+
     import banner from '$lib/brand/link-preview.png?url';
     import favicon from '$lib/brand/favicon.ico?url';
 
@@ -14,7 +16,7 @@
 
 <svelte:head>
     <link rel="icon" href={favicon} />
-    <meta property="og:image" content="https://spectro.fly.dev{banner}" />
+    <meta property="og:image" content="{ORIGIN.origin}{banner}" />
 </svelte:head>
 
 <div class="flex h-screen flex-col">

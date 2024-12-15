@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://spectro.fly.dev/sitemap.xml
