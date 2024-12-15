@@ -54,7 +54,6 @@ async function resendConfession(
     logger: Logger,
     timestamp: Date,
     appId: Snowflake,
-    interactionId: Snowflake,
     interactionToken: string,
     confessionChannelId: Snowflake,
     confessionId: bigint,
@@ -89,7 +88,7 @@ async function resendConfession(
     logger.info('confession resend has been submitted');
 
     // Promise is ignored so that it runs in the background
-    void doDeferredResponse(logger, appId, interactionId, interactionToken, async () => {
+    void doDeferredResponse(logger, appId, interactionToken, async () => {
         const message = await dispatchConfessionViaHttp(
             logger,
             createdAt,
@@ -146,7 +145,6 @@ export async function handleResend(
     logger: Logger,
     timestamp: Date,
     appId: Snowflake,
-    interactionId: Snowflake,
     interactionToken: string,
     channelId: Snowflake,
     moderatorId: Snowflake,
@@ -158,17 +156,7 @@ export async function handleResend(
 
     const confessionId = BigInt(option.value);
     try {
-        await resendConfession(
-            db,
-            logger,
-            timestamp,
-            appId,
-            interactionId,
-            interactionToken,
-            channelId,
-            confessionId,
-            moderatorId,
-        );
+        await resendConfession(db, logger, timestamp, appId, interactionToken, channelId, confessionId, moderatorId);
     } catch (err) {
         if (err instanceof ResendError) {
             logger.error(err, err.message);

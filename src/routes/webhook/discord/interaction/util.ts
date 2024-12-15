@@ -6,26 +6,19 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { deferResponse, editOriginalInteractionResponse } from '$lib/server/api/discord';
+import { editOriginalInteractionResponse } from '$lib/server/api/discord';
 import { UnexpectedDiscordErrorCode } from './errors';
 
 export async function doDeferredResponse(
     logger: Logger,
     appId: Snowflake,
-    interactionId: Snowflake,
     interactionToken: string,
     callback: () => Promise<string>,
 ) {
     const start = performance.now();
-    {
-        const result = await deferResponse(logger, interactionId, interactionToken);
-        if (typeof result === 'number') throw new UnexpectedDiscordErrorCode(result);
-    }
-    {
-        const content = await callback();
-        const result = await editOriginalInteractionResponse(logger, appId, interactionToken, { content });
-        if (typeof result === 'number') throw new UnexpectedDiscordErrorCode(result);
-    }
+    const content = await callback();
+    const result = await editOriginalInteractionResponse(logger, appId, interactionToken, { content });
+    if (typeof result === 'number') throw new UnexpectedDiscordErrorCode(result);
     const deferredResponseTimeMillis = performance.now() - start;
     logger.info({ deferredResponseTimeMillis }, 'deferred response complete');
 }

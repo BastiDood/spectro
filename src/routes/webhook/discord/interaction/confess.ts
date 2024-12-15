@@ -56,7 +56,6 @@ async function submitConfession(
     logger: Logger,
     timestamp: Date,
     appId: Snowflake,
-    interactionId: Snowflake,
     interactionToken: string,
     confessionChannelId: Snowflake,
     authorId: Snowflake,
@@ -100,7 +99,7 @@ async function submitConfession(
         logger.info({ internalId, confessionId }, 'confession pending approval submitted');
 
         // Promise is ignored so that it runs in the background
-        void doDeferredResponse(logger, appId, interactionId, interactionToken, async () => {
+        void doDeferredResponse(logger, appId, interactionToken, async () => {
             const discordErrorCode = await logPendingConfessionViaHttp(
                 logger,
                 timestamp,
@@ -149,7 +148,7 @@ async function submitConfession(
     logger.info({ internalId, confessionId }, 'confession submitted');
 
     // Promise is ignored so that it runs in the background
-    void doDeferredResponse(logger, appId, interactionId, interactionToken, async () => {
+    void doDeferredResponse(logger, appId, interactionToken, async () => {
         const message = await dispatchConfessionViaHttp(
             logger,
             timestamp,
@@ -204,7 +203,6 @@ export async function handleConfess(
     logger: Logger,
     timestamp: Date,
     appId: Snowflake,
-    interactionId: Snowflake,
     interactionToken: string,
     channelId: Snowflake,
     authorId: Snowflake,
@@ -214,17 +212,7 @@ export async function handleConfess(
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        await submitConfession(
-            db,
-            logger,
-            timestamp,
-            appId,
-            interactionId,
-            interactionToken,
-            channelId,
-            authorId,
-            option.value,
-        );
+        await submitConfession(db, logger, timestamp, appId, interactionToken, channelId, authorId, option.value);
     } catch (err) {
         if (err instanceof ConfessError) {
             logger.error(err, err.message);
