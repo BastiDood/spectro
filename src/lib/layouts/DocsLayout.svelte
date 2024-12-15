@@ -22,7 +22,7 @@
 >
     <Icon icon={RoundMenu} height="24" />
 </button>
-<div class="grid grid-cols-[auto_1fr]">
+<div class="grid w-full grid-cols-[auto_1fr]">
     <div
         role="none"
         onclick={hideSidebar}
@@ -39,7 +39,9 @@
             {@render navigation(hideSidebar)}
         </ul>
     </div>
-    <div class="overflow-y-auto">
+    <div
+        class="prose max-w-full overflow-y-auto p-10 prose-headings:scroll-mt-10 prose-h2:border-b prose-h2:border-neutral prose-h2:pb-3"
+    >
         {@render content()}
     </div>
 </div>

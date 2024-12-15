@@ -4,19 +4,19 @@
 </script>
 
 <DocsLayout content={children}>
-    {#snippet navigation(hideSidebar)}
+    {#snippet navigation(onclick)}
         <li>
-            <a href="#basic-usage" onclick={hideSidebar}>Basic Usage</a>
+            <a {onclick} href="#basic-usage">Basic Usage</a>
             <ul>
-                <li><a href="#confess" onclick={hideSidebar}>Confessions</a></li>
-                <li><a href="#reply" onclick={hideSidebar}>Anonymous Replies</a></li>
+                <li><a {onclick} href="#confess">Confessions</a></li>
+                <li><a {onclick} href="#reply">Anonymous Replies</a></li>
             </ul>
         </li>
         <li>
-            <a href="#moderation" onclick={hideSidebar}>Moderation</a>
+            <a {onclick} href="#moderation">Moderation</a>
             <ul>
-                <li><a href="#channel-setup" onclick={hideSidebar}>Channel Setup</a></li>
-                <li><a href="#manage-confessions" onclick={hideSidebar}>Manage Confessions</a></li>
+                <li><a {onclick} href="#channel-setup">Channel Setup</a></li>
+                <li><a {onclick} href="#manage-confessions">Manage Confessions</a></li>
             </ul>
         </li>
     {/snippet}
