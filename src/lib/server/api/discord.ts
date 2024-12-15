@@ -6,6 +6,7 @@ import type { Logger } from 'pino';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { EmbedType } from '$lib/server/models/discord/embed';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
@@ -235,6 +236,53 @@ export async function logResentConfessionViaHttp(
                 },
             ],
         },
+        botToken,
+    );
+}
+
+async function createInteractionResponse(
+    logger: Logger,
+    interactionId: Snowflake,
+    interactionToken: string,
+    data: InteractionResponse,
+    botToken: string,
+) {
+    const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
+
+    const start = performance.now();
+    const response = await fetch(`${DISCORD_API_BASE_URL}/interactions/${interactionId}/${interactionToken}/callback`, {
+        body,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bot ${botToken}`,
+        },
+    });
+    const createInteractionResponseTimeMillis = performance.now() - start;
+    const child = logger.child({ createInteractionResponseTimeMillis });
+
+    if (response.status === 204) {
+        child.info('interaction response created');
+        return null;
+    }
+
+    const json = await response.json();
+    const { code, message } = parse(DiscordError, json);
+    child.error({ statusCode: response.status }, message);
+    return code;
+}
+
+export async function deferResponse(
+    logger: Logger,
+    interactionId: Snowflake,
+    interactionToken: string,
+    botToken = DISCORD_BOT_TOKEN,
+) {
+    return await createInteractionResponse(
+        logger,
+        interactionId,
+        interactionToken,
+        { type: InteractionResponseType.DeferredChannelMessageWithSource, data: { flags: MessageFlags.Ephemeral } },
         botToken,
     );
 }

@@ -58,7 +58,8 @@ async function submitReply(
     logger: Logger,
     timestamp: Date,
     appId: Snowflake,
-    token: string,
+    interactionId: Snowflake,
+    interactionToken: string,
     permissions: bigint,
     confessionChannelId: Snowflake,
     parentMessageId: Snowflake,
@@ -105,7 +106,7 @@ async function submitReply(
         logger.info({ internalId, confessionId }, 'reply pending approval submitted');
 
         // Promise is ignored so that it runs in the background
-        void doDeferredResponse(logger, appId, token, async () => {
+        void doDeferredResponse(logger, appId, interactionId, interactionToken, async () => {
             const discordErrorCode = await logPendingConfessionViaHttp(
                 logger,
                 timestamp,
@@ -154,7 +155,7 @@ async function submitReply(
     logger.info({ internalId, confessionId }, 'reply submitted');
 
     // Promise is ignored so that it runs in the background
-    void doDeferredResponse(logger, appId, token, async () => {
+    void doDeferredResponse(logger, appId, interactionId, interactionToken, async () => {
         const message = await dispatchConfessionViaHttp(
             logger,
             timestamp,
@@ -208,7 +209,8 @@ export async function handleReplySubmit(
     logger: Logger,
     timestamp: Date,
     appId: Snowflake,
-    token: string,
+    interactionId: Snowflake,
+    interactionToken: string,
     channelId: Snowflake,
     authorId: Snowflake,
     permissions: bigint,
@@ -231,7 +233,8 @@ export async function handleReplySubmit(
             logger,
             timestamp,
             appId,
-            token,
+            interactionId,
+            interactionToken,
             permissions,
             channelId,
             parentMessageId,

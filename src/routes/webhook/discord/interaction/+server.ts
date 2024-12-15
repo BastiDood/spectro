@@ -36,7 +36,7 @@ async function handleInteraction(
     logger: Logger, // TODO: Fine-grained database-level performance logs.
     timestamp: Date,
     interaction: DeserializedInteraction,
-): Promise<InteractionResponse> {
+): Promise<InteractionResponse | null> {
     // eslint-disable-next-line default-case
     switch (interaction.type) {
         case InteractionType.Ping:
@@ -56,15 +56,13 @@ async function handleInteraction(
                                 logger,
                                 timestamp,
                                 interaction.application_id,
+                                interaction.id,
                                 interaction.token,
                                 interaction.channel_id,
                                 interaction.member.user.id,
                                 interaction.data.options,
                             );
-                            return {
-                                type: InteractionResponseType.DeferredChannelMessageWithSource,
-                                data: { flags: MessageFlags.Ephemeral },
-                            };
+                            return null;
                         case 'help':
                             return {
                                 type: InteractionResponseType.ChannelMessageWithSource,
@@ -111,15 +109,13 @@ async function handleInteraction(
                                 logger,
                                 timestamp,
                                 interaction.application_id,
+                                interaction.id,
                                 interaction.token,
                                 interaction.channel_id,
                                 interaction.member.user.id,
                                 interaction.data.options,
                             );
-                            return {
-                                type: InteractionResponseType.DeferredChannelMessageWithSource,
-                                data: { flags: MessageFlags.Ephemeral },
-                            };
+                            return null;
                         case 'info':
                             return {
                                 type: InteractionResponseType.ChannelMessageWithSource,
@@ -178,16 +174,14 @@ async function handleInteraction(
                         logger,
                         timestamp,
                         interaction.application_id,
+                        interaction.id,
                         interaction.token,
                         interaction.channel_id,
                         interaction.member.user.id,
                         interaction.member.permissions,
                         interaction.data.components,
                     );
-                    return {
-                        type: InteractionResponseType.DeferredChannelMessageWithSource,
-                        data: { flags: MessageFlags.Ephemeral },
-                    };
+                    return null;
                 default:
                     fail(`unexpected modal submit ${interaction.data.custom_id}`);
                     break;
@@ -224,7 +218,7 @@ export async function POST({ locals: { ctx }, request }) {
         const interactionTimeMillis = performance.now() - start;
         logger.info({ interactionTimeMillis }, 'interaction processed');
 
-        return json(response);
+        return response === null ? new Response(null, { status: 202 }) : json(response);
     }
 
     error(401);
