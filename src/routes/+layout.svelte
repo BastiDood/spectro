@@ -24,11 +24,11 @@
         <nav class="navbar h-20 bg-base-200 p-4 shadow-sm lg:pr-10">
             <div class="navbar-start">
                 <a href="/"><img src={Spectro} alt="Spectro logo" class="w-12" /></a>
-                <ul class="menu menu-horizontal space-x-1">
-                    <li><NavLink href="/guides/">Guides</NavLink></li>
-                    <li><NavLink href="/reference/">Reference</NavLink></li>
-                </ul>
             </div>
+            <ul class="menu navbar-center menu-horizontal space-x-1">
+                <li><NavLink href="/guides/">Guides</NavLink></li>
+                <li><NavLink href="/reference/">Reference</NavLink></li>
+            </ul>
             <div class="navbar-end">
                 <a rel="external" target="_blank" href="https://github.com/BastiDood/spectro"
                     ><Icon icon={GitHub} width="32" /></a
