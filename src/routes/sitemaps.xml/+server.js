@@ -1,4 +1,4 @@
-import { ORIGIN } from '$lib/server/env/svelte';
+import { ORIGIN } from '$lib/env';
 
 export const prerender = true;
 

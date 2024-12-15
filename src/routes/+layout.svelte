@@ -1,6 +1,6 @@
 <script>
     import './app.css';
-    import { ORIGIN } from '$lib/server/env/svelte';
+    import { ORIGIN } from '$lib/env';
 
     import banner from '$lib/brand/link-preview.png?url';
     import favicon from '$lib/brand/favicon.ico?url';
