@@ -1,6 +1,5 @@
 <script lang="ts">
     import CommandOption from './CommandOption.svelte';
-    import Icon from '@iconify/svelte';
 </script>
 
 {#snippet permissionBadge(perms: string)}
@@ -9,10 +8,6 @@
 
 <section>
     <h1 class="font-medium">Documentation</h1>
-    <div class="alert alert-warning gap-2 text-sm text-warning-content">
-        <Icon icon="tabler:barrier-block-filled" height="24" />
-        This page is a work in progress.
-    </div>
     <p>
         <strong>Spectro</strong> enables your community members to post anonymous confessions and replies to moderator-configured
         channels. However, for the sake of moderation, confessions are still logged for later viewing.
@@ -21,7 +16,7 @@
 <section>
     <h2 id="basic-usage">Basic Usage</h2>
     <section>
-        <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div id="help" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
                 class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
             >
@@ -36,7 +31,7 @@
         </p>
     </section>
     <section>
-        <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div id="info" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
                 class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
             >
@@ -85,7 +80,7 @@
     <h2 id="moderation">Moderation</h2>
     <section>
         <h3 id="channel-setup" class="scroll-mt-10">Channel Setup</h3>
-        <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div id="setup" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
                 class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
             >
@@ -114,7 +109,7 @@
     </section>
     <section>
         <h3 id="manage-confessions" class="scroll-mt-10">Manage Confessions</h3>
-        <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div id="lockdown" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
                 class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
             >
@@ -126,7 +121,7 @@
             <strong>Temporarily disable anonymous confessions for the current channel.</strong> Previous settings are
             preserved for the next time <code>/setup</code> is run.
         </p>
-        <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
+        <div id="resend" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
                 class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
             >

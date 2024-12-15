@@ -17,8 +17,8 @@
         <div class="tooltip tooltip-primary" data-tip="Coming soon!">
             <button class="btn btn-primary rounded-full md:px-8 md:text-lg" disabled>Add to Discord</button>
         </div>
-        <a href="/guides/">
-            <button class="btn btn-secondary rounded-full md:px-8 md:text-lg">Read the Guides</button>
+        <a href="/guide/">
+            <button class="btn btn-secondary rounded-full md:px-8 md:text-lg">Read the Guide</button>
         </a>
     </div>
 </div>

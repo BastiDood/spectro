@@ -3,7 +3,7 @@ import { ORIGIN } from '$lib/env';
 export const prerender = true;
 
 export function GET() {
-    const urls = ['', 'guides/', 'reference/']
+    const urls = ['', 'guide/', 'reference/']
         .map(
             path =>
                 `<url><loc>${ORIGIN.origin}/${path}</loc><changefreq>daily</changefreq><priority>0.5</priority></url>`,

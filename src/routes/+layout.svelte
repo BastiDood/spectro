@@ -26,7 +26,7 @@
                 <a href="/"><img src={Spectro} alt="Spectro logo" class="w-12" /></a>
             </div>
             <ul class="menu navbar-center menu-horizontal space-x-1">
-                <li><NavLink href="/guides/">Guides</NavLink></li>
+                <li><NavLink href="/guide/">Guide</NavLink></li>
                 <li><NavLink href="/reference/">Reference</NavLink></li>
             </ul>
             <div class="navbar-end">
