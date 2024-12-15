@@ -287,7 +287,7 @@ export async function deferResponse(
     );
 }
 
-export async function editOriginalInteractionResponse(
+export async function createFollowupMessage(
     logger: Logger,
     appId: Snowflake,
     token: string,
@@ -297,21 +297,21 @@ export async function editOriginalInteractionResponse(
     const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
 
     const start = performance.now();
-    const response = await fetch(`${DISCORD_API_BASE_URL}/webhooks/${appId}/${token}/messages/@original`, {
+    const response = await fetch(`${DISCORD_API_BASE_URL}/webhooks/${appId}/${token}`, {
         body,
-        method: 'PATCH',
+        method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bot ${botToken}`,
         },
     });
     const json = await response.json();
-    const editOriginalInteractionTimeMillis = performance.now() - start;
-    const child = logger.child({ editOriginalInteractionTimeMillis });
+    const createFollowupMessageTimeMillis = performance.now() - start;
+    const child = logger.child({ createFollowupMessageTimeMillis });
 
     if (response.status === 200) {
         const parsed = parse(Message, json);
-        child.info({ editOriginalInteractionResponse: parsed });
+        child.info({ createFollowupMessage: parsed });
         return parsed;
     }
 
