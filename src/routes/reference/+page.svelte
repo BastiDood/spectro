@@ -1,12 +1,7 @@
 <script lang="ts">
+    import CommandOption from './CommandOption.svelte';
     import Icon from '@iconify/svelte';
 </script>
-
-{#snippet commandOption(option: string, required: boolean, desc: string)}
-    <span class="badge {required ? 'badge-secondary' : 'badge-neutral'} tooltip tooltip-accent" data-tip={desc}>
-        {option}
-    </span>
-{/snippet}
 
 {#snippet permissionBadge(perms: string)}
     <div class="badge badge-info badge-outline place-self-center">Required permissions: {perms}</div>
@@ -24,13 +19,12 @@
     </p>
 
     <h2 id="basic-usage">Basic Usage</h2>
-
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
             <span>/help</span>
-            {@render commandOption('preview', false, 'Message visibility: public (optional)')}
+            <CommandOption tooltip="Message visibility.">preview</CommandOption>
         </div>
     </div>
     <p class="mb-10">
@@ -38,13 +32,12 @@
         but you can enable the
         <code>public</code> message mode. This command can be run anywhere: server channels, private DMs, etc.
     </p>
-
     <div class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
         <div
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
             <span>/info</span>
-            {@render commandOption('preview', false, 'Message visibility: public (optional)')}
+            <CommandOption tooltip="Message visibility.">public</CommandOption>
         </div>
     </div>
     <p class="mb-10">
@@ -57,7 +50,7 @@
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
             <span>/confess</span>
-            {@render commandOption('content', true, 'Content of the confession message')}
+            <CommandOption required tooltip="Content of the confession message.">content</CommandOption>
         </div>
         {@render permissionBadge('Send Messages')}
     </div>
@@ -87,10 +80,10 @@
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
             <span>/setup</span>
-            {@render commandOption('channel', true, 'Moderator-only channel for confession logs')}
-            {@render commandOption('label', false, 'Custom title for confession messages (optional)')}
-            {@render commandOption('color', false, 'Custom hex color for confession messages (optional)')}
-            {@render commandOption('approval', false, 'Require approvals: true or false (default)')}
+            <CommandOption required tooltip="Moderator-only channel for confession logs">channel</CommandOption>
+            <CommandOption tooltip="Custom title for confession messages.">label</CommandOption>
+            <CommandOption tooltip="Custom hex color for confession messages.">color</CommandOption>
+            <CommandOption tooltip="Should prior approvals be required?">approval</CommandOption>
         </div>
         {@render permissionBadge('Manage Channels')}
     </div>
@@ -128,7 +121,7 @@
             class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
         >
             <span>/resend</span>
-            {@render commandOption('id', true, 'ID of confession to resend')}
+            <CommandOption required tooltip="ID of confession to resend.">confession</CommandOption>
         </div>
         {@render permissionBadge('Manage Messages')}
     </div>
