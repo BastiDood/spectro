@@ -55,8 +55,6 @@ async function submitConfession(
     db: Database,
     logger: Logger,
     timestamp: Date,
-    appId: Snowflake,
-    interactionToken: string,
     confessionChannelId: Snowflake,
     authorId: Snowflake,
     description: string,
@@ -99,7 +97,7 @@ async function submitConfession(
         logger.info({ internalId, confessionId }, 'confession pending approval submitted');
 
         // Promise is ignored so that it runs in the background
-        void doDeferredResponse(logger, appId, interactionToken, async () => {
+        void doDeferredResponse(logger, async () => {
             const discordErrorCode = await logPendingConfessionViaHttp(
                 logger,
                 timestamp,
@@ -148,7 +146,7 @@ async function submitConfession(
     logger.info({ internalId, confessionId }, 'confession submitted');
 
     // Promise is ignored so that it runs in the background
-    void doDeferredResponse(logger, appId, interactionToken, async () => {
+    void doDeferredResponse(logger, async () => {
         const message = await dispatchConfessionViaHttp(
             logger,
             timestamp,
@@ -196,14 +194,14 @@ async function submitConfession(
         logger.info('auto-approved confession has been published');
         return `${label} #${confessionId} has been published.`;
     });
+
+    return `${label} #${confessionId} has been submitted.`;
 }
 
 export async function handleConfess(
     db: Database,
     logger: Logger,
     timestamp: Date,
-    appId: Snowflake,
-    interactionToken: string,
     channelId: Snowflake,
     authorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
@@ -212,7 +210,7 @@ export async function handleConfess(
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
     try {
-        await submitConfession(db, logger, timestamp, appId, interactionToken, channelId, authorId, option.value);
+        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value);
     } catch (err) {
         if (err instanceof ConfessError) {
             logger.error(err, err.message);

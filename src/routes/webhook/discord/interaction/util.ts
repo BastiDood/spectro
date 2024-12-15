@@ -4,28 +4,12 @@ import type { Logger } from 'pino';
 
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { UnexpectedDiscordErrorCode } from './errors';
-import { createFollowupMessage } from '$lib/server/api/discord';
-
-export async function doDeferredResponse(
-    logger: Logger,
-    appId: Snowflake,
-    interactionToken: string,
-    callback: () => Promise<string>,
-) {
+export async function doDeferredResponse(logger: Logger, callback: () => Promise<string>) {
     const start = performance.now();
     const content = await callback();
     const deferredResponseTimeMillis = performance.now() - start;
-    logger.info({ deferredResponseTimeMillis }, 'deferred response complete');
-
-    const result = await createFollowupMessage(logger, appId, interactionToken, {
-        flags: MessageFlags.Ephemeral,
-        content,
-    });
-    if (typeof result === 'number') throw new UnexpectedDiscordErrorCode(result);
+    logger.info({ deferredResponseTimeMillis, content }, 'deferred response complete');
 }
 
 export function parsePublic(arg?: InteractionApplicationCommandChatInputOption) {

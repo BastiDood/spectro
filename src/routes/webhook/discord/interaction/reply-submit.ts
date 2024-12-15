@@ -57,8 +57,6 @@ async function submitReply(
     db: Database,
     logger: Logger,
     timestamp: Date,
-    appId: Snowflake,
-    interactionToken: string,
     permissions: bigint,
     confessionChannelId: Snowflake,
     parentMessageId: Snowflake,
@@ -105,7 +103,7 @@ async function submitReply(
         logger.info({ internalId, confessionId }, 'reply pending approval submitted');
 
         // Promise is ignored so that it runs in the background
-        void doDeferredResponse(logger, appId, interactionToken, async () => {
+        void doDeferredResponse(logger, async () => {
             const discordErrorCode = await logPendingConfessionViaHttp(
                 logger,
                 timestamp,
@@ -154,7 +152,7 @@ async function submitReply(
     logger.info({ internalId, confessionId }, 'reply submitted');
 
     // Promise is ignored so that it runs in the background
-    void doDeferredResponse(logger, appId, interactionToken, async () => {
+    void doDeferredResponse(logger, async () => {
         const message = await dispatchConfessionViaHttp(
             logger,
             timestamp,
@@ -201,14 +199,14 @@ async function submitReply(
 
         return `${label} #${confessionId} has been published.`;
     });
+
+    return `${label} #${confessionId} has been submitted.`;
 }
 
 export async function handleReplySubmit(
     db: Database,
     logger: Logger,
     timestamp: Date,
-    appId: Snowflake,
-    interactionToken: string,
     channelId: Snowflake,
     authorId: Snowflake,
     permissions: bigint,
@@ -226,12 +224,10 @@ export async function handleReplySubmit(
     const parentMessageId = BigInt(component.custom_id);
 
     try {
-        await submitReply(
+        return await submitReply(
             db,
             logger,
             timestamp,
-            appId,
-            interactionToken,
             permissions,
             channelId,
             parentMessageId,

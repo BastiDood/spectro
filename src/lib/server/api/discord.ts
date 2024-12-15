@@ -286,36 +286,3 @@ export async function deferResponse(
         botToken,
     );
 }
-
-export async function createFollowupMessage(
-    logger: Logger,
-    appId: Snowflake,
-    token: string,
-    data: CreateMessage,
-    botToken = DISCORD_BOT_TOKEN,
-) {
-    const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
-
-    const start = performance.now();
-    const response = await fetch(`${DISCORD_API_BASE_URL}/webhooks/${appId}/${token}`, {
-        body,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bot ${botToken}`,
-        },
-    });
-    const json = await response.json();
-    const createFollowupMessageTimeMillis = performance.now() - start;
-    const child = logger.child({ createFollowupMessageTimeMillis });
-
-    if (response.status === 200) {
-        const parsed = parse(Message, json);
-        child.info({ createFollowupMessage: parsed });
-        return parsed;
-    }
-
-    const { code, message } = parse(DiscordError, json);
-    child.error({ statusCode: response.status }, message);
-    return code;
-}
