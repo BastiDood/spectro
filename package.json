@@ -26,6 +26,7 @@
     },
     "dependencies": {
         "@axiomhq/pino": "^1.3.0",
+        "@iconify/icons-ic": "^1.2.13",
         "@iconify/icons-simple-icons": "^1.2.74",
         "@iconify/svelte": "^4.1.0",
         "@noble/ed25519": "^2.1.0",

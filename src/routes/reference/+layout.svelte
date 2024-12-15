@@ -1,5 +1,6 @@
 <script>
     import Icon from '@iconify/svelte';
+    import RoundMenu from '@iconify/icons-ic/round-menu';
 
     let isSidebarHidden = $state(true);
     function hideSidebar() {
@@ -13,7 +14,7 @@
     class="btn btn-accent fixed left-0 z-10 mt-10 rounded-l-sm px-1 md:hidden"
     onclick={() => (isSidebarHidden = !isSidebarHidden)}
 >
-    <Icon icon="ic:round-menu" height="24" />
+    <Icon icon={RoundMenu} height="24" />
 </button>
 
 <div class="grid grid-cols-[auto_1fr]">
