@@ -1,12 +1,10 @@
 FROM node:22.11.0-alpine3.20 AS build
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable pnpm
-WORKDIR /app
-COPY pnpm-lock.yaml .
-RUN pnpm fetch
-COPY package.json .
-RUN pnpm install --offline
+RUN pnpm install
 COPY . .
 ENV PUBLIC_ORIGIN=https://spectro.fly.dev
 RUN pnpm build
