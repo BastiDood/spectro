@@ -8,6 +8,7 @@ RUN pnpm fetch
 COPY package.json .
 RUN pnpm install --offline
 COPY . .
+ENV PUBLIC_ORIGIN=https://spectro.fly.dev
 RUN pnpm build
 RUN pnpm prune --prod
 
