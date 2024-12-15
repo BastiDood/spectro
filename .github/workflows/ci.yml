@@ -10,6 +10,8 @@ jobs:
   build:
     name: Build SvelteKit
     runs-on: ubuntu-latest
+    env:
+      PUBLIC_ORIGIN: https://example.com
     steps:
       - name: Checkout
         uses: actions/checkout@v4
