@@ -2,7 +2,6 @@
     import Icon from '@iconify/svelte';
 
     let isSidebarHidden = $state(true);
-
     function hideSidebar() {
         isSidebarHidden = true;
     }
