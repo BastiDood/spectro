@@ -1,3 +1,4 @@
+import { setTimeout } from 'node:timers/promises';
 import { strictEqual } from 'node:assert/strict';
 
 import type { Logger } from 'pino';
@@ -17,10 +18,14 @@ export async function doDeferredResponse(
 ) {
     const start = performance.now();
     const content = await callback();
-    const result = await editOriginalInteractionResponse(logger, appId, interactionToken, { content });
-    if (typeof result === 'number') throw new UnexpectedDiscordErrorCode(result);
     const deferredResponseTimeMillis = performance.now() - start;
     logger.info({ deferredResponseTimeMillis }, 'deferred response complete');
+
+    // HACK: Wait for the interaction response to be acknowledged.
+    await setTimeout(2000);
+
+    const result = await editOriginalInteractionResponse(logger, appId, interactionToken, { content });
+    if (typeof result === 'number') throw new UnexpectedDiscordErrorCode(result);
 }
 
 export function parsePublic(arg?: InteractionApplicationCommandChatInputOption) {
