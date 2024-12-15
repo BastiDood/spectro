@@ -16,7 +16,7 @@ export async function doDeferredResponse(
     callback: () => Promise<string>,
 ) {
     // HACK: Waiting for our server to respond to Discord.
-    await setTimeout(1000);
+    await setTimeout(2000);
     const start = performance.now();
     await editOriginalInteractionResponse(logger, appId, token, { content: await callback() });
     const deferredResponseTimeMillis = performance.now() - start;
