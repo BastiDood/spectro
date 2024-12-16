@@ -2,7 +2,7 @@
     import type { HTMLAnchorAttributes } from 'svelte/elements';
     import type { Snippet } from 'svelte';
 
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
 
     interface Props extends HTMLAnchorAttributes {
         children: Snippet;
@@ -11,4 +11,4 @@
     const { children, ...props }: Props = $props();
 </script>
 
-<a class:active={$page.url.pathname === props.href} {...props}>{@render children()}</a>
+<a class:active={page.url.pathname === props.href} {...props}>{@render children()}</a>
