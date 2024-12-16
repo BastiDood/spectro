@@ -25,16 +25,16 @@
         "discord:register": "node scripts/register-slash-commands.js"
     },
     "dependencies": {
-        "@axiomhq/pino": "^1.3.0",
+        "@axiomhq/pino": "^1.3.1",
         "@iconify/icons-ic": "^1.2.13",
         "@iconify/icons-simple-icons": "^1.2.74",
         "@iconify/svelte": "^4.1.0",
         "@noble/ed25519": "^2.1.0",
-        "@sveltejs/kit": "^2.11.1",
+        "@sveltejs/kit": "^2.12.1",
         "drizzle-orm": "^0.38.2",
         "pg": "^8.13.1",
         "pino": "^9.5.0",
-        "svelte": "^5.12.0",
+        "svelte": "^5.14.1",
         "valibot": "1.0.0-beta.9"
     },
     "devDependencies": {
@@ -58,14 +58,14 @@
         "prettier": "^3.4.2",
         "prettier-plugin-svelte": "^3.3.2",
         "prettier-plugin-tailwindcss": "^0.6.9",
-        "stylelint": "^16.11.0",
+        "stylelint": "^16.12.0",
         "stylelint-config-standard": "^36.0.1",
         "stylelint-config-tailwindcss": "^0.0.7",
         "svelte-check": "^4.1.1",
         "svelte-eslint-parser": "^0.43.0",
         "tailwindcss": "^3.4.16",
         "typescript": "^5.7.2",
-        "typescript-eslint": "^8.18.0",
+        "typescript-eslint": "^8.18.1",
         "typescript-svelte-plugin": "^0.3.44",
         "vite": "^6.0.3",
         "vite-plugin-tailwind-purgecss": "^0.3.5"
