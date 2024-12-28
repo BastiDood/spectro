@@ -57,6 +57,12 @@ const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD
                     name: 'content',
                     description: 'The content of the actual confession.',
                 },
+                {
+                    type: 11,
+                    required: false,
+                    name: 'attachment',
+                    description: 'A file to attach to the confession.'
+                }
             ],
         },
         {
