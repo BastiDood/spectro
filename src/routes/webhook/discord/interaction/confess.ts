@@ -1,4 +1,4 @@
-import { strictEqual } from 'node:assert/strict';
+import strict, { strictEqual } from 'node:assert/strict';
 
 import { UnexpectedDiscordErrorCode } from './errors';
 import { doDeferredResponse } from './util';
@@ -6,6 +6,7 @@ import { doDeferredResponse } from './util';
 import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
+import type { Attachment } from '$lib/server/models/discord/attachment';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -16,6 +17,8 @@ import {
     logPendingConfessionViaHttp,
 } from '$lib/server/api/discord';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import { InteractionApplicationCommandChatInputOptionAttachment } from '$lib/server/models/discord/interaction/application-command/chat-input/option/attachment';
+import type { Resolved } from '$lib/server/models/discord/resolved';
 
 abstract class ConfessError extends Error {
     constructor(message?: string) {
@@ -58,6 +61,7 @@ async function submitConfession(
     confessionChannelId: Snowflake,
     authorId: Snowflake,
     description: string,
+    attachment: Attachment | null
 ) {
     const channel = await db.query.channel.findFirst({
         columns: {
@@ -156,6 +160,7 @@ async function submitConfession(
             hex,
             description,
             null,
+            attachment
         );
 
         if (typeof message === 'number')
@@ -205,12 +210,25 @@ export async function handleConfess(
     channelId: Snowflake,
     authorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
+    resolved: Resolved | null,
 ) {
-    strictEqual(options.length, 0);
+    strict(options.length >= 1);
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
+
+    let attachment = null;
+    const attachments = Object.values(resolved?.attachments ?? {});
+    // retrieve attachment if it exists, we don't actually do anything with the attachment option and assume the sole resolved.attachments entry is the attachment
+    if (options.length === 1) {
+        const attachmentOption = options[0] as InteractionApplicationCommandChatInputOptionAttachment;
+        strictEqual(attachmentOption.name, 'attachment')
+        strictEqual(attachments.length, 1);
+        attachment = attachments[0] as Attachment;
+        logger.info({ attachment }, 'sending with attachment');
+    }
+
     try {
-        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value);
+        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value, attachment);
     } catch (err) {
         if (err instanceof ConfessError) {
             logger.error(err, err.message);

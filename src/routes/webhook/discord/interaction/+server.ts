@@ -62,6 +62,7 @@ async function handleInteraction(
                                         interaction.channel_id,
                                         interaction.member.user.id,
                                         interaction.data.options,
+                                        interaction.data.resolved ?? null,
                                     ),
                                 },
                             };
