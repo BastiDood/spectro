@@ -1,5 +1,6 @@
 import { type InferOutput, variant } from 'valibot';
 
+import { InteractionApplicationCommandChatInputOptionAttachment } from './attachment';
 import { InteractionApplicationCommandChatInputOptionBoolean } from './boolean';
 import { InteractionApplicationCommandChatInputOptionInteger } from './integer';
 import { InteractionApplicationCommandChatInputOptionNumber } from './number';
@@ -14,7 +15,7 @@ export const InteractionApplicationCommandChatInputOption = variant('type', [
     InteractionApplicationCommandChatInputOptionBoolean,
     InteractionApplicationCommandChatInputOptionSnowflake,
     InteractionApplicationCommandChatInputOptionNumber,
-    // TODO: InteractionApplicationCommandDataOptionAttachment
+    InteractionApplicationCommandChatInputOptionAttachment
 ]);
 
 export type InteractionApplicationCommandChatInputOption = InferOutput<
