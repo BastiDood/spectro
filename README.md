@@ -46,6 +46,16 @@ pnpm db:migrate
 docker compose --profile=dev down
 ```
 
+## Registering the Application Commands
+
+To register the application commands in Discord, a one-time initialization script must be run whenever commands are added, modified, or removed. The script is essentially a simple HTTP POST request wrapper over the Discord REST API.
+
+```bash
+# Register the application commands.
+# Requires `DISCORD_APPLICATION_ID` and `DISCORD_BOT_TOKEN` already in scope.
+pnpm discord:register
+```
+
 ## Running the Web Server
 
 Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files.
