@@ -46,6 +46,18 @@ pnpm db:migrate
 docker compose --profile=dev down
 ```
 
+## Registering Callback Endpoints
+
+The bot relies on two callback endpoints that receives webhook events from Discord:
+
+1. The [interactions endpoint][discord-bot-info] for [receiving application commands][discord-interactions] via HTTP POST requests from Discord.
+1. The [public webhook events endpoint][discord-bot-webhooks] for receiving [application authorization] events from Discord.
+
+[discord-bot-info]: https://discord.com/developers/applications/1310159012234264617/information
+[discord-bot-webhooks]: https://discord.com/developers/applications/1310159012234264617/webhooks
+[discord-interactions]: https://discord.com/developers/docs/interactions/overview#preparing-for-interactions
+[discord-application-authorized]: https://discord.com/developers/docs/events/webhook-events#application-authorized
+
 ## Registering the Application Commands
 
 To register the application commands in Discord, a one-time initialization script must be run whenever commands are added, modified, or removed. The script is essentially a simple HTTP POST request wrapper over the Discord REST API.
