@@ -11,6 +11,18 @@ Spectro is a standard full-stack [SvelteKit][Svelte] web application that levera
 [Svelte]: https://svelte.dev/
 [PostgreSQL]: https://www.postgresql.org/
 
+## Managing Environment Variables
+
+For convenience, the repository includes `env:*` scripts for loading environment variables from `.env.*` files. These are meant to be used as prefixes for other package scripts.
+
+```bash
+# Run the database migrations with `.env.development` variables.
+pnpm env:dev pnpm db:migrate
+
+# Register the Discord application commands.
+pnpm env:prod pnpm discord:register
+```
+
 ## Managing the Database
 
 Spectro requires a PostgreSQL database for data persistence. For convenience, we use Docker Compose to set up a local installation. The following environment variables are required for this to work.
@@ -27,7 +39,7 @@ Spectro requires a PostgreSQL database for data persistence. For convenience, we
 docker compose --profile=dev up --detach
 
 # Run the database migrations.
-# Requires `POSTGRES_DATABASE_URL`.
+# Requires `POSTGRES_DATABASE_URL` already in scope.
 pnpm db:migrate
 
 # Shut down the PostgreSQL server.
