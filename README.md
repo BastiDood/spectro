@@ -50,11 +50,9 @@ docker compose --profile=dev down
 
 The bot relies on two callback endpoints that receives webhook events from Discord:
 
-1. The [interactions endpoint][discord-bot-info] for [receiving application commands][discord-interactions] via HTTP POST requests from Discord.
-1. The [public webhook events endpoint][discord-bot-webhooks] for receiving [application authorization][discord-application-authorized] events from Discord.
+1. The **interactions endpoint** for [receiving application commands][discord-interactions] via HTTP POST requests from Discord.
+1. The **webhook events endpoint** for receiving [application authorization][discord-application-authorized] events from Discord.
 
-[discord-bot-info]: https://discord.com/developers/applications/1310159012234264617/information
-[discord-bot-webhooks]: https://discord.com/developers/applications/1310159012234264617/webhooks
 [discord-interactions]: https://discord.com/developers/docs/interactions/overview#preparing-for-interactions
 [discord-application-authorized]: https://discord.com/developers/docs/events/webhook-events#application-authorized
 
