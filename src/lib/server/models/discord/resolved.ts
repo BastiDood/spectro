@@ -1,5 +1,6 @@
 import { type InferOutput, object, partial, record, string } from 'valibot';
 
+import { Attachment } from '$lib/server/models/discord/attachment';
 import { Channel } from '$lib/server/models/discord/channel';
 import { GuildMember } from '$lib/server/models/discord/guild-member';
 import { Message } from '$lib/server/models/discord/message';
@@ -12,6 +13,7 @@ export const Resolved = partial(
         // TODO: roles
         channels: record(string(), Channel),
         messages: record(string(), Message),
+        attachments: record(string(), Attachment)
     }),
 );
 
