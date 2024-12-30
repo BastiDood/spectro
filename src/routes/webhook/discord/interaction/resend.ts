@@ -96,7 +96,7 @@ async function resendConfession(
             hex,
             content,
             parentMessageId,
-            null
+            null // TODO: implement attachments
     );
 
         if (typeof message === 'number')

@@ -124,6 +124,7 @@ async function submitVerdict(
                 hex,
                 content,
                 parentMessageId,
+                null, // TODO: implement attachments! 
             );
 
             if (typeof discordErrorCode === 'number')
