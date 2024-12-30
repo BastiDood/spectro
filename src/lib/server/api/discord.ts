@@ -3,7 +3,7 @@ import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import type { Logger } from 'pino';
 
-import { EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import { EmbedImage, EmbedType, EmbedVideo } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -82,13 +82,24 @@ export async function dispatchConfessionViaHttp(
     };
 
     if (attachment) {
-        const imageEmbed: EmbedImage = {
-            url: new URL(attachment.url),
-            height: attachment.height,
-            width: attachment.width
-        };
-        if (params.embeds && params.embeds[0]) {
-            params.embeds[0].image = imageEmbed;
+        if (attachment.content_type?.includes("image")) {
+            const embedData: EmbedImage = {
+                url: new URL(attachment.url),
+                height: attachment.height,
+                width: attachment.width
+            };
+            if (params.embeds && params.embeds[0]) {
+                params.embeds[0].image = embedData as EmbedImage;
+            }
+            logger.info({ params }, "processing an image embed")
+        }
+        else {
+            const contentIdentifier = attachment.content_type?.split("/")[0]
+            const attachmentInfo = `\n Attached ${contentIdentifier}: ${attachment.url}`;
+            if (params.embeds && params.embeds[0]) {
+                params.embeds[0].description = params.embeds[0].description?.concat(attachmentInfo);
+            }
+            logger.info({ params }, `processing some arbitrary embed of type ${attachment.content_type}`)
         }
     }
 
