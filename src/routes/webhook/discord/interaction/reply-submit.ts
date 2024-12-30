@@ -116,8 +116,8 @@ async function submitReply(
                 authorId,
                 label,
                 content,
-                null
-        );
+                null,
+            );
 
             if (typeof discordErrorCode === 'number')
                 switch (discordErrorCode) {
@@ -169,8 +169,8 @@ async function submitReply(
             hex,
             content,
             parentMessageId,
-            null
-    );
+            null,
+        );
 
         if (typeof message === 'number')
             switch (message) {
@@ -189,7 +189,7 @@ async function submitReply(
             label,
             content,
             null,
-    );
+        );
 
         if (typeof discordErrorCode === 'number')
             switch (discordErrorCode) {

@@ -176,9 +176,9 @@ async function submitVerdict(
             ];
 
             if (attachment) {
-                fields.push(constructAttachmentField(attachment))
+                fields.push(constructAttachmentField(attachment));
             }
-                
+
             return {
                 type: EmbedType.Rich,
                 title: `${label} #${confessionId}`,
@@ -189,7 +189,7 @@ async function submitVerdict(
                     text: 'Spectro Logs',
                     icon_url: APP_ICON_URL,
                 },
-                fields
+                fields,
             };
         }
 
@@ -207,7 +207,7 @@ async function submitVerdict(
         ];
 
         if (attachment) {
-            fields.push(constructAttachmentField(attachment))
+            fields.push(constructAttachmentField(attachment));
         }
 
         await tx.delete(confession).where(eq(confession.internalId, internalId));
@@ -222,7 +222,7 @@ async function submitVerdict(
                 text: 'Spectro Logs',
                 icon_url: APP_ICON_URL,
             },
-            fields
+            fields,
         };
     });
 }

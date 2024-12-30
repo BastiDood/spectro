@@ -121,8 +121,8 @@ async function resendConfession(
             hex,
             content,
             parentMessageId,
-            attachment
-    );
+            attachment,
+        );
 
         if (typeof message === 'number')
             switch (message) {
@@ -142,7 +142,7 @@ async function resendConfession(
             moderatorId,
             label,
             content,
-            attachment
+            attachment,
         );
 
         if (typeof discordErrorCode === 'number')

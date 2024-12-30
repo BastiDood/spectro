@@ -115,7 +115,7 @@ async function submitConfession(
                 label,
                 description,
                 attachment,
-        );
+            );
 
             if (typeof discordErrorCode === 'number')
                 switch (discordErrorCode) {
@@ -187,7 +187,7 @@ async function submitConfession(
             label,
             description,
             attachment,
-    );
+        );
 
         if (typeof discordErrorCode === 'number')
             switch (discordErrorCode) {
