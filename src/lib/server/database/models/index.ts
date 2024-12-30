@@ -51,6 +51,9 @@ export const confession = app.table(
         approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
         authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
         content: text('content').notNull(),
+        attachmentUrl: text('attachment_url'),
+        attachmentFilename: text('attachment_filename'),
+        attachmentType: text('attachment_type'),
     },
     ({ confessionId, channelId }) => [uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId)],
 );
