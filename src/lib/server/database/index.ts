@@ -5,6 +5,7 @@ import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from '.
 
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 
+import type { Attachment } from '$lib/server/models/discord/attachment';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import * as schema from './models';
@@ -27,6 +28,9 @@ const CONFESSION_CONFESSION_ID = sql.raw(schema.confession.confessionId.name);
 const CONFESSION_CONTENT = sql.raw(schema.confession.content.name);
 const CONFESSION_APPROVED_AT = sql.raw(schema.confession.approvedAt.name);
 const CONFESSION_PARENT_MESSAGE_ID = sql.raw(schema.confession.parentMessageId.name);
+const CONFESSION_ATTACHMENT_URL = sql.raw(schema.confession.attachmentUrl.name);
+const CONFESSION_ATTACHMENT_FILENAME = sql.raw(schema.confession.attachmentFilename.name);
+const CONFESSION_ATTACHMENT_TYPE = sql.raw(schema.confession.attachmentType.name);
 
 const GUILD_LAST_CONFESSION_ID = sql.raw(schema.guild.lastConfessionId.name);
 
@@ -47,12 +51,15 @@ export async function insertConfession(
     description: string,
     approvedAt: Date | null,
     parentMessageId: Snowflake | null,
+    attachmentUrl: Attachment['url'] | null,
+    attachmentFilename: Attachment['filename'] | null,
+    attachmentType: Attachment['content_type'] | null
 ) {
     const guild = updateLastConfession(db, guildId);
     const {
         rows: [result, ...otherResults],
     } = await db.execute(
-        sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
+        sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_URL}, ${CONFESSION_ATTACHMENT_FILENAME}, ${CONFESSION_ATTACHMENT_TYPE}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentUrl}, ${attachmentFilename}, ${attachmentType} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
     );
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');

@@ -96,6 +96,9 @@ async function submitConfession(
             description,
             null,
             null,
+            attachment?.url ?? null,
+            attachment?.filename ?? null,
+            attachment?.content_type ?? null,
         );
 
         logger.info({ internalId, confessionId }, 'confession pending approval submitted');
@@ -146,6 +149,9 @@ async function submitConfession(
         description,
         timestamp,
         null,
+        attachment?.url ?? null,
+        attachment?.filename ?? null,
+        attachment?.content_type ?? null,
     );
 
     logger.info({ internalId, confessionId }, 'confession submitted');
