@@ -20,7 +20,7 @@ import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
-async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string, attachment: Attachment) {
+async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string, attachment: Attachment | null) {
     const payload = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
     const formData = new FormData();
     formData.append('payload_json', payload);
@@ -62,7 +62,7 @@ export async function dispatchConfessionViaHttp(
     color: number | undefined,
     description: string,
     replyToMessageId: Snowflake | null,
-    attachment: Attachment | null,
+    attachment: Attachment | null = null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const params: CreateMessage = {
