@@ -3,8 +3,8 @@ import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import type { Logger } from 'pino';
 
+import { EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
-import { EmbedType } from '$lib/server/models/discord/embed';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
@@ -14,15 +14,21 @@ import { MessageReferenceType } from '$lib/server/models/discord/message/referen
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+import type { Attachment } from '../models/discord/attachment';
 import { DiscordError } from '$lib/server/models/discord/error';
 import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
-async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string) {
+async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string, attachment: Attachment) {
     const payload = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
     const formData = new FormData();
     formData.append('payload_json', payload);
+
+    if (attachment) {
+        const imageData = await fetch(attachment.url).then(res => res.blob()).then(blob => blob);
+        formData.append(`files[${attachment.id}]`, imageData, attachment.filename);
+    }
 
     const start = performance.now();
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
@@ -56,6 +62,7 @@ export async function dispatchConfessionViaHttp(
     color: number | undefined,
     description: string,
     replyToMessageId: Snowflake | null,
+    attachment: Attachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const params: CreateMessage = {
@@ -74,6 +81,16 @@ export async function dispatchConfessionViaHttp(
         ],
     };
 
+    if (attachment) {
+        const imageEmbed: EmbedImage = {
+            url: new URL(`attachment://${attachment.filename}`)
+        }
+        if (params.embeds && params.embeds[0]) {
+            params.embeds[0].image = imageEmbed;
+        }
+        params.attachments = [attachment]
+    }
+
     if (replyToMessageId !== null)
         params.message_reference = {
             type: MessageReferenceType.Default,
@@ -81,7 +98,7 @@ export async function dispatchConfessionViaHttp(
             fail_if_not_exists: false,
         };
 
-    return await createMessage(logger, channelId, params, botToken);
+    return await createMessage(logger, channelId, params, botToken, attachment);
 }
 
 export interface ExternalChannelReference {
