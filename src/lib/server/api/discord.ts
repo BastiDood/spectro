@@ -73,7 +73,7 @@ export async function dispatchConfessionViaHttp(
     color: number | undefined,
     description: string,
     replyToMessageId: Snowflake | null,
-    attachment: Attachment | null = null,
+    attachment: Attachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const params: CreateMessage = {
@@ -137,9 +137,20 @@ export async function logPendingConfessionViaHttp(
     authorId: Snowflake,
     label: string,
     description: string,
+    attachment: Attachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const customId = internalId.toString();
+    const fields = [
+        {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+        },
+    ];
+    if (attachment) {
+        fields.push(constructAttachmentField(attachment))
+    }
     return await createMessage(
         logger,
         channelId,
@@ -157,13 +168,7 @@ export async function logPendingConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields: [
-                        {
-                            name: 'Authored by',
-                            value: `||<@${authorId}>||`,
-                            inline: true,
-                        },
-                    ],
+                    fields
                 },
             ],
             components: [
@@ -200,9 +205,10 @@ export async function logApprovedConfessionViaHttp(
     authorId: Snowflake,
     label: string,
     description: string,
+    attachment: Attachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    return await createMessage(
+    return await sendMessage(
         logger,
         channelId,
         {
@@ -219,13 +225,7 @@ export async function logApprovedConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields: [
-                        {
-                            name: 'Authored by',
-                            value: `||<@${authorId}>||`,
-                            inline: true,
-                        },
-                    ],
+                    fields
                 },
             ],
         },
