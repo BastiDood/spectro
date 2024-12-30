@@ -61,7 +61,7 @@ async function submitConfession(
     confessionChannelId: Snowflake,
     authorId: Snowflake,
     description: string,
-    attachment: Attachment | null
+    attachment: Attachment | null,
 ) {
     const channel = await db.query.channel.findFirst({
         columns: {
@@ -160,7 +160,7 @@ async function submitConfession(
             hex,
             description,
             null,
-            attachment
+            attachment,
         );
 
         if (typeof message === 'number')
@@ -221,7 +221,7 @@ export async function handleConfess(
     // retrieve attachment if it exists, we don't actually do anything with the attachment option and assume the sole resolved.attachments entry is the attachment
     if (options.length === 1) {
         const attachmentOption = options[0] as InteractionApplicationCommandChatInputOptionAttachment;
-        strictEqual(attachmentOption.name, 'attachment')
+        strictEqual(attachmentOption.name, 'attachment');
         strictEqual(attachments.length, 1);
         attachment = attachments[0] as Attachment;
         logger.info({ attachment }, 'sending with attachment');

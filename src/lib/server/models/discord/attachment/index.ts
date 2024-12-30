@@ -1,4 +1,4 @@
-import { type InferOutput, number, object, optional, string } from "valibot";
+import { type InferOutput, number, object, optional, string } from 'valibot';
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 export const Attachment = object({
@@ -11,7 +11,7 @@ export const Attachment = object({
     url: string(),
     proxy_url: string(),
     height: optional(number()),
-    width: optional(number()) 
-})
+    width: optional(number()),
+});
 
 export type Attachment = InferOutput<typeof Attachment>;

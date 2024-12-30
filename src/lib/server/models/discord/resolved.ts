@@ -13,7 +13,7 @@ export const Resolved = partial(
         // TODO: roles
         channels: record(string(), Channel),
         messages: record(string(), Message),
-        attachments: record(string(), Attachment)
+        attachments: record(string(), Attachment),
     }),
 );
 

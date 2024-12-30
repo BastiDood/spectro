@@ -11,7 +11,7 @@ export const Message = object({
     ...MessageBase.entries,
     components: optional(MessageComponents),
     message_reference: optional(MessageReference),
-    attachments: optional(array(Attachment))
+    attachments: optional(array(Attachment)),
 });
 
 export type Message = InferOutput<typeof Message>;

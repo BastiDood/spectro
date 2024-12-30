@@ -20,13 +20,21 @@ import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
-async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string, attachment: Attachment | null) {
+async function createMessage(
+    logger: Logger,
+    channelId: Snowflake,
+    data: CreateMessage,
+    botToken: string,
+    attachment: Attachment | null = null,
+) {
     const payload = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
     const formData = new FormData();
     formData.append('payload_json', payload);
 
     if (attachment) {
-        const imageData = await fetch(attachment.url).then(res => res.blob()).then(blob => blob);
+        const imageData = await fetch(attachment.url)
+            .then(res => res.blob())
+            .then(blob => blob);
         formData.append(`files[${attachment.id}]`, imageData, attachment.filename);
     }
 
@@ -83,12 +91,12 @@ export async function dispatchConfessionViaHttp(
 
     if (attachment) {
         const imageEmbed: EmbedImage = {
-            url: new URL(`attachment://${attachment.filename}`)
-        }
+            url: new URL(`attachment://${attachment.filename}`),
+        };
         if (params.embeds && params.embeds[0]) {
             params.embeds[0].image = imageEmbed;
         }
-        params.attachments = [attachment]
+        params.attachments = [attachment];
     }
 
     if (replyToMessageId !== null)

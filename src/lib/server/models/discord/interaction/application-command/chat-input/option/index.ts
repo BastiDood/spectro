@@ -15,7 +15,7 @@ export const InteractionApplicationCommandChatInputOption = variant('type', [
     InteractionApplicationCommandChatInputOptionBoolean,
     InteractionApplicationCommandChatInputOptionSnowflake,
     InteractionApplicationCommandChatInputOptionNumber,
-    InteractionApplicationCommandChatInputOptionAttachment
+    InteractionApplicationCommandChatInputOptionAttachment,
 ]);
 
 export type InteractionApplicationCommandChatInputOption = InferOutput<

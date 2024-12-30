@@ -9,7 +9,7 @@ import { Snowflake } from '$lib/server/models/discord/snowflake';
 export const InteractionApplicationCommandChatInputOptionAttachment = object({
     ...InteractionApplicationCommandChatInputOptionBase.entries,
     type: literal(InteractionApplicationCommandChatInputOptionType.Attachment),
-    value: Snowflake
+    value: Snowflake,
 });
 
 export type InteractionApplicationCommandChatInputOptionAttachment = InferOutput<
