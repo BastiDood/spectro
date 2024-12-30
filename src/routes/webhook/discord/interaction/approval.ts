@@ -6,8 +6,8 @@ import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MalformedCustomIdFormat } from './errors';
 import { hasAllPermissions } from './util';
 
+import { constructAttachmentField, dispatchConfessionViaHttp } from '$lib/server/api/discord';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
@@ -162,6 +162,23 @@ async function submitVerdict(
                         return `${label} #${confessionId} has been approved internally, but Spectro encountered an unexpected error (${discordErrorCode}) from Discord while publishing to the confession channel. Kindly inform the developers and the moderators about this issue.`;
                 }
 
+            const fields = [
+                {
+                    name: 'Authored by',
+                    value: `||<@${authorId}>||`,
+                    inline: true,
+                },
+                {
+                    name: 'Approved by',
+                    value: `<@${moderatorId}>`,
+                    inline: true,
+                },
+            ];
+
+            if (attachment) {
+                fields.push(constructAttachmentField(attachment))
+            }
+                
             return {
                 type: EmbedType.Rich,
                 title: `${label} #${confessionId}`,
@@ -172,19 +189,25 @@ async function submitVerdict(
                     text: 'Spectro Logs',
                     icon_url: APP_ICON_URL,
                 },
-                fields: [
-                    {
-                        name: 'Authored by',
-                        value: `||<@${authorId}>||`,
-                        inline: true,
-                    },
-                    {
-                        name: 'Approved by',
-                        value: `<@${moderatorId}>`,
-                        inline: true,
-                    },
-                ],
+                fields
             };
+        }
+
+        const fields = [
+            {
+                name: 'Authored by',
+                value: `||<@${authorId}>||`,
+                inline: true,
+            },
+            {
+                name: 'Deleted by',
+                value: `<@${moderatorId}>`,
+                inline: true,
+            },
+        ];
+
+        if (attachment) {
+            fields.push(constructAttachmentField(attachment))
         }
 
         await tx.delete(confession).where(eq(confession.internalId, internalId));
@@ -199,18 +222,7 @@ async function submitVerdict(
                 text: 'Spectro Logs',
                 icon_url: APP_ICON_URL,
             },
-            fields: [
-                {
-                    name: 'Authored by',
-                    value: `||<@${authorId}>||`,
-                    inline: true,
-                },
-                {
-                    name: 'Deleted by',
-                    value: `<@${moderatorId}>`,
-                    inline: true,
-                },
-            ],
+            fields
         };
     });
 }

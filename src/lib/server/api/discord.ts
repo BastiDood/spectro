@@ -53,7 +53,7 @@ async function createMessage(
     return code;
 }
 
-function constructAttachmentField(attachment: Attachment) {
+export function constructAttachmentField(attachment: Attachment) {
     const contentIdentifier = attachment.content_type?.split('/')[0] ?? 'file';
     const attachmentInfo = attachment.url;
 
