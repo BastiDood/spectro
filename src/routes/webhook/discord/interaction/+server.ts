@@ -63,6 +63,7 @@ async function handleInteraction(
                                         interaction.member.user.id,
                                         interaction.data.options,
                                         interaction.data.resolved ?? null,
+                                        interaction.member.permissions
                                     ),
                                 },
                             };

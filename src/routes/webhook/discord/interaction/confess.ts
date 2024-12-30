@@ -1,7 +1,7 @@
 import strict, { strictEqual } from 'node:assert/strict';
 
+import { doDeferredResponse, hasAllPermissions } from './util';
 import { UnexpectedDiscordErrorCode } from './errors';
-import { doDeferredResponse } from './util';
 
 import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
@@ -16,9 +16,11 @@ import {
     logApprovedConfessionViaHttp,
     logPendingConfessionViaHttp,
 } from '$lib/server/api/discord';
+import { ATTACH_FILES } from '$lib/server/models/discord/permission';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { InteractionApplicationCommandChatInputOptionAttachment } from '$lib/server/models/discord/interaction/application-command/chat-input/option/attachment';
 import type { Resolved } from '$lib/server/models/discord/resolved';
+import assert from 'node:assert';
 
 abstract class ConfessError extends Error {
     constructor(message?: string) {
@@ -219,6 +221,7 @@ export async function handleConfess(
     authorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
     resolved: Resolved | null,
+    permissions: bigint
 ) {
     strict(options.length <= 1);
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
@@ -228,6 +231,10 @@ export async function handleConfess(
     const attachments = Object.values(resolved?.attachments ?? {});
     // retrieve attachment if it exists, we don't actually do anything with the attachment option and assume the sole resolved.attachments entry is the attachment
     if (options.length === 1) {
+
+        // check for permission to attach files
+        assert(hasAllPermissions(permissions, ATTACH_FILES))
+
         const attachmentOption = options[0] as InteractionApplicationCommandChatInputOptionAttachment;
         strictEqual(attachmentOption.name, 'attachment');
         strictEqual(attachments.length, 1);

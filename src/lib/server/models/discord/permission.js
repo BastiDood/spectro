@@ -6,3 +6,6 @@ export const SEND_MESSAGES = 1n << 11n;
 
 /** Allows for deletion of other users messages. */
 export const MANAGE_MESSAGES = 1n << 13n;
+
+/** Allows for users to send attachments with their messages */
+export const ATTACH_FILES = 1n << 15n;
