@@ -16,6 +16,7 @@ import { channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
 import { Embed, EmbedType } from '$lib/server/models/discord/embed';
+import type { Attachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -108,7 +109,19 @@ async function submitVerdict(
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-        logger.info({ details }, 'fetched confession details for approval');
+        let attachment: Attachment | null = null;
+
+        // check if an attachment exists and reconstruct it
+        if (attachmentUrl && attachmentFilename) {
+            attachment = {
+                filename: attachmentFilename,
+                url: attachmentUrl,
+                content_type: attachmentType
+            }
+        }
+
+        const child = logger.child({ details });
+        child.info('fetched confession details for approval');
 
         if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelConfessError(disabledAt);
 
@@ -130,7 +143,7 @@ async function submitVerdict(
                 hex,
                 content,
                 parentMessageId,
-                null, // TODO: implement attachments! 
+                attachment,
             );
 
             if (typeof discordErrorCode === 'number')
