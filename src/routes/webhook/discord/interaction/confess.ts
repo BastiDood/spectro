@@ -221,7 +221,7 @@ export async function handleConfess(
     authorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
     resolved: Resolved | null,
-    permissions: bigint
+    permissions: bigint,
 ) {
     strict(options.length <= 1);
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
@@ -231,9 +231,8 @@ export async function handleConfess(
     const attachments = Object.values(resolved?.attachments ?? {});
     // retrieve attachment if it exists, we don't actually do anything with the attachment option and assume the sole resolved.attachments entry is the attachment
     if (options.length === 1) {
-
         // check for permission to attach files
-        assert(hasAllPermissions(permissions, ATTACH_FILES))
+        assert(hasAllPermissions(permissions, ATTACH_FILES));
 
         const attachmentOption = options[0] as InteractionApplicationCommandChatInputOptionAttachment;
         strictEqual(attachmentOption.name, 'attachment');
