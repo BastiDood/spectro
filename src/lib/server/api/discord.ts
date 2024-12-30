@@ -120,7 +120,7 @@ export async function dispatchConfessionViaHttp(
             fail_if_not_exists: false,
         };
 
-    return await createMessage(logger, channelId, params, botToken, attachment);
+    return await createMessage(logger, channelId, params, botToken);
 }
 
 export interface ExternalChannelReference {
@@ -208,7 +208,7 @@ export async function logApprovedConfessionViaHttp(
     attachment: Attachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    return await sendMessage(
+    return await createMessage(
         logger,
         channelId,
         {
