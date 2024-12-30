@@ -25,18 +25,10 @@ async function createMessage(
     channelId: Snowflake,
     data: CreateMessage,
     botToken: string,
-    attachment: Attachment | null = null,
 ) {
     const payload = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
     const formData = new FormData();
     formData.append('payload_json', payload);
-
-    if (attachment) {
-        const imageData = await fetch(attachment.url)
-            .then(res => res.blob())
-            .then(blob => blob);
-        formData.append(`files[${attachment.id}]`, imageData, attachment.filename);
-    }
 
     const start = performance.now();
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
@@ -91,12 +83,13 @@ export async function dispatchConfessionViaHttp(
 
     if (attachment) {
         const imageEmbed: EmbedImage = {
-            url: new URL(`attachment://${attachment.filename}`),
+            url: new URL(attachment.url),
+            height: attachment.height,
+            width: attachment.width
         };
         if (params.embeds && params.embeds[0]) {
             params.embeds[0].image = imageEmbed;
         }
-        params.attachments = [attachment];
     }
 
     if (replyToMessageId !== null)
