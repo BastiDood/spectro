@@ -69,7 +69,7 @@ async function resendConfession(
             approvedAt: confession.approvedAt,
             attachmentUrl: confession.attachmentUrl,
             attachmentFilename: confession.attachmentFilename,
-            attachmentType: confession.attachmentType
+            attachmentType: confession.attachmentType,
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
@@ -78,7 +78,19 @@ async function resendConfession(
     strictEqual(others.length, 0);
 
     if (typeof result === 'undefined') throw new ConfessionNotFoundResendError(confessionId);
-    const { parentMessageId, authorId, approvedAt, createdAt, content, logChannelId, label, color, attachmentType, attachmentUrl, attachmentFilename } = result;
+    const {
+        parentMessageId,
+        authorId,
+        approvedAt,
+        createdAt,
+        content,
+        logChannelId,
+        label,
+        color,
+        attachmentType,
+        attachmentUrl,
+        attachmentFilename,
+    } = result;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
     logger.info({ confession }, 'confession to be resent found');
@@ -92,8 +104,8 @@ async function resendConfession(
         attachment = {
             filename: attachmentFilename,
             url: attachmentUrl,
-            content_type: attachmentType
-        }
+            content_type: attachmentType,
+        };
     }
 
     logger.info('confession resend has been submitted');

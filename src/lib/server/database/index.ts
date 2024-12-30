@@ -53,7 +53,7 @@ export async function insertConfession(
     parentMessageId: Snowflake | null,
     attachmentUrl: Attachment['url'] | null,
     attachmentFilename: Attachment['filename'] | null,
-    attachmentType: Attachment['content_type'] | null
+    attachmentType: Attachment['content_type'] | null,
 ) {
     const guild = updateLastConfession(db, guildId);
     const {

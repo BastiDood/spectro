@@ -54,14 +54,14 @@ async function createMessage(
 }
 
 function constructAttachmentField(attachment: Attachment) {
-    const contentIdentifier = attachment.content_type?.split("/")[0] ?? "file";
+    const contentIdentifier = attachment.content_type?.split('/')[0] ?? 'file';
     const attachmentInfo = attachment.url;
 
     return {
         name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
         value: attachmentInfo,
-        inline: true
-    }
+        inline: true,
+    };
 }
 
 export async function dispatchConfessionViaHttp(
@@ -93,23 +93,22 @@ export async function dispatchConfessionViaHttp(
     };
 
     if (attachment) {
-        if (attachment.content_type?.includes("image")) {
+        if (attachment.content_type?.includes('image')) {
             const embedData: EmbedImage = {
                 url: new URL(attachment.url),
                 height: attachment.height,
-                width: attachment.width
+                width: attachment.width,
             };
             if (params.embeds && params.embeds[0]) {
                 params.embeds[0].image = embedData as EmbedImage;
             }
-            logger.info({ params }, "processing an image embed")
-        }
-        else {
+            logger.info({ params }, 'processing an image embed');
+        } else {
             const attachmentField = constructAttachmentField(attachment);
             if (params.embeds && params.embeds[0]) {
-                params.embeds[0].fields = [attachmentField]
+                params.embeds[0].fields = [attachmentField];
             }
-            logger.info({ params }, `processing some arbitrary embed of type ${attachment.content_type}`)
+            logger.info({ params }, `processing some arbitrary embed of type ${attachment.content_type}`);
         }
     }
 
@@ -149,7 +148,7 @@ export async function logPendingConfessionViaHttp(
         },
     ];
     if (attachment) {
-        fields.push(constructAttachmentField(attachment))
+        fields.push(constructAttachmentField(attachment));
     }
     return await createMessage(
         logger,
@@ -168,7 +167,7 @@ export async function logPendingConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields
+                    fields,
                 },
             ],
             components: [
@@ -215,9 +214,8 @@ export async function logApprovedConfessionViaHttp(
             inline: true,
         },
     ];
-
-    if(attachment) {
-        fields.push(constructAttachmentField(attachment))
+    if (attachment) {
+        fields.push(constructAttachmentField(attachment));
     }
 
     return await createMessage(
@@ -237,7 +235,7 @@ export async function logApprovedConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields
+                    fields,
                 },
             ],
         },
@@ -270,8 +268,8 @@ export async function logResentConfessionViaHttp(
         },
     ];
 
-    if(attachment) {
-        fields.push(constructAttachmentField(attachment))
+    if (attachment) {
+        fields.push(constructAttachmentField(attachment));
     }
 
     return await createMessage(
@@ -291,7 +289,7 @@ export async function logResentConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields
+                    fields,
                 },
             ],
         },

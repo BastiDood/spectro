@@ -83,7 +83,7 @@ async function submitVerdict(
                 content: confession.content,
                 attachmentUrl: confession.attachmentUrl,
                 attachmentFilename: confession.attachmentFilename,
-                attachmentType: confession.attachmentType
+                attachmentType: confession.attachmentType,
             })
             .from(confession)
             .innerJoin(channel, eq(confession.channelId, channel.id))
@@ -105,7 +105,7 @@ async function submitVerdict(
             content,
             attachmentUrl,
             attachmentFilename,
-            attachmentType
+            attachmentType,
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
@@ -116,8 +116,8 @@ async function submitVerdict(
             attachment = {
                 filename: attachmentFilename,
                 url: attachmentUrl,
-                content_type: attachmentType
-            }
+                content_type: attachmentType,
+            };
         }
 
         const child = logger.child({ details });
