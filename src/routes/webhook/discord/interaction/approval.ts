@@ -80,6 +80,9 @@ async function submitVerdict(
                 createdAt: confession.createdAt,
                 approvedAt: confession.approvedAt,
                 content: confession.content,
+                attachmentUrl: confession.attachmentUrl,
+                attachmentFilename: confession.attachmentFilename,
+                attachmentType: confession.attachmentType
             })
             .from(confession)
             .innerJoin(channel, eq(confession.channelId, channel.id))
@@ -99,6 +102,9 @@ async function submitVerdict(
             color,
             label,
             content,
+            attachmentUrl,
+            attachmentFilename,
+            attachmentType
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
