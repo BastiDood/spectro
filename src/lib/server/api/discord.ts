@@ -53,6 +53,17 @@ async function createMessage(
     return code;
 }
 
+function constructAttachmentField(attachment: Attachment) {
+    const contentIdentifier = attachment.content_type?.split("/")[0] ?? "file";
+    const attachmentInfo = attachment.url;
+
+    return {
+        name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
+        value: attachmentInfo,
+        inline: false
+    }
+}
+
 export async function dispatchConfessionViaHttp(
     logger: Logger,
     timestamp: Date,
@@ -94,15 +105,7 @@ export async function dispatchConfessionViaHttp(
             logger.info({ params }, "processing an image embed")
         }
         else {
-            const contentIdentifier = attachment.content_type?.split("/")[0] ?? "file";
-            const attachmentInfo = attachment.url;
-
-            const attachmentField = {
-                name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
-                value: attachmentInfo,
-                inline: false
-            }
-
+            const attachmentField = constructAttachmentField(attachment);
             if (params.embeds && params.embeds[0]) {
                 params.embeds[0].fields = [attachmentField]
             }
