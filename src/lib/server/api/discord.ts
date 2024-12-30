@@ -3,7 +3,7 @@ import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import type { Logger } from 'pino';
 
-import { Embed, EmbedImage, EmbedType, EmbedVideo } from '$lib/server/models/discord/embed';
+import { EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';

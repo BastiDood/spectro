@@ -96,7 +96,8 @@ async function resendConfession(
             hex,
             content,
             parentMessageId,
-        );
+            null
+    );
 
         if (typeof message === 'number')
             switch (message) {
