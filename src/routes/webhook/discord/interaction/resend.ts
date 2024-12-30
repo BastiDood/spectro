@@ -130,6 +130,7 @@ async function resendConfession(
             moderatorId,
             label,
             content,
+            attachment
         );
 
         if (typeof discordErrorCode === 'number')

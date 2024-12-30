@@ -208,6 +208,18 @@ export async function logApprovedConfessionViaHttp(
     attachment: Attachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
+    const fields = [
+        {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+        },
+    ];
+
+    if(attachment) {
+        fields.push(constructAttachmentField(attachment))
+    }
+
     return await createMessage(
         logger,
         channelId,
@@ -242,8 +254,26 @@ export async function logResentConfessionViaHttp(
     moderatorId: Snowflake,
     label: string,
     description: string,
+    attachment: Attachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
+    const fields = [
+        {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+        },
+        {
+            name: 'Resent by',
+            value: `<@${moderatorId}>`,
+            inline: true,
+        },
+    ];
+
+    if(attachment) {
+        fields.push(constructAttachmentField(attachment))
+    }
+
     return await createMessage(
         logger,
         channelId,
@@ -261,18 +291,7 @@ export async function logResentConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields: [
-                        {
-                            name: 'Authored by',
-                            value: `||<@${authorId}>||`,
-                            inline: true,
-                        },
-                        {
-                            name: 'Resent by',
-                            value: `<@${moderatorId}>`,
-                            inline: true,
-                        },
-                    ],
+                    fields
                 },
             ],
         },
