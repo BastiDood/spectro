@@ -60,7 +60,7 @@ function constructAttachmentField(attachment: Attachment) {
     return {
         name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
         value: attachmentInfo,
-        inline: false
+        inline: true
     }
 }
 
