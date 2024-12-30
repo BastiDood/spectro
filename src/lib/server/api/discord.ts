@@ -20,14 +20,15 @@ import { parse } from 'valibot';
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
 async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string) {
-    const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
+    const payload = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
+    const formData = new FormData();
+    formData.append('payload_json', payload);
 
     const start = performance.now();
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
-        body,
+        body: formData,
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bot ${botToken}`,
         },
     });
