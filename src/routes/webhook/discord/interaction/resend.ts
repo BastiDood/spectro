@@ -15,7 +15,6 @@ import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/mo
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { dispatchConfessionViaHttp, logResentConfessionViaHttp } from '$lib/server/api/discord';
-import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 
 abstract class ResendError extends Error {
     constructor(message?: string) {
