@@ -14,6 +14,7 @@ import { MessageReferenceType } from '$lib/server/models/discord/message/referen
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+import { strict, strictEqual } from 'assert';
 import type { Attachment } from '../models/discord/attachment';
 import { DiscordError } from '$lib/server/models/discord/error';
 import { parse } from 'valibot';
@@ -49,8 +50,11 @@ async function createMessage(logger: Logger, channelId: Snowflake, data: CreateM
 }
 
 export function constructAttachmentField(attachment: Attachment) {
-    const contentIdentifier = attachment.content_type?.split('/')[0] ?? 'file';
+    const [contentIdentifier, ...rest] = attachment.content_type?.split('/') ?? ['file'];
+    strict(typeof contentIdentifier === 'string');
+    strictEqual(rest.length, 1);
     const attachmentInfo = attachment.url;
+    strict(typeof attachmentInfo === 'string')
 
     return {
         name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
