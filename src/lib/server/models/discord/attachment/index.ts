@@ -10,8 +10,8 @@ export const Attachment = object({
     size: optional(number()),
     url: string(),
     proxy_url: optional(string()),
-    height: optional(number()),
-    width: optional(number()),
+    height: optional(nullable(number())),
+    width: optional(nullable(number())),
 });
 
 export type Attachment = InferOutput<typeof Attachment>;
