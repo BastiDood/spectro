@@ -57,6 +57,13 @@
       "when": 1735550579587,
       "tag": "0007_last_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1735633091201,
+      "tag": "0008_add-attachment-model",
+      "breakpoints": true
     }
   ]
 }

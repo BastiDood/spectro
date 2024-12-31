@@ -81,15 +81,10 @@ async function submitVerdict(
                 createdAt: confession.createdAt,
                 approvedAt: confession.approvedAt,
                 content: confession.content,
-                retrievedAttachment: {
-                    attachmentUrl: attachmentData.url,
-                    attachmentFilename: attachmentData.filename,
-                    attachmentType: attachmentData.contentType
-                }
+                attachmentId: confession.attachmentId
             })
             .from(confession)
             .innerJoin(channel, eq(confession.channelId, channel.id))
-            .leftJoin(attachmentData, eq(confession.attachmentId, attachmentData.attachmentId))
             .where(eq(confession.internalId, internalId))
             .limit(1)
             .for('update');
@@ -106,18 +101,35 @@ async function submitVerdict(
             color,
             label,
             content,
-            retrievedAttachment
+            attachmentId
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
         let attachment: EmbedAttachment | null = null;
 
         // check if an attachment exists and reconstruct it
-        if (retrievedAttachment) {
+        if (attachmentId !== null) {
+            const [retrieved, ...others] = await tx
+            .select({
+                attachmentFilename: attachmentData.filename,
+                attachmentUrl: attachmentData.url,
+                attachmentType: attachmentData.contentType
+            })
+            .from(attachmentData)
+            .where(eq(attachmentData.attachmentId, attachmentId));
+            strictEqual(others.length, 0);
+            assert(typeof retrieved !== 'undefined');
+
+            const {
+                attachmentFilename,
+                attachmentUrl,
+                attachmentType
+            } = retrieved;
+
             attachment = {
-                filename: retrievedAttachment.attachmentFilename,
-                url: retrievedAttachment.attachmentUrl,
-                content_type: retrievedAttachment.attachmentType ?? undefined,
+                filename: attachmentFilename,
+                url: attachmentUrl,
+                content_type: attachmentType ?? undefined,
             };
         }
 
