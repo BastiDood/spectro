@@ -105,27 +105,23 @@ async function submitVerdict(
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
+        // TODO: Refactor to Relations API once the `bigint` bug is fixed.
         let embedAttachment: EmbedAttachment | null = null;
-
-        // check if an attachment exists and reconstruct it
         if (attachmentId !== null) {
             const [retrieved, ...others] = await tx
                 .select({
-                    attachmentFilename: attachment.filename,
-                    attachmentUrl: attachment.url,
-                    attachmentType: attachment.contentType,
+                    filename: attachment.filename,
+                    url: attachment.url,
+                    contentType: attachment.contentType,
                 })
                 .from(attachment)
                 .where(eq(attachment.id, attachmentId));
             strictEqual(others.length, 0);
             assert(typeof retrieved !== 'undefined');
-
-            const { attachmentFilename, attachmentUrl, attachmentType } = retrieved;
-
             embedAttachment = {
-                filename: attachmentFilename,
-                url: attachmentUrl,
-                content_type: attachmentType ?? undefined,
+                filename: retrieved.filename,
+                url: retrieved.url,
+                content_type: retrieved.contentType ?? undefined,
             };
         }
 
@@ -263,9 +259,9 @@ export async function handleApproval(
         const payload = await submitVerdict(db, logger, timestamp, isApproved, internalId, userId, permissions);
         return typeof payload === 'string'
             ? {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: { flags: MessageFlags.Ephemeral, content: payload },
-            }
+                  type: InteractionResponseType.ChannelMessageWithSource,
+                  data: { flags: MessageFlags.Ephemeral, content: payload },
+              }
             : { type: InteractionResponseType.UpdateMessage, data: { components: [], embeds: [payload] } };
     } catch (err) {
         if (err instanceof ApprovalError) {
