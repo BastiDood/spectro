@@ -95,8 +95,8 @@ export async function dispatchConfessionViaHttp(
         if (attachment.content_type?.includes('image')) {
             const embedData: EmbedImage = {
                 url: new URL(attachment.url),
-                height: attachment.height,
-                width: attachment.width,
+                height: attachment.height ?? undefined,
+                width: attachment.width ?? undefined,
             };
             if (params.embeds && params.embeds[0]) {
                 params.embeds[0].image = embedData as EmbedImage;
