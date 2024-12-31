@@ -1,7 +1,9 @@
-import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
+import assert, { strictEqual } from 'node:assert/strict';
 
 import type { Logger } from 'pino';
+
+import { APP_ICON_URL, Color } from '$lib/server/constants';
+import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
@@ -14,7 +16,6 @@ import { MessageReferenceType } from '$lib/server/models/discord/message/referen
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { strict, strictEqual } from 'assert';
 import { DiscordError } from '$lib/server/models/discord/error';
 import type { EmbedAttachment } from '../models/discord/attachment';
 import { parse } from 'valibot';
@@ -51,14 +52,11 @@ async function createMessage(logger: Logger, channelId: Snowflake, data: CreateM
 
 export function constructAttachmentField(attachment: EmbedAttachment) {
     const [contentIdentifier, ...rest] = attachment.content_type?.split('/') ?? ['file'];
-    strict(typeof contentIdentifier === 'string');
     strictEqual(rest.length, 1);
-    const attachmentInfo = attachment.url;
-    strict(typeof attachmentInfo === 'string');
-
+    assert(typeof contentIdentifier === 'string');
     return {
         name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
-        value: attachmentInfo,
+        value: attachment.url,
         inline: true,
     };
 }
