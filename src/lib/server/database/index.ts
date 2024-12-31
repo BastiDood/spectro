@@ -54,7 +54,7 @@ async function insertAttachmentData(db: Interface, attachment: Attachment) {
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
     assert(typeof result.id === 'bigint');
-    return { attachmentId: BigInt(result.id) };
+    return BigInt(result.id);
 }
 
 export async function insertConfession(
@@ -68,28 +68,20 @@ export async function insertConfession(
     parentMessageId: Snowflake | null,
     attachment: Attachment | null,
 ) {
-    const guild = updateLastConfession(db, guildId);
-    const result = await db.transaction(async tx => {
-        let attachmentId = null;
-        if (attachment !== null) {
-            attachmentId = (await insertAttachmentData(tx, attachment)).attachmentId;
-        }
+    return await db.transaction(async tx => {
+        const attachmentId = attachment === null ? null : await insertAttachmentData(tx, attachment);
+        const guild = updateLastConfession(tx, guildId);
         const {
             rows: [result, ...otherResults],
         } = await tx.execute(
             sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
         );
         strictEqual(otherResults.length, 0);
-        // we double up the type guards so the transaction fails if any assertion fails
         assert(typeof result !== 'undefined');
         assert(typeof result._internal_id === 'string');
         assert(typeof result._confession_id === 'string');
-        return result;
+        return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
     });
-    assert(typeof result !== 'undefined');
-    assert(typeof result._internal_id === 'string');
-    assert(typeof result._confession_id === 'string');
-    return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
 }
 
 /**
