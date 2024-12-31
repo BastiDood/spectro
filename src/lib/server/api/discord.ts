@@ -32,6 +32,7 @@ async function createMessage(logger: Logger, channelId: Snowflake, data: CreateM
         method: 'POST',
         headers: {
             Authorization: `Bot ${botToken}`,
+            'Content-Type': 'multipart/form-data',
         },
     });
     const json = await response.json();
