@@ -228,7 +228,9 @@ export async function handleConfess(
     strictEqual(option.name, 'content');
 
     let attachment = null;
-    const attachments = Object.values(resolved?.attachments ?? {});
+    const attachments = typeof resolved === 'undefined'
+        ? []
+        : Object.values(resolved.attachments);
     // retrieve attachment if it exists, we don't actually do anything with the attachment option and assume the sole resolved.attachments entry is the attachment
     if (options.length === 1) {
         // check for permission to attach files
