@@ -1,12 +1,16 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
 import type { Logger } from 'pino';
+import { parse } from 'valibot';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import { type Embed, type EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+import { type Embed, EmbedType } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
+import { DiscordError } from '$lib/server/models/discord/error';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
@@ -14,11 +18,6 @@ import { MessageComponentType } from '$lib/server/models/discord/message/compone
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
-import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { DiscordError } from '$lib/server/models/discord/error';
-import type { EmbedAttachment } from '../models/discord/attachment';
-import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
