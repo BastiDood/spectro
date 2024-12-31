@@ -74,12 +74,23 @@ export async function insertConfession(
     attachment: Attachment | null,
 ) {
     const guild = updateLastConfession(db, guildId);
-    const {
-        rows: [result, ...otherResults],
-    } = await db.execute(
-        sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_URL}, ${CONFESSION_ATTACHMENT_FILENAME}, ${CONFESSION_ATTACHMENT_TYPE}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentUrl}, ${attachmentFilename}, ${attachmentType} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
-    );
-    strictEqual(otherResults.length, 0);
+    const result = await db.transaction(async (tx) => {
+        let attachmentId = null;
+        if (attachment !== null) {
+            attachmentId = (await insertAttachmentData(tx, attachment)).attachmentId;
+        };
+        const {
+            rows: [result, ...otherResults],
+        } = await tx.execute(
+            sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
+        );
+        strictEqual(otherResults.length, 0);
+        // we double up the type guards so the transaction fails if any assertion fails
+        assert(typeof result !== 'undefined');
+        assert(typeof result._internal_id === 'string');
+        assert(typeof result._confession_id === 'string');
+        return result;
+    });
     assert(typeof result !== 'undefined');
     assert(typeof result._internal_id === 'string');
     assert(typeof result._confession_id === 'string');
