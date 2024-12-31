@@ -128,7 +128,6 @@ export async function logPendingConfessionViaHttp(
     attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    const customId = internalId.toString();
     const fields = [
         {
             name: 'Authored by',
@@ -137,10 +136,9 @@ export async function logPendingConfessionViaHttp(
         },
     ];
 
-    if (attachment !== null) {
-        fields.push(constructAttachmentField(attachment));
-    }
+    if (attachment !== null) fields.push(constructAttachmentField(attachment));
 
+    const customId = internalId.toString();
     return await createMessage(
         logger,
         channelId,
@@ -260,9 +258,7 @@ export async function logResentConfessionViaHttp(
         },
     ];
 
-    if (attachment !== null) {
-        fields.push(constructAttachmentField(attachment));
-    }
+    if (attachment !== null) fields.push(constructAttachmentField(attachment));
 
     return await createMessage(
         logger,
