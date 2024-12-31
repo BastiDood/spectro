@@ -28,9 +28,7 @@ const CONFESSION_CONFESSION_ID = sql.raw(schema.confession.confessionId.name);
 const CONFESSION_CONTENT = sql.raw(schema.confession.content.name);
 const CONFESSION_APPROVED_AT = sql.raw(schema.confession.approvedAt.name);
 const CONFESSION_PARENT_MESSAGE_ID = sql.raw(schema.confession.parentMessageId.name);
-const CONFESSION_ATTACHMENT_URL = sql.raw(schema.confession.attachmentUrl.name);
-const CONFESSION_ATTACHMENT_FILENAME = sql.raw(schema.confession.attachmentFilename.name);
-const CONFESSION_ATTACHMENT_TYPE = sql.raw(schema.confession.attachmentType.name);
+const CONFESSION_ATTACHMENT_ID = sql.raw(schema.confession.attachmentId.name);
 
 const GUILD_LAST_CONFESSION_ID = sql.raw(schema.guild.lastConfessionId.name);
 
@@ -42,6 +40,28 @@ function updateLastConfession(db: Interface, guildId: Snowflake) {
         .returning({ confessionId: schema.guild.lastConfessionId });
 }
 
+async function insertAttachmentData(
+    db: Interface,
+    attachment: Attachment
+) {
+    const [result, ...otherResults] = await db.insert(schema.attachmentData).values({
+        attachmentId: attachment.id,
+        filename: attachment.filename,
+        title: attachment.title,
+        description: attachment.description,
+        contentType: attachment.content_type,
+        size: attachment.size,
+        url: attachment.url,
+        proxyUrl: attachment.proxy_url,
+        height: attachment.height,
+        width: attachment.width
+    }).returning();
+    strictEqual(otherResults.length, 0);
+    assert(typeof result !== 'undefined');
+    assert(typeof result.attachmentId === 'bigint')
+    return { attachmentId: BigInt(result.attachmentId) }
+}
+
 export async function insertConfession(
     db: Interface,
     timestamp: Date,
@@ -51,9 +71,7 @@ export async function insertConfession(
     description: string,
     approvedAt: Date | null,
     parentMessageId: Snowflake | null,
-    attachmentUrl: Attachment['url'] | null,
-    attachmentFilename: Attachment['filename'] | null,
-    attachmentType: Attachment['content_type'] | null,
+    attachment: Attachment | null,
 ) {
     const guild = updateLastConfession(db, guildId);
     const {
