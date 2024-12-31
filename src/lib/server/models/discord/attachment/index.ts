@@ -1,4 +1,4 @@
-import { type InferOutput, nullable, number, object, optional, string } from 'valibot';
+import { type InferOutput, nullable, number, object, optional, pick, string } from 'valibot';
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 export const Attachment = object({
@@ -14,4 +14,8 @@ export const Attachment = object({
     width: optional(nullable(number())),
 });
 
+// use this limited attachment when retrieving from db for embedding in a message
+export const EmbedAttachment = pick(Attachment, ['filename', 'url', 'content_type', 'height', 'width'])
+
 export type Attachment = InferOutput<typeof Attachment>;
+export type EmbedAttachment = InferOutput<typeof EmbedAttachment>;

@@ -15,8 +15,8 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import { strict, strictEqual } from 'assert';
-import type { Attachment } from '../models/discord/attachment';
 import { DiscordError } from '$lib/server/models/discord/error';
+import type { EmbedAttachment } from '../models/discord/attachment';
 import { parse } from 'valibot';
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
@@ -49,7 +49,7 @@ async function createMessage(logger: Logger, channelId: Snowflake, data: CreateM
     return code;
 }
 
-export function constructAttachmentField(attachment: Attachment) {
+export function constructAttachmentField(attachment: EmbedAttachment) {
     const [contentIdentifier, ...rest] = attachment.content_type?.split('/') ?? ['file'];
     strict(typeof contentIdentifier === 'string');
     strictEqual(rest.length, 1);
@@ -72,7 +72,7 @@ export async function dispatchConfessionViaHttp(
     color: number | undefined,
     description: string,
     replyToMessageId: Snowflake | null,
-    attachment: Attachment | null,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const params: CreateMessage = {
@@ -135,7 +135,7 @@ export async function logPendingConfessionViaHttp(
     authorId: Snowflake,
     label: string,
     description: string,
-    attachment: Attachment | null,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const customId = internalId.toString();
@@ -205,7 +205,7 @@ export async function logApprovedConfessionViaHttp(
     authorId: Snowflake,
     label: string,
     description: string,
-    attachment: Attachment | null,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const fields = [
@@ -254,7 +254,7 @@ export async function logResentConfessionViaHttp(
     moderatorId: Snowflake,
     label: string,
     description: string,
-    attachment: Attachment | null,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
     const fields = [
