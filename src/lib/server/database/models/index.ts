@@ -53,7 +53,10 @@ export const confession = app.table(
         content: text('content').notNull(),
         attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(() => attachmentData.attachmentId)
     },
-    ({ confessionId, channelId }) => [uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId)],
+    ({ confessionId, channelId, attachmentId }) => [
+        uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId),
+        uniqueIndex('confession_to_attachment_unique_idx').on(confessionId, attachmentId)
+    ],
 );
 
 export type Confession = typeof confession.$inferSelect;
