@@ -100,15 +100,14 @@ async function resendConfession(
     if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
-    let embedAttachment: EmbedAttachment | null = null;
-    // check if an attachment exists and reconstruct it
-    if (retrievedAttachment) {
-        embedAttachment = {
-            filename: retrievedAttachment.attachmentFilename,
-            url: retrievedAttachment.attachmentUrl,
-            content_type: retrievedAttachment.attachmentType ?? undefined,
-        };
-    }
+    const embedAttachment =
+        retrievedAttachment === null
+            ? null
+            : {
+                  filename: retrievedAttachment.attachmentFilename,
+                  url: retrievedAttachment.attachmentUrl,
+                  content_type: retrievedAttachment.attachmentType ?? undefined,
+              };
 
     logger.info('confession resend has been submitted');
 
