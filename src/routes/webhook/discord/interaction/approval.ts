@@ -175,7 +175,7 @@ async function submitVerdict(
                 },
             ];
 
-            if (attachment) {
+            if (attachment !== null) {
                 fields.push(constructAttachmentField(attachment));
             }
 
@@ -206,7 +206,7 @@ async function submitVerdict(
             },
         ];
 
-        if (attachment) {
+        if (attachment !== null) {
             fields.push(constructAttachmentField(attachment));
         }
 

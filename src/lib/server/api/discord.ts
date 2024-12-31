@@ -91,7 +91,7 @@ export async function dispatchConfessionViaHttp(
         ],
     };
 
-    if (attachment) {
+    if (attachment !== null) {
         if (attachment.content_type?.includes('image')) {
             const embedData: EmbedImage = {
                 url: new URL(attachment.url),
@@ -146,9 +146,11 @@ export async function logPendingConfessionViaHttp(
             inline: true,
         },
     ];
-    if (attachment) {
+
+    if (attachment !== null) {
         fields.push(constructAttachmentField(attachment));
     }
+    
     return await createMessage(
         logger,
         channelId,
@@ -213,7 +215,8 @@ export async function logApprovedConfessionViaHttp(
             inline: true,
         },
     ];
-    if (attachment) {
+
+    if (attachment !== null) {
         fields.push(constructAttachmentField(attachment));
     }
 
@@ -267,7 +270,7 @@ export async function logResentConfessionViaHttp(
         },
     ];
 
-    if (attachment) {
+    if (attachment !== null) {
         fields.push(constructAttachmentField(attachment));
     }
 
