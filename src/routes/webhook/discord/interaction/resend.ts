@@ -7,7 +7,7 @@ import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
 import { and, eq } from 'drizzle-orm';
-import { channel, confession } from '$lib/server/database/models';
+import { attachmentData, channel, confession } from '$lib/server/database/models';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -15,6 +15,7 @@ import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/mo
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { dispatchConfessionViaHttp, logResentConfessionViaHttp } from '$lib/server/api/discord';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 
 abstract class ResendError extends Error {
     constructor(message?: string) {
@@ -67,12 +68,15 @@ async function resendConfession(
             createdAt: confession.createdAt,
             content: confession.content,
             approvedAt: confession.approvedAt,
-            attachmentUrl: confession.attachmentUrl,
-            attachmentFilename: confession.attachmentFilename,
-            attachmentType: confession.attachmentType,
+            retrievedAttachment: {
+                attachmentUrl: attachmentData.url,
+                attachmentFilename: attachmentData.filename,
+                attachmentType: attachmentData.contentType
+            }
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
+        .leftJoin(attachmentData, eq(confession.attachmentId, attachmentData.attachmentId))
         .where(and(eq(confession.channelId, confessionChannelId), eq(confession.confessionId, confessionId)))
         .limit(1);
     strictEqual(others.length, 0);
@@ -87,9 +91,7 @@ async function resendConfession(
         logChannelId,
         label,
         color,
-        attachmentType,
-        attachmentUrl,
-        attachmentFilename,
+        retrievedAttachment
     } = result;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
@@ -98,13 +100,13 @@ async function resendConfession(
     if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
-    let attachment = null;
+    let attachment : EmbedAttachment | null = null;
     // check if an attachment exists and reconstruct it
-    if (attachmentUrl && attachmentFilename) {
+    if (retrievedAttachment) {
         attachment = {
-            filename: attachmentFilename,
-            url: attachmentUrl,
-            content_type: attachmentType,
+            filename: retrievedAttachment.attachmentFilename,
+            url: retrievedAttachment.attachmentUrl,
+            content_type: retrievedAttachment.attachmentType ?? undefined,
         };
     }
 
