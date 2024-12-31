@@ -1,10 +1,11 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import { strictEqual } from 'node:assert/strict';
+
+import type { Logger } from 'pino';
 
 import { doDeferredResponse, hasAllPermissions } from './util';
 import { UnexpectedDiscordErrorCode } from './errors';
 
 import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
-import type { Logger } from 'pino';
 
 import {
     dispatchConfessionViaHttp,
@@ -16,8 +17,7 @@ import { ATTACH_FILES } from '$lib/server/models/discord/permission';
 
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
-import { InteractionApplicationCommandChatInputOptionAttachment } from '$lib/server/models/discord/interaction/application-command/chat-input/option/attachment';
+import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -26,6 +26,13 @@ abstract class ConfessError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ConfessError';
+    }
+}
+
+class InsufficientPermissionsConfessionError extends ConfessError {
+    constructor() {
+        super('You do not have the permission to attach files to messages in this channel.');
+        this.name = 'InsufficientPermissionsConfessionError';
     }
 }
 
@@ -52,6 +59,7 @@ class MissingLogConfessError extends ConfessError {
 }
 
 /**
+ * @throws {InsufficientPermissionsConfessionError}
  * @throws {UnknownChannelConfessError}
  * @throws {DisabledChannelConfessError}
  * @throws {MissingLogConfessError}
@@ -60,11 +68,14 @@ async function submitConfession(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    permission: bigint,
     confessionChannelId: Snowflake,
     authorId: Snowflake,
     description: string,
     attachment: Attachment | null,
 ) {
+    if (!hasAllPermissions(permission, ATTACH_FILES)) throw new InsufficientPermissionsConfessionError();
+
     const channel = await db.query.channel.findFirst({
         columns: {
             logChannelId: true,
@@ -213,35 +224,34 @@ export async function handleConfess(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    permissions: bigint,
     channelId: Snowflake,
     authorId: Snowflake,
-    [option, ...options]: InteractionApplicationCommandChatInputOption[],
+    [contentOption, attachmentOption, ...options]: InteractionApplicationCommandChatInputOption[],
     resolved: Resolved | null,
-    permissions: bigint,
 ) {
-    assert(options.length <= 1);
-    strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
-    strictEqual(option.name, 'content');
+    strictEqual(options.length, 0);
+    strictEqual(contentOption?.type, InteractionApplicationCommandChatInputOptionType.String);
+    strictEqual(contentOption.name, 'content');
 
-    let attachment = null;
-    const attachments =
-        typeof resolved === 'undefined' || typeof resolved?.attachments === 'undefined' || resolved === null
-            ? []
-            : Object.values(resolved.attachments);
-    // retrieve attachment if it exists, we don't actually do anything with the attachment option and assume the sole resolved.attachments entry is the attachment
-    if (options.length === 1) {
-        // check for permission to attach files
-        assert(hasAllPermissions(permissions, ATTACH_FILES));
-
-        const attachmentOption = options[0] as InteractionApplicationCommandChatInputOptionAttachment;
-        strictEqual(attachmentOption.name, 'attachment');
-        strictEqual(attachments.length, 1);
-        attachment = attachments[0] as Attachment;
-        logger.info({ attachment }, 'sending with attachment');
-    }
+    const attachment =
+        typeof attachmentOption === 'undefined'
+            ? null
+            : (strictEqual(attachmentOption.type, InteractionApplicationCommandChatInputOptionType.Attachment),
+              strictEqual(attachmentOption.name, 'attachment'),
+              resolved?.attachments?.[attachmentOption.value.toString()] ?? null);
 
     try {
-        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value, attachment);
+        return await submitConfession(
+            db,
+            logger,
+            timestamp,
+            permissions,
+            channelId,
+            authorId,
+            contentOption.value,
+            attachment,
+        );
     } catch (err) {
         if (err instanceof ConfessError) {
             logger.error(err, err.message);

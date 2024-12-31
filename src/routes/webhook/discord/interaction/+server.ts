@@ -59,11 +59,11 @@ async function handleInteraction(
                                         db,
                                         logger,
                                         timestamp,
+                                        interaction.member.permissions,
                                         interaction.channel_id,
                                         interaction.member.user.id,
                                         interaction.data.options,
                                         interaction.data.resolved ?? null,
-                                        interaction.member.permissions,
                                     ),
                                 },
                             };
