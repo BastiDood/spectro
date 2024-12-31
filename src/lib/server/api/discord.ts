@@ -204,9 +204,7 @@ export async function logApprovedConfessionViaHttp(
         },
     ];
 
-    if (attachment !== null) {
-        fields.push(constructAttachmentField(attachment));
-    }
+    if (attachment !== null) fields.push(constructAttachmentField(attachment));
 
     return await createMessage(
         logger,
