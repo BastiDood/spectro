@@ -5,7 +5,7 @@ import type { Logger } from 'pino';
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import { EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import { type Embed, type EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -73,42 +73,34 @@ export async function dispatchConfessionViaHttp(
     attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    const params: CreateMessage = {
-        embeds: [
-            {
-                type: EmbedType.Rich,
-                title: `${label} #${confessionId}`,
-                description,
-                timestamp,
-                color,
-                footer: {
-                    text: "Admins can access Spectro's confession logs",
-                    icon_url: APP_ICON_URL,
-                },
-            },
-        ],
+    const embed: Embed = {
+        type: EmbedType.Rich,
+        title: `${label} #${confessionId}`,
+        description,
+        timestamp,
+        color,
+        footer: {
+            text: "Admins can access Spectro's confession logs",
+            icon_url: APP_ICON_URL,
+        },
     };
 
-    if (attachment !== null) {
-        if (attachment.content_type?.includes('image')) {
-            const embedData: EmbedImage = {
+    if (typeof attachment?.content_type !== 'undefined') {
+        if (attachment.content_type.includes('image')) {
+            embed.image = {
                 url: new URL(attachment.url),
                 height: attachment.height ?? undefined,
                 width: attachment.width ?? undefined,
             };
-            if (params.embeds && params.embeds[0]) {
-                params.embeds[0].image = embedData as EmbedImage;
-            }
-            logger.info({ params }, 'processing an image embed');
+            logger.info({ image: embed.image }, 'processing an image embed');
         } else {
-            const attachmentField = constructAttachmentField(attachment);
-            if (params.embeds && params.embeds[0]) {
-                params.embeds[0].fields = [attachmentField];
-            }
-            logger.info({ params }, `processing some arbitrary embed of type ${attachment.content_type}`);
+            const field = constructAttachmentField(attachment);
+            logger.info({ field, contentType: attachment.content_type }, 'processing some arbitrary embed type');
+            embed.fields = [field];
         }
     }
 
+    const params: CreateMessage = { embeds: [embed] };
     if (replyToMessageId !== null)
         params.message_reference = {
             type: MessageReferenceType.Default,
