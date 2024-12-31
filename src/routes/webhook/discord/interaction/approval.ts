@@ -6,8 +6,8 @@ import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MalformedCustomIdFormat } from './errors';
 import { hasAllPermissions } from './util';
 
-import { constructAttachmentField, dispatchConfessionViaHttp } from '$lib/server/api/discord';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
@@ -184,9 +184,7 @@ async function submitVerdict(
                 },
             ];
 
-            if (embedAttachment !== null) {
-                fields.push(constructAttachmentField(embedAttachment));
-            }
+            if (embedAttachment !== null) fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
 
             return {
                 type: EmbedType.Rich,
@@ -215,9 +213,7 @@ async function submitVerdict(
             },
         ];
 
-        if (embedAttachment !== null) {
-            fields.push(constructAttachmentField(embedAttachment));
-        }
+        if (embedAttachment !== null) fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
 
         await tx.delete(confession).where(eq(confession.internalId, internalId));
         logger.warn('deleted confession due to rejection');
@@ -267,9 +263,9 @@ export async function handleApproval(
         const payload = await submitVerdict(db, logger, timestamp, isApproved, internalId, userId, permissions);
         return typeof payload === 'string'
             ? {
-                  type: InteractionResponseType.ChannelMessageWithSource,
-                  data: { flags: MessageFlags.Ephemeral, content: payload },
-              }
+                type: InteractionResponseType.ChannelMessageWithSource,
+                data: { flags: MessageFlags.Ephemeral, content: payload },
+            }
             : { type: InteractionResponseType.UpdateMessage, data: { components: [], embeds: [payload] } };
     } catch (err) {
         if (err instanceof ApprovalError) {

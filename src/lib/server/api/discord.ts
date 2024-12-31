@@ -1,5 +1,3 @@
-import assert, { strictEqual } from 'node:assert/strict';
-
 import type { Logger } from 'pino';
 import { parse } from 'valibot';
 
@@ -7,7 +5,7 @@ import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { type Embed, EmbedType } from '$lib/server/models/discord/embed';
+import { type Embed, type EmbedField, EmbedType } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { DiscordError } from '$lib/server/models/discord/error';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
@@ -22,17 +20,14 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
 async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string) {
-    const payload = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
-    const formData = new FormData();
-    formData.append('payload_json', payload);
-
+    const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
     const start = performance.now();
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
-        body: formData,
+        body,
         method: 'POST',
         headers: {
             Authorization: `Bot ${botToken}`,
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
         },
     });
     const json = await response.json();
@@ -48,17 +43,6 @@ async function createMessage(logger: Logger, channelId: Snowflake, data: CreateM
     const { code, message } = parse(DiscordError, json);
     child.error({ statusCode: response.status }, message);
     return code;
-}
-
-export function constructAttachmentField(attachment: EmbedAttachment) {
-    const [contentIdentifier, ...rest] = attachment.content_type?.split('/') ?? ['file'];
-    strictEqual(rest.length, 1);
-    assert(typeof contentIdentifier === 'string');
-    return {
-        name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
-        value: attachment.url,
-        inline: true,
-    };
 }
 
 export async function dispatchConfessionViaHttp(
@@ -86,18 +70,13 @@ export async function dispatchConfessionViaHttp(
     };
 
     if (typeof attachment?.content_type !== 'undefined') {
-        if (attachment.content_type.includes('image')) {
+        if (attachment.content_type.includes('image'))
             embed.image = {
                 url: new URL(attachment.url),
                 height: attachment.height ?? undefined,
                 width: attachment.width ?? undefined,
             };
-            logger.info({ image: embed.image }, 'processing an image embed');
-        } else {
-            const field = constructAttachmentField(attachment);
-            logger.info({ field, contentType: attachment.content_type }, 'processing some arbitrary embed type');
-            embed.fields = [field];
-        }
+        else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
     }
 
     const params: CreateMessage = { embeds: [embed] };
@@ -128,7 +107,7 @@ export async function logPendingConfessionViaHttp(
     attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    const fields = [
+    const fields: EmbedField[] = [
         {
             name: 'Authored by',
             value: `||<@${authorId}>||`,
@@ -136,7 +115,7 @@ export async function logPendingConfessionViaHttp(
         },
     ];
 
-    if (attachment !== null) fields.push(constructAttachmentField(attachment));
+    if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
 
     const customId = internalId.toString();
     return await createMessage(
@@ -204,7 +183,7 @@ export async function logApprovedConfessionViaHttp(
         },
     ];
 
-    if (attachment !== null) fields.push(constructAttachmentField(attachment));
+    if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
 
     return await createMessage(
         logger,
@@ -256,7 +235,7 @@ export async function logResentConfessionViaHttp(
         },
     ];
 
-    if (attachment !== null) fields.push(constructAttachmentField(attachment));
+    if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
 
     return await createMessage(
         logger,
