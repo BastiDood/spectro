@@ -1,4 +1,4 @@
-import strict, { strictEqual } from 'node:assert/strict';
+import assert, { strictEqual } from 'node:assert/strict';
 
 import { doDeferredResponse, hasAllPermissions } from './util';
 import { UnexpectedDiscordErrorCode } from './errors';
@@ -20,7 +20,6 @@ import { ATTACH_FILES } from '$lib/server/models/discord/permission';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { InteractionApplicationCommandChatInputOptionAttachment } from '$lib/server/models/discord/interaction/application-command/chat-input/option/attachment';
 import type { Resolved } from '$lib/server/models/discord/resolved';
-import assert from 'node:assert';
 
 abstract class ConfessError extends Error {
     constructor(message?: string) {
