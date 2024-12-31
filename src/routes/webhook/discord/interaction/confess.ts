@@ -218,7 +218,7 @@ export async function handleConfess(
     resolved: Resolved | null,
     permissions: bigint,
 ) {
-    strict(options.length <= 1);
+    assert(options.length <= 1);
     strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
     strictEqual(option.name, 'content');
 
