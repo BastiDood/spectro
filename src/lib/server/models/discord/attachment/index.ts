@@ -2,7 +2,7 @@ import { type InferOutput, nullable, number, object, optional, string } from 'va
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 export const Attachment = object({
-    id: optional(Snowflake),
+    id: Snowflake,
     filename: string(),
     title: optional(string()),
     description: optional(string()),
