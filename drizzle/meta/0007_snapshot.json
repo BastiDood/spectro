@@ -1,5 +1,5 @@
 {
-  "id": "54640ae8-698e-4694-bb01-372505b753cf",
+  "id": "0f8cf572-51d4-412b-9325-0fc5e311ef2a",
   "prevId": "e921d4f1-d54a-40f2-ae31-0c25ba36c56c",
   "version": "7",
   "dialect": "postgresql",
@@ -20,29 +20,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "content_type": {
           "name": "content_type",
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "size": {
-          "name": "size",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
         },
         "url": {
           "name": "url",
@@ -55,18 +37,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "height": {
-          "name": "height",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "width": {
-          "name": "width",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},

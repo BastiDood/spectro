@@ -1,14 +1,9 @@
 CREATE TABLE "app"."attachment_data" (
 	"id" bigint PRIMARY KEY NOT NULL,
 	"filename" text NOT NULL,
-	"title" text,
-	"description" text,
 	"content_type" text,
-	"size" integer NOT NULL,
 	"url" text NOT NULL,
-	"proxy_url" text NOT NULL,
-	"height" integer,
-	"width" integer
+	"proxy_url" text NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "app"."confession" ADD COLUMN "attachment_id" bigint;--> statement-breakpoint
