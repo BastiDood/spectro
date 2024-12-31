@@ -228,7 +228,7 @@ export async function handleConfess(
     strictEqual(option.name, 'content');
 
     let attachment = null;
-    const attachments = typeof resolved === 'undefined'
+    const attachments = typeof resolved === 'undefined' || typeof resolved?.attachments === 'undefined' || resolved === null
         ? []
         : Object.values(resolved.attachments);
     // retrieve attachment if it exists, we don't actually do anything with the attachment option and assume the sole resolved.attachments entry is the attachment
