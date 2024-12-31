@@ -41,20 +41,14 @@ function updateLastConfession(db: Interface, guildId: Snowflake) {
 }
 
 async function insertAttachmentData(db: Interface, attachment: Attachment) {
-    const [result, ...otherResults] = await db
-        .insert(schema.attachment)
-        .values({
-            id: attachment.id,
-            filename: attachment.filename,
-            contentType: attachment.content_type,
-            url: attachment.url,
-            proxyUrl: attachment.proxy_url,
-        })
-        .returning();
-    strictEqual(otherResults.length, 0);
-    assert(typeof result !== 'undefined');
-    assert(typeof result.id === 'bigint');
-    return BigInt(result.id);
+    const { rowCount } = await db.insert(schema.attachment).values({
+        id: attachment.id,
+        filename: attachment.filename,
+        contentType: attachment.content_type,
+        url: attachment.url,
+        proxyUrl: attachment.proxy_url,
+    });
+    strictEqual(rowCount, 1);
 }
 
 export async function insertConfession(
@@ -69,7 +63,7 @@ export async function insertConfession(
     attachment: Attachment | null,
 ) {
     return await db.transaction(async tx => {
-        const attachmentId = attachment === null ? null : await insertAttachmentData(tx, attachment);
+        const attachmentId = attachment === null ? null : (await insertAttachmentData(tx, attachment), attachment.id);
         const guild = updateLastConfession(tx, guildId);
         const {
             rows: [result, ...otherResults],
