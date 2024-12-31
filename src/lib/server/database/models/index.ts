@@ -1,4 +1,4 @@
-import { bigint, bit, boolean, integer, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { bigint, bit, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
@@ -70,14 +70,9 @@ export const confessionRelations = relations(confession, ({ one }) => ({
 export const attachment = app.table('attachment_data', {
     id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
     filename: text('filename').notNull(),
-    title: text('title'),
-    description: text('description'),
     contentType: text('content_type'),
-    size: integer('size').notNull(),
     url: text('url').notNull(),
     proxyUrl: text('proxy_url').notNull(),
-    height: integer('height'),
-    width: integer('width'),
 });
 
 export type AttachmentData = typeof attachment.$inferSelect;

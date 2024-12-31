@@ -46,14 +46,9 @@ async function insertAttachmentData(db: Interface, attachment: Attachment) {
         .values({
             id: attachment.id,
             filename: attachment.filename,
-            title: attachment.title,
-            description: attachment.description,
             contentType: attachment.content_type,
-            size: attachment.size,
             url: attachment.url,
             proxyUrl: attachment.proxy_url,
-            height: attachment.height,
-            width: attachment.width,
         })
         .returning();
     strictEqual(otherResults.length, 0);
