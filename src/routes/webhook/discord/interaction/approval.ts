@@ -12,7 +12,7 @@ import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 
-import { attachmentData, channel, confession } from '$lib/server/database/models';
+import { attachment, channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
 import { Embed, EmbedType } from '$lib/server/models/discord/embed';
@@ -105,24 +105,24 @@ async function submitVerdict(
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-        let attachment: EmbedAttachment | null = null;
+        let embedAttachment: EmbedAttachment | null = null;
 
         // check if an attachment exists and reconstruct it
         if (attachmentId !== null) {
             const [retrieved, ...others] = await tx
                 .select({
-                    attachmentFilename: attachmentData.filename,
-                    attachmentUrl: attachmentData.url,
-                    attachmentType: attachmentData.contentType,
+                    attachmentFilename: attachment.filename,
+                    attachmentUrl: attachment.url,
+                    attachmentType: attachment.contentType,
                 })
-                .from(attachmentData)
-                .where(eq(attachmentData.attachmentId, attachmentId));
+                .from(attachment)
+                .where(eq(attachment.id, attachmentId));
             strictEqual(others.length, 0);
             assert(typeof retrieved !== 'undefined');
 
             const { attachmentFilename, attachmentUrl, attachmentType } = retrieved;
 
-            attachment = {
+            embedAttachment = {
                 filename: attachmentFilename,
                 url: attachmentUrl,
                 content_type: attachmentType ?? undefined,
@@ -152,7 +152,7 @@ async function submitVerdict(
                 hex,
                 content,
                 parentMessageId,
-                attachment,
+                embedAttachment,
             );
 
             if (typeof discordErrorCode === 'number')
@@ -184,8 +184,8 @@ async function submitVerdict(
                 },
             ];
 
-            if (attachment !== null) {
-                fields.push(constructAttachmentField(attachment));
+            if (embedAttachment !== null) {
+                fields.push(constructAttachmentField(embedAttachment));
             }
 
             return {
@@ -215,8 +215,8 @@ async function submitVerdict(
             },
         ];
 
-        if (attachment !== null) {
-            fields.push(constructAttachmentField(attachment));
+        if (embedAttachment !== null) {
+            fields.push(constructAttachmentField(embedAttachment));
         }
 
         await tx.delete(confession).where(eq(confession.internalId, internalId));

@@ -7,7 +7,7 @@ import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
 import { and, eq } from 'drizzle-orm';
-import { attachmentData, channel, confession } from '$lib/server/database/models';
+import { attachment, channel, confession } from '$lib/server/database/models';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -69,14 +69,14 @@ async function resendConfession(
             content: confession.content,
             approvedAt: confession.approvedAt,
             retrievedAttachment: {
-                attachmentUrl: attachmentData.url,
-                attachmentFilename: attachmentData.filename,
-                attachmentType: attachmentData.contentType,
+                attachmentUrl: attachment.url,
+                attachmentFilename: attachment.filename,
+                attachmentType: attachment.contentType,
             },
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
-        .leftJoin(attachmentData, eq(confession.attachmentId, attachmentData.attachmentId))
+        .leftJoin(attachment, eq(confession.attachmentId, attachment.id))
         .where(and(eq(confession.channelId, confessionChannelId), eq(confession.confessionId, confessionId)))
         .limit(1);
     strictEqual(others.length, 0);
@@ -100,10 +100,10 @@ async function resendConfession(
     if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
-    let attachment: EmbedAttachment | null = null;
+    let embedAttachment: EmbedAttachment | null = null;
     // check if an attachment exists and reconstruct it
     if (retrievedAttachment) {
-        attachment = {
+        embedAttachment = {
             filename: retrievedAttachment.attachmentFilename,
             url: retrievedAttachment.attachmentUrl,
             content_type: retrievedAttachment.attachmentType ?? undefined,
@@ -123,7 +123,7 @@ async function resendConfession(
             hex,
             content,
             parentMessageId,
-            attachment,
+            embedAttachment,
         );
 
         if (typeof message === 'number')
@@ -144,7 +144,7 @@ async function resendConfession(
             moderatorId,
             label,
             content,
-            attachment,
+            embedAttachment,
         );
 
         if (typeof discordErrorCode === 'number')

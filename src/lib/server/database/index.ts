@@ -42,9 +42,9 @@ function updateLastConfession(db: Interface, guildId: Snowflake) {
 
 async function insertAttachmentData(db: Interface, attachment: Attachment) {
     const [result, ...otherResults] = await db
-        .insert(schema.attachmentData)
+        .insert(schema.attachment)
         .values({
-            attachmentId: attachment.id,
+            id: attachment.id,
             filename: attachment.filename,
             title: attachment.title,
             description: attachment.description,
@@ -58,8 +58,8 @@ async function insertAttachmentData(db: Interface, attachment: Attachment) {
         .returning();
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
-    assert(typeof result.attachmentId === 'bigint');
-    return { attachmentId: BigInt(result.attachmentId) };
+    assert(typeof result.id === 'bigint');
+    return { attachmentId: BigInt(result.id) };
 }
 
 export async function insertConfession(

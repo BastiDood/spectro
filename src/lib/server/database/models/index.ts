@@ -51,7 +51,7 @@ export const confession = app.table(
         approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
         authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
         content: text('content').notNull(),
-        attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(() => attachmentData.attachmentId),
+        attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(() => attachment.id),
     },
     ({ confessionId, channelId, attachmentId }) => [
         uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId),
@@ -64,11 +64,11 @@ export type NewConfession = typeof confession.$inferInsert;
 
 export const confessionRelations = relations(confession, ({ one }) => ({
     channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
-    attachment: one(attachmentData, { fields: [confession.attachmentId], references: [attachmentData.attachmentId] }),
+    attachment: one(attachment, { fields: [confession.attachmentId], references: [attachment.id] }),
 }));
 
-export const attachmentData = app.table('attachment_data', {
-    attachmentId: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+export const attachment = app.table('attachment_data', {
+    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
     filename: text('filename').notNull(),
     title: text('title'),
     description: text('description'),
@@ -80,5 +80,5 @@ export const attachmentData = app.table('attachment_data', {
     width: integer('width'),
 });
 
-export type AttachmentData = typeof attachmentData.$inferSelect;
-export type NewAttachmentData = typeof attachmentData.$inferInsert;
+export type AttachmentData = typeof attachment.$inferSelect;
+export type NewAttachmentData = typeof attachment.$inferInsert;
