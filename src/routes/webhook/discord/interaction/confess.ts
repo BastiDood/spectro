@@ -6,20 +6,21 @@ import { UnexpectedDiscordErrorCode } from './errors';
 import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
-import type { Attachment } from '$lib/server/models/discord/attachment';
-import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
-import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
 import {
     dispatchConfessionViaHttp,
     logApprovedConfessionViaHttp,
     logPendingConfessionViaHttp,
 } from '$lib/server/api/discord';
+
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
+
+import type { Attachment } from '$lib/server/models/discord/attachment';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionAttachment } from '$lib/server/models/discord/interaction/application-command/chat-input/option/attachment';
+import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Resolved } from '$lib/server/models/discord/resolved';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 abstract class ConfessError extends Error {
     constructor(message?: string) {
