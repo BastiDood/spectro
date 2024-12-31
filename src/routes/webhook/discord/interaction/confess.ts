@@ -148,7 +148,7 @@ async function submitConfession(
         });
 
         logger.info('confession pending approval has been submitted');
-        return `Submitting ${label} #${confessionId}...`;
+        return `${label} #${confessionId} has been submitted.`;
     }
 
     const { internalId, confessionId } = await insertConfession(
@@ -214,10 +214,10 @@ async function submitConfession(
             }
 
         logger.info('auto-approved confession has been published');
-        return `${label} #${confessionId} has been published.`;
+        return `${label} #${confessionId} has been confirmed.`;
     });
 
-    return `${label} #${confessionId} has been submitted.`;
+    return `${label} #${confessionId} has been published.`;
 }
 
 export async function handleConfess(
