@@ -64,6 +64,7 @@ export type NewConfession = typeof confession.$inferInsert;
 
 export const confessionRelations = relations(confession, ({ one }) => ({
     channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
+    attachment: one(attachmentData, { fields: [confession.attachmentId], references: [attachmentData.attachmentId] })
 }));
 
 export const attachmentData = app.table(
