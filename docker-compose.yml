@@ -7,7 +7,7 @@ services:
       - .env.development
     restart: always
     ports:
-      - 5555:5432
+      - 5432:5432
     profiles:
       - dev
     volumes:
