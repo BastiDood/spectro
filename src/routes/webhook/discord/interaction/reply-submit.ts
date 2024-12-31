@@ -98,6 +98,7 @@ async function submitReply(
             content,
             null,
             parentMessageId,
+            null,
         );
 
         logger.info({ internalId, confessionId }, 'reply pending approval submitted');
@@ -113,6 +114,7 @@ async function submitReply(
                 authorId,
                 label,
                 content,
+                null,
             );
 
             if (typeof discordErrorCode === 'number')
@@ -147,6 +149,7 @@ async function submitReply(
         content,
         timestamp,
         parentMessageId,
+        null,
     );
 
     logger.info({ internalId, confessionId }, 'reply submitted');
@@ -162,6 +165,7 @@ async function submitReply(
             hex,
             content,
             parentMessageId,
+            null,
         );
 
         if (typeof message === 'number')
@@ -180,6 +184,7 @@ async function submitReply(
             authorId,
             label,
             content,
+            null,
         );
 
         if (typeof discordErrorCode === 'number')

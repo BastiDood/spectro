@@ -37,8 +37,8 @@ export type EmbedFooter = InferOutput<typeof EmbedFooter>;
 export const EmbedImage = object({
     url: Url,
     proxy_url: optional(Url),
-    width: optional(pipe(number(), safeInteger(), minValue(1))),
-    height: optional(pipe(number(), safeInteger(), minValue(1))),
+    width: optional(pipe(number(), safeInteger(), minValue(0))),
+    height: optional(pipe(number(), safeInteger(), minValue(0))),
 });
 
 export type EmbedImage = InferOutput<typeof EmbedImage>;
@@ -46,8 +46,8 @@ export type EmbedImage = InferOutput<typeof EmbedImage>;
 export const EmbedVideo = object({
     url: optional(Url),
     proxy_url: optional(Url),
-    width: optional(pipe(number(), safeInteger(), minValue(1))),
-    height: optional(pipe(number(), safeInteger(), minValue(1))),
+    width: optional(pipe(number(), safeInteger(), minValue(0))),
+    height: optional(pipe(number(), safeInteger(), minValue(0))),
 });
 
 export type EmbedVideo = InferOutput<typeof EmbedVideo>;

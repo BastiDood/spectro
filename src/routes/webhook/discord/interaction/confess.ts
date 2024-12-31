@@ -1,26 +1,38 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { UnexpectedDiscordErrorCode } from './errors';
-import { doDeferredResponse } from './util';
-
-import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
-import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
-import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { doDeferredResponse, hasAllPermissions } from './util';
+import { UnexpectedDiscordErrorCode } from './errors';
+
+import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 
 import {
     dispatchConfessionViaHttp,
     logApprovedConfessionViaHttp,
     logPendingConfessionViaHttp,
 } from '$lib/server/api/discord';
+
+import { ATTACH_FILES } from '$lib/server/models/discord/permission';
+
+import type { Attachment } from '$lib/server/models/discord/attachment';
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
+import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
+import type { Resolved } from '$lib/server/models/discord/resolved';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 abstract class ConfessError extends Error {
     constructor(message?: string) {
         super(message);
         this.name = 'ConfessError';
+    }
+}
+
+class InsufficientPermissionsConfessionError extends ConfessError {
+    constructor() {
+        super('You do not have the permission to attach files to messages in this channel.');
+        this.name = 'InsufficientPermissionsConfessionError';
     }
 }
 
@@ -47,6 +59,7 @@ class MissingLogConfessError extends ConfessError {
 }
 
 /**
+ * @throws {InsufficientPermissionsConfessionError}
  * @throws {UnknownChannelConfessError}
  * @throws {DisabledChannelConfessError}
  * @throws {MissingLogConfessError}
@@ -55,10 +68,14 @@ async function submitConfession(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    permission: bigint,
     confessionChannelId: Snowflake,
     authorId: Snowflake,
     description: string,
+    attachment: Attachment | null,
 ) {
+    if (!hasAllPermissions(permission, ATTACH_FILES)) throw new InsufficientPermissionsConfessionError();
+
     const channel = await db.query.channel.findFirst({
         columns: {
             logChannelId: true,
@@ -92,6 +109,7 @@ async function submitConfession(
             description,
             null,
             null,
+            attachment,
         );
 
         logger.info({ internalId, confessionId }, 'confession pending approval submitted');
@@ -107,6 +125,7 @@ async function submitConfession(
                 authorId,
                 label,
                 description,
+                attachment,
             );
 
             if (typeof discordErrorCode === 'number')
@@ -129,7 +148,7 @@ async function submitConfession(
         });
 
         logger.info('confession pending approval has been submitted');
-        return `Submitting ${label} #${confessionId}...`;
+        return `${label} #${confessionId} has been submitted.`;
     }
 
     const { internalId, confessionId } = await insertConfession(
@@ -141,6 +160,7 @@ async function submitConfession(
         description,
         timestamp,
         null,
+        attachment,
     );
 
     logger.info({ internalId, confessionId }, 'confession submitted');
@@ -156,6 +176,7 @@ async function submitConfession(
             hex,
             description,
             null,
+            attachment,
         );
 
         if (typeof message === 'number')
@@ -174,6 +195,7 @@ async function submitConfession(
             authorId,
             label,
             description,
+            attachment,
         );
 
         if (typeof discordErrorCode === 'number')
@@ -192,25 +214,44 @@ async function submitConfession(
             }
 
         logger.info('auto-approved confession has been published');
-        return `${label} #${confessionId} has been published.`;
+        return `${label} #${confessionId} has been confirmed.`;
     });
 
-    return `${label} #${confessionId} has been submitted.`;
+    return `${label} #${confessionId} has been published.`;
 }
 
 export async function handleConfess(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    permissions: bigint,
     channelId: Snowflake,
     authorId: Snowflake,
-    [option, ...options]: InteractionApplicationCommandChatInputOption[],
+    [contentOption, attachmentOption, ...options]: InteractionApplicationCommandChatInputOption[],
+    resolved: Resolved | null,
 ) {
     strictEqual(options.length, 0);
-    strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.String);
-    strictEqual(option.name, 'content');
+    strictEqual(contentOption?.type, InteractionApplicationCommandChatInputOptionType.String);
+    strictEqual(contentOption.name, 'content');
+
+    const attachment =
+        typeof attachmentOption === 'undefined'
+            ? null
+            : (strictEqual(attachmentOption.type, InteractionApplicationCommandChatInputOptionType.Attachment),
+              strictEqual(attachmentOption.name, 'attachment'),
+              resolved?.attachments?.[attachmentOption.value.toString()] ?? null);
+
     try {
-        return await submitConfession(db, logger, timestamp, channelId, authorId, option.value);
+        return await submitConfession(
+            db,
+            logger,
+            timestamp,
+            permissions,
+            channelId,
+            authorId,
+            contentOption.value,
+            attachment,
+        );
     } catch (err) {
         if (err instanceof ConfessError) {
             logger.error(err, err.message);

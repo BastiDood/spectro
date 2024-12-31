@@ -7,7 +7,7 @@ import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
 import { and, eq } from 'drizzle-orm';
-import { channel, confession } from '$lib/server/database/models';
+import { attachment, channel, confession } from '$lib/server/database/models';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -67,21 +67,46 @@ async function resendConfession(
             createdAt: confession.createdAt,
             content: confession.content,
             approvedAt: confession.approvedAt,
+            retrievedAttachment: {
+                attachmentUrl: attachment.url,
+                attachmentFilename: attachment.filename,
+                attachmentType: attachment.contentType,
+            },
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
+        .leftJoin(attachment, eq(confession.attachmentId, attachment.id))
         .where(and(eq(confession.channelId, confessionChannelId), eq(confession.confessionId, confessionId)))
         .limit(1);
     strictEqual(others.length, 0);
 
     if (typeof result === 'undefined') throw new ConfessionNotFoundResendError(confessionId);
-    const { parentMessageId, authorId, approvedAt, createdAt, content, logChannelId, label, color } = result;
+    const {
+        parentMessageId,
+        authorId,
+        approvedAt,
+        createdAt,
+        content,
+        logChannelId,
+        label,
+        color,
+        retrievedAttachment,
+    } = result;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
     logger.info({ confession }, 'confession to be resent found');
 
     if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
+
+    const embedAttachment =
+        retrievedAttachment === null
+            ? null
+            : {
+                  filename: retrievedAttachment.attachmentFilename,
+                  url: retrievedAttachment.attachmentUrl,
+                  content_type: retrievedAttachment.attachmentType ?? undefined,
+              };
 
     logger.info('confession resend has been submitted');
 
@@ -96,6 +121,7 @@ async function resendConfession(
             hex,
             content,
             parentMessageId,
+            embedAttachment,
         );
 
         if (typeof message === 'number')
@@ -116,6 +142,7 @@ async function resendConfession(
             moderatorId,
             label,
             content,
+            embedAttachment,
         );
 
         if (typeof discordErrorCode === 'number')

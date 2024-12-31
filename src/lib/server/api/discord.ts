@@ -1,10 +1,14 @@
+import type { Logger } from 'pino';
+import { parse } from 'valibot';
+
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import type { Logger } from 'pino';
-
+import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+import { type Embed, type EmbedField, EmbedType } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
-import { EmbedType } from '$lib/server/models/discord/embed';
+import { DiscordError } from '$lib/server/models/discord/error';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
@@ -13,22 +17,17 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { DiscordError } from '$lib/server/models/discord/error';
-import { parse } from 'valibot';
-
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
 async function createMessage(logger: Logger, channelId: Snowflake, data: CreateMessage, botToken: string) {
     const body = JSON.stringify(data, (_, value) => (typeof value === 'bigint' ? value.toString() : value));
-
     const start = performance.now();
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
         body,
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bot ${botToken}`,
+            'Content-Type': 'application/json',
         },
     });
     const json = await response.json();
@@ -55,24 +54,32 @@ export async function dispatchConfessionViaHttp(
     color: number | undefined,
     description: string,
     replyToMessageId: Snowflake | null,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
-    const params: CreateMessage = {
-        embeds: [
-            {
-                type: EmbedType.Rich,
-                title: `${label} #${confessionId}`,
-                description,
-                timestamp,
-                color,
-                footer: {
-                    text: "Admins can access Spectro's confession logs",
-                    icon_url: APP_ICON_URL,
-                },
-            },
-        ],
+    const embed: Embed = {
+        type: EmbedType.Rich,
+        title: `${label} #${confessionId}`,
+        description,
+        timestamp,
+        color,
+        footer: {
+            text: "Admins can access Spectro's confession logs",
+            icon_url: APP_ICON_URL,
+        },
     };
 
+    if (typeof attachment?.content_type !== 'undefined') {
+        if (attachment.content_type.includes('image'))
+            embed.image = {
+                url: new URL(attachment.url),
+                height: attachment.height ?? undefined,
+                width: attachment.width ?? undefined,
+            };
+        else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
+    }
+
+    const params: CreateMessage = { embeds: [embed] };
     if (replyToMessageId !== null)
         params.message_reference = {
             type: MessageReferenceType.Default,
@@ -97,8 +104,19 @@ export async function logPendingConfessionViaHttp(
     authorId: Snowflake,
     label: string,
     description: string,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
+    const fields: EmbedField[] = [
+        {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+        },
+    ];
+
+    if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+
     const customId = internalId.toString();
     return await createMessage(
         logger,
@@ -117,13 +135,7 @@ export async function logPendingConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields: [
-                        {
-                            name: 'Authored by',
-                            value: `||<@${authorId}>||`,
-                            inline: true,
-                        },
-                    ],
+                    fields,
                 },
             ],
             components: [
@@ -160,8 +172,19 @@ export async function logApprovedConfessionViaHttp(
     authorId: Snowflake,
     label: string,
     description: string,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
+    const fields = [
+        {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+        },
+    ];
+
+    if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+
     return await createMessage(
         logger,
         channelId,
@@ -179,13 +202,7 @@ export async function logApprovedConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields: [
-                        {
-                            name: 'Authored by',
-                            value: `||<@${authorId}>||`,
-                            inline: true,
-                        },
-                    ],
+                    fields,
                 },
             ],
         },
@@ -202,8 +219,24 @@ export async function logResentConfessionViaHttp(
     moderatorId: Snowflake,
     label: string,
     description: string,
+    attachment: EmbedAttachment | null,
     botToken = DISCORD_BOT_TOKEN,
 ) {
+    const fields = [
+        {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+        },
+        {
+            name: 'Resent by',
+            value: `<@${moderatorId}>`,
+            inline: true,
+        },
+    ];
+
+    if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+
     return await createMessage(
         logger,
         channelId,
@@ -221,18 +254,7 @@ export async function logResentConfessionViaHttp(
                         text: 'Spectro Logs',
                         icon_url: APP_ICON_URL,
                     },
-                    fields: [
-                        {
-                            name: 'Authored by',
-                            value: `||<@${authorId}>||`,
-                            inline: true,
-                        },
-                        {
-                            name: 'Resent by',
-                            value: `<@${moderatorId}>`,
-                            inline: true,
-                        },
-                    ],
+                    fields,
                 },
             ],
         },

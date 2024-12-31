@@ -12,10 +12,11 @@ import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 
-import { channel, confession } from '$lib/server/database/models';
+import { attachment, channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
 import { Embed, EmbedType } from '$lib/server/models/discord/embed';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -80,6 +81,7 @@ async function submitVerdict(
                 createdAt: confession.createdAt,
                 approvedAt: confession.approvedAt,
                 content: confession.content,
+                attachmentId: confession.attachmentId,
             })
             .from(confession)
             .innerJoin(channel, eq(confession.channelId, channel.id))
@@ -99,10 +101,32 @@ async function submitVerdict(
             color,
             label,
             content,
+            attachmentId,
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-        logger.info({ details }, 'fetched confession details for approval');
+        // TODO: Refactor to Relations API once the `bigint` bug is fixed.
+        let embedAttachment: EmbedAttachment | null = null;
+        if (attachmentId !== null) {
+            const [retrieved, ...others] = await tx
+                .select({
+                    filename: attachment.filename,
+                    url: attachment.url,
+                    contentType: attachment.contentType,
+                })
+                .from(attachment)
+                .where(eq(attachment.id, attachmentId));
+            strictEqual(others.length, 0);
+            assert(typeof retrieved !== 'undefined');
+            embedAttachment = {
+                filename: retrieved.filename,
+                url: retrieved.url,
+                content_type: retrieved.contentType ?? undefined,
+            };
+        }
+
+        const child = logger.child({ details });
+        child.info('fetched confession details for approval');
 
         if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelConfessError(disabledAt);
 
@@ -124,6 +148,7 @@ async function submitVerdict(
                 hex,
                 content,
                 parentMessageId,
+                embedAttachment,
             );
 
             if (typeof discordErrorCode === 'number')
@@ -142,6 +167,21 @@ async function submitVerdict(
                         return `${label} #${confessionId} has been approved internally, but Spectro encountered an unexpected error (${discordErrorCode}) from Discord while publishing to the confession channel. Kindly inform the developers and the moderators about this issue.`;
                 }
 
+            const fields = [
+                {
+                    name: 'Authored by',
+                    value: `||<@${authorId}>||`,
+                    inline: true,
+                },
+                {
+                    name: 'Approved by',
+                    value: `<@${moderatorId}>`,
+                    inline: true,
+                },
+            ];
+
+            if (embedAttachment !== null) fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+
             return {
                 type: EmbedType.Rich,
                 title: `${label} #${confessionId}`,
@@ -152,20 +192,24 @@ async function submitVerdict(
                     text: 'Spectro Logs',
                     icon_url: APP_ICON_URL,
                 },
-                fields: [
-                    {
-                        name: 'Authored by',
-                        value: `||<@${authorId}>||`,
-                        inline: true,
-                    },
-                    {
-                        name: 'Approved by',
-                        value: `<@${moderatorId}>`,
-                        inline: true,
-                    },
-                ],
+                fields,
             };
         }
+
+        const fields = [
+            {
+                name: 'Authored by',
+                value: `||<@${authorId}>||`,
+                inline: true,
+            },
+            {
+                name: 'Deleted by',
+                value: `<@${moderatorId}>`,
+                inline: true,
+            },
+        ];
+
+        if (embedAttachment !== null) fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
 
         await tx.delete(confession).where(eq(confession.internalId, internalId));
         logger.warn('deleted confession due to rejection');
@@ -179,18 +223,7 @@ async function submitVerdict(
                 text: 'Spectro Logs',
                 icon_url: APP_ICON_URL,
             },
-            fields: [
-                {
-                    name: 'Authored by',
-                    value: `||<@${authorId}>||`,
-                    inline: true,
-                },
-                {
-                    name: 'Deleted by',
-                    value: `<@${moderatorId}>`,
-                    inline: true,
-                },
-            ],
+            fields,
         };
     });
 }

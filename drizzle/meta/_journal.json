@@ -50,6 +50,13 @@
       "when": 1733593923197,
       "tag": "0006_configure-logs-channel",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1735640659155,
+      "tag": "0007_store-attachment-data",
+      "breakpoints": true
     }
   ]
 }
