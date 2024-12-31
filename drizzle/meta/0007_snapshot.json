@@ -1,9 +1,82 @@
 {
-  "id": "547ee0a5-2ecc-4d37-bb78-8e6c86fa772c",
+  "id": "54640ae8-698e-4694-bb01-372505b753cf",
   "prevId": "e921d4f1-d54a-40f2-ae31-0c25ba36c56c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "app.attachment_data": {
+      "name": "attachment_data",
+      "schema": "app",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "filename": {
+          "name": "filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "size": {
+          "name": "size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proxy_url": {
+          "name": "proxy_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "app.channel": {
       "name": "channel",
       "schema": "app",
@@ -163,21 +236,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "attachment_url": {
-          "name": "attachment_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attachment_filename": {
-          "name": "attachment_filename",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attachment_type": {
-          "name": "attachment_type",
-          "type": "text",
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         }
@@ -203,6 +264,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "confession_to_attachment_unique_idx": {
+          "name": "confession_to_attachment_unique_idx",
+          "columns": [
+            {
+              "expression": "confession_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "attachment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -213,6 +295,20 @@
           "schemaTo": "app",
           "columnsFrom": [
             "channel_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "confession_attachment_id_attachment_data_id_fk": {
+          "name": "confession_attachment_id_attachment_data_id_fk",
+          "tableFrom": "confession",
+          "tableTo": "attachment_data",
+          "schemaTo": "app",
+          "columnsFrom": [
+            "attachment_id"
           ],
           "columnsTo": [
             "id"

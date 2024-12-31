@@ -54,15 +54,8 @@
     {
       "idx": 7,
       "version": "7",
-      "when": 1735550579587,
-      "tag": "0007_last_tombstone",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1735633091201,
-      "tag": "0008_add-attachment-model",
+      "when": 1735633808311,
+      "tag": "0007_store-attachment-data",
       "breakpoints": true
     }
   ]
