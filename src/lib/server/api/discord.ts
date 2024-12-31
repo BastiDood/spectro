@@ -54,7 +54,7 @@ export function constructAttachmentField(attachment: EmbedAttachment) {
     strict(typeof contentIdentifier === 'string');
     strictEqual(rest.length, 1);
     const attachmentInfo = attachment.url;
-    strict(typeof attachmentInfo === 'string')
+    strict(typeof attachmentInfo === 'string');
 
     return {
         name: `${contentIdentifier[0]?.toUpperCase().concat(contentIdentifier.substring(1))} Attachment`,
@@ -150,7 +150,7 @@ export async function logPendingConfessionViaHttp(
     if (attachment !== null) {
         fields.push(constructAttachmentField(attachment));
     }
-    
+
     return await createMessage(
         logger,
         channelId,

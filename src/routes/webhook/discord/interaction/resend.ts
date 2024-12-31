@@ -71,8 +71,8 @@ async function resendConfession(
             retrievedAttachment: {
                 attachmentUrl: attachmentData.url,
                 attachmentFilename: attachmentData.filename,
-                attachmentType: attachmentData.contentType
-            }
+                attachmentType: attachmentData.contentType,
+            },
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
@@ -91,7 +91,7 @@ async function resendConfession(
         logChannelId,
         label,
         color,
-        retrievedAttachment
+        retrievedAttachment,
     } = result;
     const hex = color === null ? undefined : Number.parseInt(color, 2);
 
@@ -100,7 +100,7 @@ async function resendConfession(
     if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
-    let attachment : EmbedAttachment | null = null;
+    let attachment: EmbedAttachment | null = null;
     // check if an attachment exists and reconstruct it
     if (retrievedAttachment) {
         attachment = {

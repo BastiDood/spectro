@@ -15,7 +15,7 @@ export const Attachment = object({
 });
 
 // use this limited attachment when retrieving from db for embedding in a message
-export const EmbedAttachment = pick(Attachment, ['filename', 'url', 'content_type', 'height', 'width'])
+export const EmbedAttachment = pick(Attachment, ['filename', 'url', 'content_type', 'height', 'width']);
 
 export type Attachment = InferOutput<typeof Attachment>;
 export type EmbedAttachment = InferOutput<typeof EmbedAttachment>;

@@ -40,26 +40,26 @@ function updateLastConfession(db: Interface, guildId: Snowflake) {
         .returning({ confessionId: schema.guild.lastConfessionId });
 }
 
-async function insertAttachmentData(
-    db: Interface,
-    attachment: Attachment
-) {
-    const [result, ...otherResults] = await db.insert(schema.attachmentData).values({
-        attachmentId: attachment.id,
-        filename: attachment.filename,
-        title: attachment.title,
-        description: attachment.description,
-        contentType: attachment.content_type,
-        size: attachment.size,
-        url: attachment.url,
-        proxyUrl: attachment.proxy_url,
-        height: attachment.height,
-        width: attachment.width
-    }).returning();
+async function insertAttachmentData(db: Interface, attachment: Attachment) {
+    const [result, ...otherResults] = await db
+        .insert(schema.attachmentData)
+        .values({
+            attachmentId: attachment.id,
+            filename: attachment.filename,
+            title: attachment.title,
+            description: attachment.description,
+            contentType: attachment.content_type,
+            size: attachment.size,
+            url: attachment.url,
+            proxyUrl: attachment.proxy_url,
+            height: attachment.height,
+            width: attachment.width,
+        })
+        .returning();
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
-    assert(typeof result.attachmentId === 'bigint')
-    return { attachmentId: BigInt(result.attachmentId) }
+    assert(typeof result.attachmentId === 'bigint');
+    return { attachmentId: BigInt(result.attachmentId) };
 }
 
 export async function insertConfession(
@@ -74,11 +74,11 @@ export async function insertConfession(
     attachment: Attachment | null,
 ) {
     const guild = updateLastConfession(db, guildId);
-    const result = await db.transaction(async (tx) => {
+    const result = await db.transaction(async tx => {
         let attachmentId = null;
         if (attachment !== null) {
             attachmentId = (await insertAttachmentData(tx, attachment)).attachmentId;
-        };
+        }
         const {
             rows: [result, ...otherResults],
         } = await tx.execute(

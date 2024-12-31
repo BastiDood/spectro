@@ -51,11 +51,11 @@ export const confession = app.table(
         approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
         authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
         content: text('content').notNull(),
-        attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(() => attachmentData.attachmentId)
+        attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(() => attachmentData.attachmentId),
     },
     ({ confessionId, channelId, attachmentId }) => [
         uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId),
-        uniqueIndex('confession_to_attachment_unique_idx').on(confessionId, attachmentId)
+        uniqueIndex('confession_to_attachment_unique_idx').on(confessionId, attachmentId),
     ],
 );
 
@@ -64,24 +64,21 @@ export type NewConfession = typeof confession.$inferInsert;
 
 export const confessionRelations = relations(confession, ({ one }) => ({
     channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
-    attachment: one(attachmentData, { fields: [confession.attachmentId], references: [attachmentData.attachmentId] })
+    attachment: one(attachmentData, { fields: [confession.attachmentId], references: [attachmentData.attachmentId] }),
 }));
 
-export const attachmentData = app.table(
-    'attachment_data',
-    {
-        attachmentId: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-        filename: text('filename').notNull(),
-        title: text('title'),
-        description: text('description'),
-        contentType: text('content_type'),
-        size: integer('size').notNull(),
-        url: text('url').notNull(),
-        proxyUrl: text('proxy_url').notNull(),
-        height: integer('height'),
-        width: integer('width')
-    },
-)
+export const attachmentData = app.table('attachment_data', {
+    attachmentId: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+    filename: text('filename').notNull(),
+    title: text('title'),
+    description: text('description'),
+    contentType: text('content_type'),
+    size: integer('size').notNull(),
+    url: text('url').notNull(),
+    proxyUrl: text('proxy_url').notNull(),
+    height: integer('height'),
+    width: integer('width'),
+});
 
 export type AttachmentData = typeof attachmentData.$inferSelect;
 export type NewAttachmentData = typeof attachmentData.$inferInsert;

@@ -81,7 +81,7 @@ async function submitVerdict(
                 createdAt: confession.createdAt,
                 approvedAt: confession.approvedAt,
                 content: confession.content,
-                attachmentId: confession.attachmentId
+                attachmentId: confession.attachmentId,
             })
             .from(confession)
             .innerJoin(channel, eq(confession.channelId, channel.id))
@@ -101,7 +101,7 @@ async function submitVerdict(
             color,
             label,
             content,
-            attachmentId
+            attachmentId,
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
@@ -110,21 +110,17 @@ async function submitVerdict(
         // check if an attachment exists and reconstruct it
         if (attachmentId !== null) {
             const [retrieved, ...others] = await tx
-            .select({
-                attachmentFilename: attachmentData.filename,
-                attachmentUrl: attachmentData.url,
-                attachmentType: attachmentData.contentType
-            })
-            .from(attachmentData)
-            .where(eq(attachmentData.attachmentId, attachmentId));
+                .select({
+                    attachmentFilename: attachmentData.filename,
+                    attachmentUrl: attachmentData.url,
+                    attachmentType: attachmentData.contentType,
+                })
+                .from(attachmentData)
+                .where(eq(attachmentData.attachmentId, attachmentId));
             strictEqual(others.length, 0);
             assert(typeof retrieved !== 'undefined');
 
-            const {
-                attachmentFilename,
-                attachmentUrl,
-                attachmentType
-            } = retrieved;
+            const { attachmentFilename, attachmentUrl, attachmentType } = retrieved;
 
             attachment = {
                 filename: attachmentFilename,
