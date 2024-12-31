@@ -6,10 +6,10 @@ export const Attachment = object({
     filename: string(),
     title: optional(string()),
     description: optional(string()),
-    content_type: nullable(optional(string())),
-    size: optional(number()),
+    content_type: optional(string()),
+    size: number(),
     url: string(),
-    proxy_url: optional(string()),
+    proxy_url: string(),
     height: optional(nullable(number())),
     width: optional(nullable(number())),
 });
