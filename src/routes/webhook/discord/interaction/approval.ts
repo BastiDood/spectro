@@ -12,11 +12,11 @@ import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 
-import { channel, confession } from '$lib/server/database/models';
+import { attachmentData, channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
 import { Embed, EmbedType } from '$lib/server/models/discord/embed';
-import type { Attachment } from '$lib/server/models/discord/attachment';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -81,12 +81,15 @@ async function submitVerdict(
                 createdAt: confession.createdAt,
                 approvedAt: confession.approvedAt,
                 content: confession.content,
-                attachmentUrl: confession.attachmentUrl,
-                attachmentFilename: confession.attachmentFilename,
-                attachmentType: confession.attachmentType,
+                retrievedAttachment: {
+                    attachmentUrl: attachmentData.url,
+                    attachmentFilename: attachmentData.filename,
+                    attachmentType: attachmentData.contentType
+                }
             })
             .from(confession)
             .innerJoin(channel, eq(confession.channelId, channel.id))
+            .leftJoin(attachmentData, eq(confession.attachmentId, attachmentData.attachmentId))
             .where(eq(confession.internalId, internalId))
             .limit(1)
             .for('update');
@@ -103,20 +106,18 @@ async function submitVerdict(
             color,
             label,
             content,
-            attachmentUrl,
-            attachmentFilename,
-            attachmentType,
+            retrievedAttachment
         } = details;
         const hex = color === null ? undefined : Number.parseInt(color, 2);
 
-        let attachment: Attachment | null = null;
+        let attachment: EmbedAttachment | null = null;
 
         // check if an attachment exists and reconstruct it
-        if (attachmentUrl && attachmentFilename) {
+        if (retrievedAttachment) {
             attachment = {
-                filename: attachmentFilename,
-                url: attachmentUrl,
-                content_type: attachmentType,
+                filename: retrievedAttachment.attachmentFilename,
+                url: retrievedAttachment.attachmentUrl,
+                content_type: retrievedAttachment.attachmentType ?? undefined,
             };
         }
 
