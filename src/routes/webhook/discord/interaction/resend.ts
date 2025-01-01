@@ -1,7 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
+import { doDeferredResponse, hasAllPermissions } from './util';
 import { UnexpectedDiscordErrorCode } from './errors';
-import { doDeferredResponse } from './util';
 
 import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
@@ -9,7 +9,10 @@ import type { Logger } from 'pino';
 import { and, eq } from 'drizzle-orm';
 import { attachment, channel, confession } from '$lib/server/database/models';
 
+import { ATTACH_FILES } from '$lib/server/models/discord/permission';
+
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -30,6 +33,13 @@ class ConfessionNotFoundResendError extends ResendError {
     }
 }
 
+class InsufficientPermissionsResendError extends ResendError {
+    constructor() {
+        super('You do not have the permission to resend confessions with attachments in this channel.');
+        this.name = 'InsufficientPermissionsResendError';
+    }
+}
+
 class PendingApprovalResendError extends ResendError {
     constructor(public confessionId: bigint) {
         super(`Confession #${confessionId} has not yet been approved for publication in this channel.`);
@@ -46,6 +56,7 @@ class MissingLogChannelResendError extends ResendError {
 
 /**
  * @throws {ConfessionNotFoundResendError}
+ * @throws {InsufficientPermissionsResendError}
  * @throws {PendingApprovalResendError}
  * @throws {MissingLogChannelResendError}
  */
@@ -53,6 +64,7 @@ async function resendConfession(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    permission: bigint,
     confessionChannelId: Snowflake,
     confessionId: bigint,
     moderatorId: Snowflake,
@@ -99,14 +111,15 @@ async function resendConfession(
     if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
     if (logChannelId === null) throw new MissingLogChannelResendError();
 
-    const embedAttachment =
-        retrievedAttachment === null
-            ? null
-            : {
-                  filename: retrievedAttachment.attachmentFilename,
-                  url: retrievedAttachment.attachmentUrl,
-                  content_type: retrievedAttachment.attachmentType ?? undefined,
-              };
+    let embedAttachment: EmbedAttachment | null = null;
+    if (retrievedAttachment !== null) {
+        if (!hasAllPermissions(permission, ATTACH_FILES)) throw new InsufficientPermissionsResendError();
+        embedAttachment = {
+            filename: retrievedAttachment.attachmentFilename,
+            url: retrievedAttachment.attachmentUrl,
+            content_type: retrievedAttachment.attachmentType ?? undefined,
+        };
+    }
 
     logger.info('confession resend has been submitted');
 
@@ -171,6 +184,7 @@ export async function handleResend(
     db: Database,
     logger: Logger,
     timestamp: Date,
+    permission: bigint,
     channelId: Snowflake,
     moderatorId: Snowflake,
     [option, ...options]: InteractionApplicationCommandChatInputOption[],
@@ -181,7 +195,7 @@ export async function handleResend(
 
     const confessionId = BigInt(option.value);
     try {
-        return await resendConfession(db, logger, timestamp, channelId, confessionId, moderatorId);
+        return await resendConfession(db, logger, timestamp, permission, channelId, confessionId, moderatorId);
     } catch (err) {
         if (err instanceof ResendError) {
             logger.error(err, err.message);
