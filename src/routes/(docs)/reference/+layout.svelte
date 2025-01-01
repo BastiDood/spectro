@@ -3,6 +3,7 @@
     const { children } = $props();
 </script>
 
+<!-- <slot /> -->
 <DocsLayout content={children}>
     {#snippet navigation(onclick)}
         <li>
