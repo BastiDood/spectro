@@ -3,7 +3,7 @@
 </script>
 
 {#snippet permissionBadge(perms: string)}
-    <div class="badge badge-info badge-outline place-self-center">Required permissions: {perms}</div>
+    <div class="badge badge-info badge-outline place-self-center">{perms}</div>
 {/snippet}
 
 <section>
@@ -52,12 +52,18 @@
             >
                 <span>/confess</span>
                 <CommandOption required tooltip="Content of the confession message.">content</CommandOption>
+                <CommandOption tooltip="A file to attach to the confession.">attachment</CommandOption>
             </div>
             {@render permissionBadge('Send Messages')}
+            {@render permissionBadge('Attach Files')}
         </div>
         <p class="mb-10">
-            <strong>Send a confession to the current channel.</strong> This command fails if the current channel has not
-            yet been configured to receive confessions.
+            <strong
+                >Send a confession to the current channel with an optional <code class="whitespace-nowrap"
+                    >attachment</code
+                >.</strong
+            > This command fails if the current channel has not yet been configured by the server moderators to accept anonymous
+            confessions.
         </p>
     </section>
     <section>

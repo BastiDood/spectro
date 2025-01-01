@@ -43,8 +43,8 @@ export function handleHelp(
                         inline: false,
                     },
                     {
-                        name: '`/confess <content>`',
-                        value: 'Requires the **"Send Messages"** permission. Send a confession to a channel. This command fails if the current channel has not yet been configured to receive confessions.',
+                        name: '`/confess <content> [attachment]`',
+                        value: 'Requires the **"Send Messages"** permission and the **"Attach Files"** permission (only when sending an `attachment`). Send a confession to a channel. This command fails if the current channel has not yet been configured to receive confessions.',
                     },
                     {
                         name: '`Apps > Reply Anonymously`',
