@@ -31,16 +31,14 @@
     ></div>
     <div
         class:hidden={isSidebarHidden}
-        class="absolute top-0 z-20 h-full overflow-y-auto drop-shadow-[3px_3px_0px_rgba(247,149,29,0.35)] md:static md:block md:px-4"
+        class="fixed bottom-0 z-20 md:static md:block md:px-4 md:drop-shadow-[3px_3px_0px_rgba(247,149,29,0.35)]"
     >
-        <ul
-            class="menu menu-lg sticky min-h-full flex-nowrap bg-base-300 px-6 py-4 md:menu-md md:top-10 md:min-h-min md:rounded-box"
-        >
+        <ul class="menu menu-lg flex-nowrap bg-base-300 px-6 py-4 md:menu-md md:sticky md:top-32 md:rounded-box">
             {@render navigation(hideSidebar)}
         </ul>
     </div>
     <div
-        class="prose max-w-full overflow-y-auto p-10 prose-headings:scroll-mt-10 prose-h2:border-b prose-h2:border-neutral prose-h2:pb-3"
+        class="prose max-w-full p-10 prose-headings:scroll-mt-10 prose-h2:border-b prose-h2:border-neutral prose-h2:pb-3"
     >
         {@render content()}
     </div>
