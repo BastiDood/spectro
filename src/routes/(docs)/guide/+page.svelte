@@ -109,6 +109,13 @@
         <a href="/reference/#reply" class="link link-primary">Apps &gt; Reply Anonymously</a> option. A modal with a text
         area input should pop up on the screen, where the anonymous reply can be drafted.
     </p>
+    <div class="alert alert-info">
+        <Icon icon={BaselineAnnouncement} width={24} />
+        <span
+            >Attaching a file alongside a message reply is currently unsupported. This feature is blocked on Discord
+            finally implementing file select inputs for modal submit components.</span
+        >
+    </div>
 </section>
 <section>
     <h2 id="resend-confessions">Resending Confessions</h2>

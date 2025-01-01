@@ -1,5 +1,7 @@
 <script lang="ts">
+    import BaselineAnnouncement from '@iconify/icons-ic/baseline-announcement';
     import CommandOption from './CommandOption.svelte';
+    import Icon from '@iconify/svelte';
 </script>
 
 {#snippet permissionBadge(perms: string)}
@@ -80,6 +82,13 @@
             <strong>right-clicking</strong>
             on that message and invoking the <code class="whitespace-nowrap">Apps &gt; Reply Anonymously</code> command.
         </p>
+        <div class="alert alert-info">
+            <Icon icon={BaselineAnnouncement} width={24} />
+            <span
+                >Attaching a file alongside a message reply is currently unsupported. This feature is blocked on Discord
+                finally implementing file select inputs for modal submit components.</span
+            >
+        </div>
     </section>
 </section>
 <section>
