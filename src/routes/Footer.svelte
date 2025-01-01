@@ -10,7 +10,7 @@
                     <img src={profile} alt="BastiDood" loading="lazy" class="mr-3 max-w-48" />
                 </a>
             </div>
-            <div class="grid grid-cols-2 gap-8 sm:gap-6">
+            <div class="grid grid-cols-3 gap-8 sm:gap-6">
                 <div>
                     <h2 class="mb-4 text-sm font-semibold uppercase text-base-content">Sitemap</h2>
                     <ul class="space-y-2 text-gray-400">
@@ -23,34 +23,45 @@
                     <h2 class="mb-4 text-sm font-semibold uppercase text-base-content">Code</h2>
                     <ul class="space-y-2 text-gray-400">
                         <li>
-                            <a href="https://github.com/BastiDood/spectro" target="_blank" class="hover:underline"
+                            <a target="_blank" href="https://github.com/BastiDood/spectro" class="hover:underline"
                                 >Repository</a
                             >
                         </li>
                         <li>
                             <a
-                                href="https://github.com/BastiDood/spectro/blob/main/LICENSE"
                                 target="_blank"
+                                href="https://github.com/BastiDood/spectro/blob/main/LICENSE"
                                 class="hover:underline">License</a
                             >
                         </li>
                         <li>
                             <a
-                                href="https://github.com/BastiDood/spectro/blob/main/COPYING.md"
                                 target="_blank"
+                                href="https://github.com/BastiDood/spectro/blob/main/COPYING.md"
                                 class="hover:underline">External Assets</a
                             >
                         </li>
+                    </ul>
+                </div>
+                <div>
+                    <h2 class="mb-4 text-sm font-semibold uppercase text-base-content">Legal</h2>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="/privacy/" class="hover:underline">Privacy Policy</a></li>
                     </ul>
                 </div>
             </div>
         </div>
         <hr class="my-6 border-gray-700 sm:mx-auto lg:my-8" />
         <p class="text-sm text-gray-400">
-            Coded with ❤️ by <a rel="external" href="https://bastidood.github.io/" class="link link-primary"
-                >Basti Ortiz</a
+            Coded with ❤️ by <a
+                rel="external"
+                target="_blank"
+                href="https://bastidood.github.io/"
+                class="link link-primary">Basti Ortiz</a
             >. Themes, branding, and design by
-            <a rel="external" href="https://github.com/Anjellyrika" class="link link-primary">Jelly Raborar</a>.
+            <a rel="external" target="_blank" href="https://github.com/Anjellyrika" class="link link-primary"
+                >Jelly Raborar</a
+            >.
         </p>
     </div>
 </footer>
