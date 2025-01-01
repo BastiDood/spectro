@@ -37,6 +37,6 @@
             </div>
         </nav>
     </header>
-    <main class="flex justify-center">{@render children()}</main>
+    {@render children()}
 </div>
 <Footer />
