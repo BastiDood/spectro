@@ -17,12 +17,12 @@
 </script>
 
 <button
-    class="btn btn-accent fixed left-0 z-10 mt-10 rounded-l-sm px-1 md:hidden"
+    class="btn btn-accent fixed left-0 mt-10 rounded-l-sm px-1 md:hidden"
     onclick={() => (isSidebarHidden = !isSidebarHidden)}
 >
     <Icon icon={RoundMenu} height="24" />
 </button>
-<div class="grid w-full grid-cols-[auto_1fr]">
+<div class="grid grid-cols-[auto_1fr]">
     <div
         role="none"
         onclick={hideSidebar}
