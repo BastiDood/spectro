@@ -70,6 +70,11 @@
     <li>The guild ID of Server in which the Bot command was invoked.</li>
     <li>The ID of the channel in which the Bot command was invoked.</li>
 </ul>
+<p>
+    Logs are only retained for up to 30 days—after which they are deleted. These logs are essential for monitoring the
+    Bot's health and performance. Should any bugs arise, the logs also provide the pertinent context that is necessary
+    for resolving them.
+</p>
 
 <h2>Persisted Data</h2>
 <p>
