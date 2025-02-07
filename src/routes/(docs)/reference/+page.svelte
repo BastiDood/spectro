@@ -1,9 +1,11 @@
 <script lang="ts">
+    import BaselineAnnouncement from '@iconify/icons-ic/baseline-announcement';
     import CommandOption from './CommandOption.svelte';
+    import Icon from '@iconify/svelte';
 </script>
 
 {#snippet permissionBadge(perms: string)}
-    <div class="badge badge-info badge-outline place-self-center">Required permissions: {perms}</div>
+    <div class="badge badge-info badge-outline place-self-center">{perms}</div>
 {/snippet}
 
 <section>
@@ -52,12 +54,18 @@
             >
                 <span>/confess</span>
                 <CommandOption required tooltip="Content of the confession message.">content</CommandOption>
+                <CommandOption tooltip="A file to attach to the confession.">attachment</CommandOption>
             </div>
             {@render permissionBadge('Send Messages')}
+            {@render permissionBadge('Attach Files')}
         </div>
         <p class="mb-10">
-            <strong>Send a confession to the current channel.</strong> This command fails if the current channel has not
-            yet been configured to receive confessions.
+            <strong
+                >Send a confession to the current channel with an optional <code class="whitespace-nowrap"
+                    >attachment</code
+                >.</strong
+            > This command fails if the current channel has not yet been configured by the server moderators to accept anonymous
+            confessions.
         </p>
     </section>
     <section>
@@ -74,6 +82,13 @@
             <strong>right-clicking</strong>
             on that message and invoking the <code class="whitespace-nowrap">Apps &gt; Reply Anonymously</code> command.
         </p>
+        <div class="alert alert-info">
+            <Icon icon={BaselineAnnouncement} width={24} />
+            <span
+                >Attaching a file alongside a message reply is currently unsupported. This feature is blocked on Discord
+                finally implementing file select inputs for modal submit components.</span
+            >
+        </div>
     </section>
 </section>
 <section>

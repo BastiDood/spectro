@@ -45,6 +45,12 @@
         <li>
             Spectro must have the <span class="badge badge-accent">Send Messages</span> permission in the target
             <strong>channel</strong> in order to publish confessions.
+            <ul>
+                <li>
+                    Optionally, the <span class="badge badge-accent">Attach Files</span> permission is required for sending
+                    attachments with the confession.
+                </li>
+            </ul>
         </li>
         <li>
             Spectro should have the <span class="badge badge-accent">Send Messages</span> permission in the log
@@ -63,7 +69,8 @@
         Once a channel has been properly configured, any member with the <span class="badge badge-accent"
             >Send Messages</span
         >
-        permission can now invoke the {@render command('confess')} command to publish an anonymous confession.
+        permission can now invoke the {@render command('confess')} command to publish an anonymous confession. To send an
+        attachment along with the confession, the <span class="badge badge-accent">Attach Files</span> permission is required.
     </p>
     <div class="alert alert-warning">
         <Icon icon={BaselineAnnouncement} width={24} />
@@ -102,6 +109,13 @@
         <a href="/reference/#reply" class="link link-primary">Apps &gt; Reply Anonymously</a> option. A modal with a text
         area input should pop up on the screen, where the anonymous reply can be drafted.
     </p>
+    <div class="alert alert-info">
+        <Icon icon={BaselineAnnouncement} width={24} />
+        <span
+            >Attaching a file alongside a message reply is currently unsupported. This feature is blocked on Discord
+            finally implementing file select inputs for modal submit components.</span
+        >
+    </div>
 </section>
 <section>
     <h2 id="resend-confessions">Resending Confessions</h2>

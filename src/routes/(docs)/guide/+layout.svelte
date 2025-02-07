@@ -3,6 +3,7 @@
     const { children } = $props();
 </script>
 
+<!-- <slot /> -->
 <DocsLayout content={children}>
     {#snippet navigation(onclick)}
         <li><a {onclick} href="#set-up">Setting up Confession Channels</a></li>

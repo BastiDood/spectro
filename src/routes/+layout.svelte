@@ -9,6 +9,7 @@
     import Icon from '@iconify/svelte';
     import Spectro from '$lib/brand/logomark/48-logomark.png';
 
+    import Footer from './Footer.svelte';
     import NavLink from './NavLink.svelte';
 
     const { children } = $props();
@@ -19,7 +20,7 @@
     <meta property="og:image" content="{ORIGIN.origin}{banner}" />
 </svelte:head>
 
-<div class="flex h-screen flex-col">
+<div class="flex flex-col">
     <header class="sticky top-0 z-10">
         <nav class="navbar h-20 bg-base-200 p-4 shadow-sm lg:pr-10">
             <div class="navbar-start">
@@ -36,5 +37,6 @@
             </div>
         </nav>
     </header>
-    <main class="flex min-h-0 grow justify-center">{@render children()}</main>
+    {@render children()}
 </div>
+<Footer />
