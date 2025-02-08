@@ -38,7 +38,7 @@
         "valibot": "1.0.0-beta.15"
     },
     "devDependencies": {
-        "@eslint/js": "^9.19.0",
+        "@eslint/js": "^9.20.0",
         "@linthtml/linthtml": "^0.10.1",
         "@linthtml/linthtml-config-recommended": "^0.1.0",
         "@sveltejs/adapter-node": "^5.2.12",
@@ -50,7 +50,7 @@
         "daisyui": "^4.12.23",
         "dotenv-cli": "^8.0.0",
         "drizzle-kit": "^0.30.4",
-        "eslint": "^9.19.0",
+        "eslint": "^9.20.0",
         "eslint-config-prettier": "^10.0.1",
         "eslint-plugin-svelte": "^2.46.1",
         "globals": "^15.14.0",
