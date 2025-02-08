@@ -8,7 +8,7 @@ RUN pnpm install
 COPY . .
 ENV PUBLIC_ORIGIN=https://spectro.fly.dev
 RUN pnpm build
-RUN pnpm prune --prod
+RUN pnpm prune --prod --ignore-scripts
 
 FROM gcr.io/distroless/nodejs22-debian12:nonroot-amd64 AS deploy
 COPY --from=build /app/node_modules node_modules/
