@@ -100,7 +100,7 @@
 
 <h2>Data Deletion</h2>
 <p>
-    Should the User wish to have their data deleted, they must coordinate the bot maintainer (via <a
+    Should the User wish to have their data deleted, they must coordinate with the bot maintainer (via <a
         rel="external"
         href="mailto:39114273+BastiDood@users.noreply.github.com">email</a
     >) and the concerned server moderators.
