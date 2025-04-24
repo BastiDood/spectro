@@ -1,4 +1,4 @@
-FROM node:22.14.0-alpine3.21 AS build
+FROM node:22.15.0-alpine3.20 AS build
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 ENV PNPM_HOME="/pnpm"

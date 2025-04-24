@@ -1,10 +1,9 @@
 services:
   db:
-    image: postgres:17.2-alpine3.20
-    environment:
-      POSTGRES_DB: spectro
+    image: postgres:17.4-alpine3.21
     env_file:
       - .env.development
+    user: postgres
     restart: always
     ports:
       - 5432:5432
@@ -15,7 +14,7 @@ services:
     healthcheck:
       test:
         - CMD
-        - pg_isready --username=postgres --dbname=spectro
+        - pg_isready
       interval: 1s
       timeout: 5s
       retries: 10
