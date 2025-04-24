@@ -1,1 +1,7 @@
-{ "extends": ["stylelint-config-standard", "stylelint-config-tailwindcss"] }
+{
+    "extends": ["stylelint-config-standard", "stylelint-config-tailwindcss"],
+    "rules": {
+        "at-rule-no-deprecated": [true, { "severity": "warning" }],
+        "at-rule-empty-line-before": null
+    }
+}

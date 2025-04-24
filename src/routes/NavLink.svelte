@@ -11,4 +11,4 @@
     const { children, ...props }: Props = $props();
 </script>
 
-<a class:active={page.url.pathname === props.href} {...props}>{@render children()}</a>
+<a class:menu-active={page.url.pathname === props.href} {...props}>{@render children()}</a>

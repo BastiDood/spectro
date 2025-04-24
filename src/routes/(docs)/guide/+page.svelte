@@ -1,5 +1,5 @@
 <script lang="ts">
-    import BaselineAnnouncement from '@iconify/icons-ic/baseline-announcement';
+    import BaselineAnnouncement from '@iconify-icons/ic/baseline-announcement';
     import Icon from '@iconify/svelte';
 </script>
 

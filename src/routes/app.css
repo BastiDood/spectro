@@ -1,3 +1,54 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin "@tailwindcss/typography";
+
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+    name: 'spectro';
+    default: true;
+    prefersdark: true;
+    color-scheme: 'dark';
+
+    --color-base-100: #24223d;
+    --color-base-200: #1e1c34;
+    --color-base-300: #18162b;
+    --color-base-content: #ceced5;
+    --color-primary: #f7951d;
+    --color-primary-content: #150800;
+    --color-secondary: #6367b5;
+    --color-secondary-content: #dde0f1;
+    --color-accent: #6a367a;
+    --color-accent-content: #e0d5e4;
+    --color-neutral: #352f62;
+    --color-neutral-content: #d2d2df;
+    --color-info: #0891b2;
+    --color-info-content: #00070c;
+    --color-success: #1b6f43;
+    --color-success-content: #d2e1d7;
+    --color-warning: #ffc852;
+    --color-warning-content: #160f02;
+    --color-error: #ab3030;
+    --color-error-content: #f3d6d3;
+    --radius-selector: 0.5rem;
+    --radius-field: 0.25rem;
+    --radius-box: 0.5rem;
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+    --border: 1px;
+    --depth: 1;
+    --noise: 0;
+}
+
+@theme {
+    --animate-float: float 3s infinite;
+    @keyframes float {
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-12px);
+        }
+    }
+}

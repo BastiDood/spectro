@@ -1,5 +1,5 @@
 <script lang="ts">
-    import BaselineAnnouncement from '@iconify/icons-ic/baseline-announcement';
+    import BaselineAnnouncement from '@iconify-icons/ic/baseline-announcement';
     import CommandOption from './CommandOption.svelte';
     import Icon from '@iconify/svelte';
 </script>
@@ -20,7 +20,7 @@
     <section>
         <div id="help" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
-                class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+                class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
             >
                 <span>/help</span>
                 <CommandOption tooltip="Message visibility.">preview</CommandOption>
@@ -35,7 +35,7 @@
     <section>
         <div id="info" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
-                class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+                class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
             >
                 <span>/info</span>
                 <CommandOption tooltip="Message visibility.">public</CommandOption>
@@ -50,7 +50,7 @@
     <section>
         <div id="confess" class="flex scroll-mt-10 flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
-                class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+                class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
             >
                 <span>/confess</span>
                 <CommandOption required tooltip="Content of the confession message.">content</CommandOption>
@@ -71,7 +71,7 @@
     <section>
         <div id="reply" class="flex scroll-mt-10 flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
-                class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+                class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
             >
                 <span>Apps &gt; Reply Anonymously</span>
             </div>
@@ -97,7 +97,7 @@
         <h3 id="channel-setup" class="scroll-mt-10">Channel Setup</h3>
         <div id="setup" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
-                class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+                class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
             >
                 <span>/setup</span>
                 <CommandOption required tooltip="Moderator-only channel for confession logs">channel</CommandOption>
@@ -126,7 +126,7 @@
         <h3 id="manage-confessions" class="scroll-mt-10">Manage Confessions</h3>
         <div id="lockdown" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
-                class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+                class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
             >
                 <span>/lockdown</span>
             </div>
@@ -138,7 +138,7 @@
         </p>
         <div id="resend" class="flex flex-col items-center gap-2 lg:flex-row lg:items-start">
             <div
-                class="w-fit self-center rounded-md bg-base-300 px-4 py-2 font-mono text-lg font-bold text-primary drop-shadow-md"
+                class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
             >
                 <span>/resend</span>
                 <CommandOption required tooltip="ID of confession to resend.">confession</CommandOption>

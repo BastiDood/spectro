@@ -5,7 +5,7 @@
     import banner from '$lib/brand/link-preview.png?url';
     import favicon from '$lib/brand/favicon.ico?url';
 
-    import GitHub from '@iconify/icons-simple-icons/github';
+    import GitHub from '@iconify-icons/simple-icons/github';
     import Icon from '@iconify/svelte';
     import Spectro from '$lib/brand/logomark/48-logomark.png';
 
@@ -22,7 +22,7 @@
 
 <div class="flex flex-col">
     <header class="sticky top-0 z-10">
-        <nav class="navbar h-20 bg-base-200 p-4 shadow-sm lg:pr-10">
+        <nav class="navbar bg-base-200 h-20 p-4 shadow-sm lg:pr-10">
             <div class="navbar-start">
                 <a href="/"><img src={Spectro} alt="Spectro logo" class="w-12" /></a>
             </div>
