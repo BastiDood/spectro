@@ -69,7 +69,7 @@ export async function dispatchConfessionViaHttp(
         },
     };
 
-    if (typeof attachment?.content_type !== 'undefined') {
+    if (typeof attachment?.content_type !== 'undefined')
         if (attachment.content_type.includes('image'))
             embed.image = {
                 url: new URL(attachment.url),
@@ -77,7 +77,6 @@ export async function dispatchConfessionViaHttp(
                 width: attachment.width ?? undefined,
             };
         else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
-    }
 
     const params: CreateMessage = { embeds: [embed] };
     if (replyToMessageId !== null)

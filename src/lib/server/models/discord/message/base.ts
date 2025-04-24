@@ -17,10 +17,13 @@ import { Timestamp } from '$lib/server/models/timestamp';
 
 export const enum MessageFlags {
     /** Do not include embeds when serializing this message. */
+    // eslint-disable-next-line @typescript-eslint/prefer-literal-enum-member
     SuppressEmbeds = 1 << 2,
     /** This message is only visible to the user who created this interaction. */
+    // eslint-disable-next-line @typescript-eslint/prefer-literal-enum-member
     Ephemeral = 1 << 6,
     /** This message will not trigger push and desktop notifications. */
+    // eslint-disable-next-line @typescript-eslint/prefer-literal-enum-member
     SuppressNotifications = 1 << 12,
 }
 

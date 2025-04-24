@@ -72,8 +72,11 @@ export async function insertConfession(
         );
         strictEqual(otherResults.length, 0);
         assert(typeof result !== 'undefined');
+        // eslint-disable-next-line no-underscore-dangle
         assert(typeof result._internal_id === 'string');
+        // eslint-disable-next-line no-underscore-dangle
         assert(typeof result._confession_id === 'string');
+        // eslint-disable-next-line no-underscore-dangle
         return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
     });
 }

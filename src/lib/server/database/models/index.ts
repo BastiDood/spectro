@@ -35,6 +35,17 @@ export const channel = app.table(
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
+export const attachment = app.table('attachment_data', {
+    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type'),
+    url: text('url').notNull(),
+    proxyUrl: text('proxy_url').notNull(),
+});
+
+export type AttachmentData = typeof attachment.$inferSelect;
+export type NewAttachmentData = typeof attachment.$inferInsert;
+
 export const confession = app.table(
     'confession',
     {
@@ -66,14 +77,3 @@ export const confessionRelations = relations(confession, ({ one }) => ({
     channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
     attachment: one(attachment, { fields: [confession.attachmentId], references: [attachment.id] }),
 }));
-
-export const attachment = app.table('attachment_data', {
-    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-    filename: text('filename').notNull(),
-    contentType: text('content_type'),
-    url: text('url').notNull(),
-    proxyUrl: text('proxy_url').notNull(),
-});
-
-export type AttachmentData = typeof attachment.$inferSelect;
-export type NewAttachmentData = typeof attachment.$inferInsert;

@@ -7,7 +7,7 @@ import assert, { strictEqual } from 'node:assert/strict';
 import { error } from '@sveltejs/kit';
 import { verifyAsync } from '@noble/ed25519';
 
-import { type Database } from '$lib/server/database';
+import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 import { handleApplicationAuthorized } from './application-authorized';
 

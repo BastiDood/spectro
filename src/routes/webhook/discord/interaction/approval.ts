@@ -242,7 +242,7 @@ export async function handleApproval(
     const internalId = BigInt(id);
     assert(typeof key !== 'undefined');
 
-    // eslint-disable-next-line init-declarations
+    // eslint-disable-next-line @typescript-eslint/init-declarations
     let isApproved: boolean;
     switch (key) {
         case 'publish':

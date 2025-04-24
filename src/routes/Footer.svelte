@@ -12,7 +12,7 @@
             </div>
             <div class="grid grid-cols-3 gap-8 sm:gap-6">
                 <div>
-                    <h2 class="mb-4 text-sm font-semibold uppercase text-base-content">Sitemap</h2>
+                    <h2 class="text-base-content mb-4 text-sm font-semibold uppercase">Sitemap</h2>
                     <ul class="space-y-2 text-gray-400">
                         <li><a href="/" class="hover:underline">Home</a></li>
                         <li><a href="/guide/" class="hover:underline">Guide</a></li>
@@ -20,7 +20,7 @@
                     </ul>
                 </div>
                 <div>
-                    <h2 class="mb-4 text-sm font-semibold uppercase text-base-content">Code</h2>
+                    <h2 class="text-base-content mb-4 text-sm font-semibold uppercase">Code</h2>
                     <ul class="space-y-2 text-gray-400">
                         <li>
                             <a target="_blank" href="https://github.com/BastiDood/spectro" class="hover:underline"
@@ -44,7 +44,7 @@
                     </ul>
                 </div>
                 <div>
-                    <h2 class="mb-4 text-sm font-semibold uppercase text-base-content">Legal</h2>
+                    <h2 class="text-base-content mb-4 text-sm font-semibold uppercase">Legal</h2>
                     <ul class="space-y-2 text-gray-400">
                         <li><a href="/privacy/" class="hover:underline">Privacy Policy</a></li>
                     </ul>

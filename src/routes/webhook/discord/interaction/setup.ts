@@ -57,7 +57,7 @@ async function enableConfessions(
     return result;
 }
 
-const HEX_COLOR = /^[0-9a-f]{6}$/i;
+const HEX_COLOR = /^[0-9a-f]{6}$/iu;
 export async function handleSetup(
     db: Database,
     logger: Logger,
@@ -66,13 +66,13 @@ export async function handleSetup(
     channelId: Snowflake,
     options: InteractionApplicationCommandChatInputOption[],
 ) {
-    // eslint-disable-next-line init-declarations
+    // eslint-disable-next-line @typescript-eslint/init-declarations
     let channel: Snowflake | undefined;
-    // eslint-disable-next-line init-declarations
+    // eslint-disable-next-line @typescript-eslint/init-declarations
     let label: string | undefined;
-    // eslint-disable-next-line init-declarations
+    // eslint-disable-next-line @typescript-eslint/init-declarations
     let color: number | undefined;
-    // eslint-disable-next-line init-declarations
+    // eslint-disable-next-line @typescript-eslint/init-declarations
     let isApprovalRequired: boolean | undefined;
 
     for (const option of options)

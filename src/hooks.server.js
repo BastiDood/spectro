@@ -28,7 +28,7 @@ export async function handle({ event, resolve }) {
 }
 
 export function handleError({ error, event }) {
-    if (typeof event.locals.ctx !== 'undefined') {
+    if (typeof event.locals.ctx !== 'undefined')
         if (isValiError(error)) {
             const valibotErrorPaths = error.issues.map(issue => getDotPath(issue)).filter(path => path !== null);
             event.locals.ctx.logger.fatal({ valibotErrorPaths }, error.message);
@@ -39,6 +39,6 @@ export function handleError({ error, event }) {
         } else {
             event.locals.ctx.logger.fatal({ unknownError: error });
         }
-    }
+
     throw error;
 }
