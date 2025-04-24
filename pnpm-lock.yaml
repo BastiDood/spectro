@@ -39,8 +39,8 @@ importers:
         specifier: ^5.28.2
         version: 5.28.2
       valibot:
-        specifier: 1.0.0-rc.0
-        version: 1.0.0-rc.0(typescript@5.8.3)
+        specifier: 1.0.0
+        version: 1.0.0(typescript@5.8.3)
     devDependencies:
       '@eslint/js':
         specifier: ^9.25.1
@@ -2946,8 +2946,8 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
-  valibot@1.0.0-rc.0:
-    resolution: {integrity: sha512-9ZUrOXOejY/WaIn8p0Z469R1qBAwNJeqq8jzOIDsl1qR8gqtObHQmyHLFli0UCkcGiTco5kH6/KPLWsTWE9b2g==}
+  valibot@1.0.0:
+    resolution: {integrity: sha512-1Hc0ihzWxBar6NGeZv7fPLY0QuxFMyxwYR2sF1Blu7Wq7EnremwY2W02tit2ij2VJT8HcSkHAQqmFfl77f73Yw==}
     peerDependencies:
       typescript: '>=5'
     peerDependenciesMeta:
@@ -5687,7 +5687,7 @@ snapshots:
 
   uuid@11.1.0: {}
 
-  valibot@1.0.0-rc.0(typescript@5.8.3):
+  valibot@1.0.0(typescript@5.8.3):
     optionalDependencies:
       typescript: 5.8.3
 
