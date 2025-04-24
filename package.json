@@ -3,7 +3,7 @@
     "version": "0.0.0",
     "type": "module",
     "private": true,
-    "packageManager": "pnpm@10.3.0+sha512.ee592eda8815a8a293c206bb0917c4bb0ff274c50def7cbc17be05ec641fc2d1b02490ce660061356bd0d126a4d7eb2ec8830e6959fb8a447571c631d5a2442d",
+    "packageManager": "pnpm@10.9.0+sha512.0486e394640d3c1fb3c9d43d49cf92879ff74f8516959c235308f5a8f62e2e19528a65cdc2a3058f587cde71eba3d5b56327c8c33a97e4c4051ca48a10ca2d5f",
     "scripts": {
         "prepare": "svelte-kit sync",
         "env:dev": "dotenv -e .env.development --",
