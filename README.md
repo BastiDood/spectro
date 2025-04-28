@@ -113,8 +113,6 @@ pnpm fmt # prettier
 pnpm fmt:fix # prettier --write
 
 # Check Linting Rules
-pnpm lint:html   # linthtml
-pnpm lint:css    # stylelint
 pnpm lint:js     # eslint
 pnpm lint:svelte # svelte-check
 

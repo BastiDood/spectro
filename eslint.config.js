@@ -9,26 +9,11 @@ import svelteConfig from './svelte.config.js';
 
 export default ts.config(
     { ignores: ['.svelte-kit/**/*', 'build/**/*', 'node_modules/**/*'] },
-    js.configs.recommended,
-    ...ts.configs.strict,
-    ...ts.configs.stylistic,
-    ...svelte.configs.recommended,
-    prettier,
-    ...svelte.configs.prettier,
     { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
+    // TODO: @eslint/css when @theme is supported
     {
-        files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
-        ignores: ['eslint.config.js', 'svelte.config.js'],
-        languageOptions: {
-            parserOptions: {
-                projectService: true,
-                extraFileExtensions: ['.svelte'],
-                parser: ts.parser,
-                svelteConfig,
-            },
-        },
-    },
-    {
+        files: ['**/*.js', '**/*.ts', '**/*.svelte'],
+        extends: [js.configs.recommended, ...ts.configs.recommended, ...ts.configs.stylistic, prettier],
         rules: {
             '@typescript-eslint/class-methods-use-this': 'error',
             '@typescript-eslint/default-param-last': 'error',
@@ -135,6 +120,18 @@ export default ts.config(
             'sort-imports': ['error', { allowSeparatedGroups: true }],
             'symbol-description': 'error',
             yoda: ['warn', 'never', { exceptRange: true }],
+        },
+    },
+    {
+        files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+        extends: [...svelte.configs.recommended, ...svelte.configs.prettier],
+        languageOptions: {
+            parserOptions: {
+                projectService: true,
+                extraFileExtensions: ['.svelte'],
+                parser: ts.parser,
+                svelteConfig,
+            },
         },
     },
 );

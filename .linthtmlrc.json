@@ -1,8 +1,0 @@
-{
-    "extends": "@linthtml/linthtml-config-recommended",
-    "rules": {
-        "attr-quote-style": [true, "double"],
-        "line-max-len": [true, 120],
-        "title-max-len": [true, 60]
-    }
-}
