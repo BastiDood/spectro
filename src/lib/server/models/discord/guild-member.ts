@@ -3,7 +3,7 @@ import { Snowflake } from './snowflake';
 import { User } from './user';
 
 export const GuildMember = object({
-    user: User,
+    user: optional(User),
     nick: nullish(string()),
     avatar: nullish(string()),
     roles: array(Snowflake),

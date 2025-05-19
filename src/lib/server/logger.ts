@@ -1,7 +1,7 @@
 import { AssertionError } from 'node:assert/strict';
 
 import { type Logger, type TransportTargetOptions, pino } from 'pino';
-import { isValiError, summarize } from 'valibot';
+import { getDotPath, isValiError } from 'valibot';
 
 import { building, dev } from '$app/environment';
 
@@ -18,10 +18,15 @@ if (dev || building) {
 export const logger = pino(pino.transport({ targets }));
 
 export function handleFatalError(logger: Logger, error: unknown): never {
-    if (isValiError(error)) logger.fatal({ summary: summarize(error.issues) }, error.message);
-    else if (error instanceof AssertionError) logger.fatal({ nodeAssertionError: error }, error.message);
-    else if (error instanceof Error) logger.fatal({ error }, error.message);
-    else logger.fatal({ unknownError: error });
-
+    if (isValiError(error)) {
+        const valibotErrorPaths = error.issues.map(issue => getDotPath(issue)).filter(path => path !== null);
+        logger.fatal({ valibotErrorPaths }, error.message);
+    } else if (error instanceof AssertionError) {
+        logger.fatal({ nodeAssertionError: error }, error.message);
+    } else if (error instanceof Error) {
+        logger.fatal({ error }, error.message);
+    } else {
+        logger.fatal({ unknownError: error });
+    }
     throw error;
 }

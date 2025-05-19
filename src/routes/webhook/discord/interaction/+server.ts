@@ -100,7 +100,8 @@ async function handleInteraction(
                         case 'resend':
                             assert(typeof interaction.channel_id !== 'undefined');
                             assert(typeof interaction.data.options !== 'undefined');
-                            assert(typeof interaction.member?.permissions !== 'undefined');
+                            assert(typeof interaction.member?.user?.id !== 'undefined');
+                            assert(typeof interaction.member.permissions !== 'undefined');
                             assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
                             return {
                                 type: InteractionResponseType.ChannelMessageWithSource,
