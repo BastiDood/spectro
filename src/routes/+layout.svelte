@@ -3,7 +3,6 @@
     import { ORIGIN } from '$lib/env';
 
     import banner from '$lib/brand/link-preview.png?url';
-    import favicon from '$lib/brand/favicon.ico?url';
 
     import GitHub from '@iconify-icons/simple-icons/github';
     import Icon from '@iconify/svelte';
@@ -16,7 +15,6 @@
 </script>
 
 <svelte:head>
-    <link rel="icon" href={favicon} />
     <meta property="og:image" content="{ORIGIN.origin}{banner}" />
 </svelte:head>
 
