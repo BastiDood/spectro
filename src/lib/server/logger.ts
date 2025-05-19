@@ -18,14 +18,16 @@ if (dev || building) {
     });
 }
 
-export const logger = pino({
-  transport: pino.transport({ targets }),
-  redact: {
-    // HACK: need to remove this to conserve on log field sizes.
-    paths: ['interaction.data.resolved'],
-    remove: true,
+export const logger = pino(
+  {
+    redact: {
+      // HACK: need to remove this to conserve on log field sizes.
+      paths: ['interaction.data.resolved'],
+      remove: true,
+    },
   },
-});
+  pino.transport({ targets }),
+);
 
 export function handleFatalError(logger: Logger, error: unknown): never {
   if (isValiError(error)) {
