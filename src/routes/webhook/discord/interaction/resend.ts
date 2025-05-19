@@ -101,7 +101,7 @@ async function resendConfession(
         color,
         retrievedAttachment,
     } = result;
-    const hex = color === null ? undefined : Number.parseInt(color, 2);
+    const hex = color === null ? void 0 : Number.parseInt(color, 2);
 
     logger.info({ confession }, 'confession to be resent found');
 
@@ -114,7 +114,7 @@ async function resendConfession(
         embedAttachment = {
             filename: retrievedAttachment.attachmentFilename,
             url: retrievedAttachment.attachmentUrl,
-            content_type: retrievedAttachment.attachmentType ?? undefined,
+            content_type: retrievedAttachment.attachmentType ?? void 0,
         };
     }
 

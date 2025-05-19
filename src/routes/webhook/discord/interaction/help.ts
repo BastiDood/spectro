@@ -20,7 +20,7 @@ export function handleHelp(
     logger.info({ isPublic }, 'help page summoned');
 
     return {
-        flags: isPublic ? undefined : MessageFlags.Ephemeral,
+        flags: isPublic ? void 0 : MessageFlags.Ephemeral,
         embeds: [
             {
                 color: 0xf7951d,

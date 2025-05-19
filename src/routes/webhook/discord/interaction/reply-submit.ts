@@ -79,7 +79,7 @@ async function submitReply(
 
     assert(typeof channel !== 'undefined');
     const { logChannelId, guildId, disabledAt, label, color, isApprovalRequired } = channel;
-    const hex = color === null ? undefined : Number.parseInt(color, 2);
+    const hex = color === null ? void 0 : Number.parseInt(color, 2);
 
     logger.info({ channel }, 'channel for reply submission found');
 

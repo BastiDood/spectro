@@ -99,7 +99,7 @@ async function submitVerdict(
             content,
             attachmentId,
         } = details;
-        const hex = color === null ? undefined : Number.parseInt(color, 2);
+        const hex = color === null ? void 0 : Number.parseInt(color, 2);
 
         // TODO: Refactor to Relations API once the `bigint` bug is fixed.
         let embedAttachment: EmbedAttachment | null = null;
@@ -117,7 +117,7 @@ async function submitVerdict(
             embedAttachment = {
                 filename: retrieved.filename,
                 url: retrieved.url,
-                content_type: retrieved.contentType ?? undefined,
+                content_type: retrieved.contentType ?? void 0,
             };
         }
 

@@ -18,14 +18,10 @@ if (dev || building) {
 export const logger = pino(pino.transport({ targets }));
 
 export function handleFatalError(logger: Logger, error: unknown): never {
-    if (isValiError(error)) {
-        logger.fatal({ summary: summarize(error.issues) }, error.message);
-    } else if (error instanceof AssertionError) {
-        logger.fatal({ nodeAssertionError: error }, error.message);
-    } else if (error instanceof Error) {
-        logger.fatal({ error }, error.message);
-    } else {
-        logger.fatal({ unknownError: error });
-    }
+    if (isValiError(error)) logger.fatal({ summary: summarize(error.issues) }, error.message);
+    else if (error instanceof AssertionError) logger.fatal({ nodeAssertionError: error }, error.message);
+    else if (error instanceof Error) logger.fatal({ error }, error.message);
+    else logger.fatal({ unknownError: error });
+
     throw error;
 }

@@ -113,7 +113,7 @@ pnpm fmt # prettier
 pnpm fmt:fix # prettier --write
 
 # Check Linting Rules
-pnpm lint:js     # eslint
+pnpm lint:eslint # eslint
 pnpm lint:svelte # svelte-check
 
 # Check All Lints in Parallel

@@ -1,15 +1,17 @@
 @import 'tailwindcss';
 
-@plugin "@tailwindcss/typography";
+@plugin '@tailwindcss/typography';
 
-@plugin "daisyui";
-@plugin "daisyui/theme" {
+@plugin 'daisyui' {
+    logs: false;
+}
+
+@plugin 'daisyui/theme' {
     name: 'spectro';
     default: true;
     prefersdark: true;
     color-scheme: 'dark';
     themes: false;
-    logs: false;
 
     --color-base-100: #24223d;
     --color-base-200: #1e1c34;

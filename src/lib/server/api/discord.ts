@@ -73,8 +73,8 @@ export async function dispatchConfessionViaHttp(
         if (attachment.content_type.includes('image'))
             embed.image = {
                 url: new URL(attachment.url),
-                height: attachment.height ?? undefined,
-                width: attachment.width ?? undefined,
+                height: attachment.height ?? void 0,
+                width: attachment.width ?? void 0,
             };
         else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
 

@@ -89,7 +89,7 @@ async function submitConfession(
 
     if (typeof channel === 'undefined') throw new UnknownChannelConfessError();
     const { logChannelId, guildId, disabledAt, color, label, isApprovalRequired } = channel;
-    const hex = color === null ? undefined : Number.parseInt(color, 2);
+    const hex = color === null ? void 0 : Number.parseInt(color, 2);
 
     logger.info({ channel }, 'channel for confession submission found');
 
