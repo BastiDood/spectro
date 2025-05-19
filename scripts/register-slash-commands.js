@@ -8,133 +8,138 @@ const MANAGE_CHANNELS = 1 << 4;
 const SEND_MESSAGES = 1 << 11;
 const MANAGE_MESSAGES = 1 << 13;
 
-const response = await fetch(`https://discord.com/api/v10/applications/${DISCORD_APPLICATION_ID}/commands`, {
+const response = await fetch(
+  `https://discord.com/api/v10/applications/${DISCORD_APPLICATION_ID}/commands`,
+  {
     method: 'PUT',
     headers: {
-        Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
-        'Content-Type': 'application/json',
+      Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify([
-        {
-            type: 1,
-            name: 'info',
-            description: 'Learn more about the bot.',
-            integration_types: [0, 1],
-            contexts: [0, 1, 2],
-            options: [
-                {
-                    type: 5,
-                    name: 'public',
-                    description: 'Send the information page publicly. Disabled by default.',
-                },
-            ],
-        },
-        {
-            type: 1,
-            name: 'help',
-            description: 'Open the help page.',
-            integration_types: [0, 1],
-            contexts: [0, 1, 2],
-            options: [
-                {
-                    type: 5,
-                    name: 'public',
-                    description: 'Send the help message publicly. Disabled by default.',
-                },
-            ],
-        },
-        {
-            type: 1,
-            name: 'confess',
-            description: 'Send an anonymous confession.',
-            default_member_permissions: SEND_MESSAGES.toString(),
-            integration_types: [0],
-            contexts: [0],
-            options: [
-                {
-                    type: 3,
-                    required: true,
-                    name: 'content',
-                    description: 'The content of the actual confession.',
-                },
-                {
-                    type: 11,
-                    required: false,
-                    name: 'attachment',
-                    description: 'A file to attach to the confession.',
-                },
-            ],
-        },
-        {
+      {
+        type: 1,
+        name: 'info',
+        description: 'Learn more about the bot.',
+        integration_types: [0, 1],
+        contexts: [0, 1, 2],
+        options: [
+          {
+            type: 5,
+            name: 'public',
+            description: 'Send the information page publicly. Disabled by default.',
+          },
+        ],
+      },
+      {
+        type: 1,
+        name: 'help',
+        description: 'Open the help page.',
+        integration_types: [0, 1],
+        contexts: [0, 1, 2],
+        options: [
+          {
+            type: 5,
+            name: 'public',
+            description: 'Send the help message publicly. Disabled by default.',
+          },
+        ],
+      },
+      {
+        type: 1,
+        name: 'confess',
+        description: 'Send an anonymous confession.',
+        default_member_permissions: SEND_MESSAGES.toString(),
+        integration_types: [0],
+        contexts: [0],
+        options: [
+          {
             type: 3,
-            name: 'Reply Anonymously',
-            default_member_permissions: SEND_MESSAGES.toString(),
-            integration_types: [0],
-            contexts: [0],
-        },
-        {
-            type: 1,
-            name: 'setup',
-            description: 'Enable confessions for this channel.',
-            default_member_permissions: MANAGE_CHANNELS.toString(),
-            integration_types: [0],
-            contexts: [0],
-            options: [
-                {
-                    type: 7,
-                    channel_types: [0],
-                    name: 'channel',
-                    required: true,
-                    description: 'The channel to which all confession logs and approval requests will be sent.',
-                },
-                {
-                    type: 3,
-                    name: 'label',
-                    description: 'A label to use for the confession. Defaults to "Confession".',
-                },
-                {
-                    type: 3,
-                    name: 'color',
-                    description: 'A hex-encoded RGB color to use for highlighting confession embeds.',
-                    min_length: 6,
-                    max_length: 6,
-                },
-                {
-                    type: 5,
-                    name: 'approval',
-                    description:
-                        'Sets whether approval is required before confession publication in this channel. Defaults to false.',
-                },
-            ],
-        },
-        {
-            type: 1,
-            name: 'lockdown',
-            description: 'Temporarily disable confessions for this channel. Previous settings are remembered.',
-            default_member_permissions: MANAGE_CHANNELS.toString(),
-            integration_types: [0],
-            contexts: [0],
-        },
-        {
-            type: 1,
-            name: 'resend',
+            required: true,
+            name: 'content',
+            description: 'The content of the actual confession.',
+          },
+          {
+            type: 11,
+            required: false,
+            name: 'attachment',
+            description: 'A file to attach to the confession.',
+          },
+        ],
+      },
+      {
+        type: 3,
+        name: 'Reply Anonymously',
+        default_member_permissions: SEND_MESSAGES.toString(),
+        integration_types: [0],
+        contexts: [0],
+      },
+      {
+        type: 1,
+        name: 'setup',
+        description: 'Enable confessions for this channel.',
+        default_member_permissions: MANAGE_CHANNELS.toString(),
+        integration_types: [0],
+        contexts: [0],
+        options: [
+          {
+            type: 7,
+            channel_types: [0],
+            name: 'channel',
+            required: true,
             description:
-                'Resend a confession by its ID. This is useful when the original message was accidentally deleted.',
-            default_member_permissions: MANAGE_MESSAGES.toString(),
-            integration_types: [0],
-            contexts: [0],
-            options: [
-                {
-                    type: 4,
-                    required: true,
-                    name: 'confession',
-                    min_value: 1,
-                    description: 'Confession ID to resend.',
-                },
-            ],
-        },
+              'The channel to which all confession logs and approval requests will be sent.',
+          },
+          {
+            type: 3,
+            name: 'label',
+            description: 'A label to use for the confession. Defaults to "Confession".',
+          },
+          {
+            type: 3,
+            name: 'color',
+            description: 'A hex-encoded RGB color to use for highlighting confession embeds.',
+            min_length: 6,
+            max_length: 6,
+          },
+          {
+            type: 5,
+            name: 'approval',
+            description:
+              'Sets whether approval is required before confession publication in this channel. Defaults to false.',
+          },
+        ],
+      },
+      {
+        type: 1,
+        name: 'lockdown',
+        description:
+          'Temporarily disable confessions for this channel. Previous settings are remembered.',
+        default_member_permissions: MANAGE_CHANNELS.toString(),
+        integration_types: [0],
+        contexts: [0],
+      },
+      {
+        type: 1,
+        name: 'resend',
+        description:
+          'Resend a confession by its ID. This is useful when the original message was accidentally deleted.',
+        default_member_permissions: MANAGE_MESSAGES.toString(),
+        integration_types: [0],
+        contexts: [0],
+        options: [
+          {
+            type: 4,
+            required: true,
+            name: 'confession',
+            min_value: 1,
+            description: 'Confession ID to resend.',
+          },
+        ],
+      },
     ]),
-});
+  },
+);
 
 const json = await response.json();
 console.dir(json, { depth: Infinity });

@@ -2,10 +2,10 @@ import type { InteractionResponseType } from '$lib/server/models/discord/interac
 import type { MessageComponentActionRow } from '$lib/server/models/discord/message/component/action-row';
 
 export interface InteractionResponseModal {
-    type: InteractionResponseType.Modal;
-    data: {
-        custom_id: string;
-        title: string;
-        components: MessageComponentActionRow[];
-    };
+  type: InteractionResponseType.Modal;
+  data: {
+    custom_id: string;
+    title: string;
+    components: MessageComponentActionRow[];
+  };
 }

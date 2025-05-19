@@ -9,15 +9,15 @@ import { InteractionApplicationCommandChatInputOptionString } from './string';
 import { InteractionApplicationCommandChatInputOptionSubCommand } from './subcommand';
 
 export const InteractionApplicationCommandChatInputOption = variant('type', [
-    InteractionApplicationCommandChatInputOptionSubCommand,
-    InteractionApplicationCommandChatInputOptionString,
-    InteractionApplicationCommandChatInputOptionInteger,
-    InteractionApplicationCommandChatInputOptionBoolean,
-    InteractionApplicationCommandChatInputOptionSnowflake,
-    InteractionApplicationCommandChatInputOptionNumber,
-    InteractionApplicationCommandChatInputOptionAttachment,
+  InteractionApplicationCommandChatInputOptionSubCommand,
+  InteractionApplicationCommandChatInputOptionString,
+  InteractionApplicationCommandChatInputOptionInteger,
+  InteractionApplicationCommandChatInputOptionBoolean,
+  InteractionApplicationCommandChatInputOptionSnowflake,
+  InteractionApplicationCommandChatInputOptionNumber,
+  InteractionApplicationCommandChatInputOptionAttachment,
 ]);
 
 export type InteractionApplicationCommandChatInputOption = InferOutput<
-    typeof InteractionApplicationCommandChatInputOption
+  typeof InteractionApplicationCommandChatInputOption
 >;

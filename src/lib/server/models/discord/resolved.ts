@@ -7,14 +7,14 @@ import { Message } from '$lib/server/models/discord/message';
 import { User } from '$lib/server/models/discord/user';
 
 export const Resolved = partial(
-    object({
-        users: record(string(), User),
-        members: record(string(), GuildMember),
-        // TODO: roles
-        channels: record(string(), Channel),
-        messages: record(string(), Message),
-        attachments: record(string(), Attachment),
-    }),
+  object({
+    users: record(string(), User),
+    members: record(string(), GuildMember),
+    // TODO: roles
+    channels: record(string(), Channel),
+    messages: record(string(), Message),
+    attachments: record(string(), Attachment),
+  }),
 );
 
 export type Resolved = InferOutput<typeof Resolved>;

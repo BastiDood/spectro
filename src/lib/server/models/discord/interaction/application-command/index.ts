@@ -7,13 +7,13 @@ import { InteractionApplicationCommandMessage } from './message';
 import { InteractionApplicationCommandUser } from './user';
 
 export const InteractionApplicationCommand = object({
-    ...InteractionBase.entries,
-    type: literal(InteractionType.ApplicationCommand),
-    data: variant('type', [
-        InteractionApplicationCommandChatInput,
-        InteractionApplicationCommandMessage,
-        InteractionApplicationCommandUser,
-    ]),
+  ...InteractionBase.entries,
+  type: literal(InteractionType.ApplicationCommand),
+  data: variant('type', [
+    InteractionApplicationCommandChatInput,
+    InteractionApplicationCommandMessage,
+    InteractionApplicationCommandUser,
+  ]),
 });
 
 export type InteractionApplicationCommand = InferOutput<typeof InteractionApplicationCommand>;
