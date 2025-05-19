@@ -3,7 +3,4 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 import tailwind from '@tailwindcss/vite';
 
-export default defineConfig({
-    plugins: [tailwind(), sveltekit()],
-    server: { allowedHosts: ['shaky-carrots-stop.loca.lt'] },
-});
+export default defineConfig({ plugins: [tailwind(), sveltekit()] });
