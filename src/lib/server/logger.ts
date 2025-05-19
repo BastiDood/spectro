@@ -15,7 +15,14 @@ if (dev || building) {
         targets.push({ target: '@axiomhq/pino', options: { dataset: AXIOM_DATASET, token: AXIOM_TOKEN } });
 }
 
-export const logger = pino(pino.transport({ targets }));
+export const logger = pino({
+    transport: pino.transport({ targets }),
+    redact: {
+        // HACK: need to remove this to conserve on log field sizes.
+        paths: ['interaction.data.resolved'],
+        remove: true,
+    },
+});
 
 export function handleFatalError(logger: Logger, error: unknown): never {
     if (isValiError(error)) {
