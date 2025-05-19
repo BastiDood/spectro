@@ -1,23 +1,21 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { doDeferredResponse, hasAllPermissions } from './util';
-import { UnexpectedDiscordErrorCode } from './errors';
-
-import { type Database, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
-
 import { and, eq } from 'drizzle-orm';
+
 import { attachment, channel, confession } from '$lib/server/database/models';
+import { db, resetLogChannel } from '$lib/server/database';
+import { dispatchConfessionViaHttp, logResentConfessionViaHttp } from '$lib/server/api/discord';
 
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
-
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { dispatchConfessionViaHttp, logResentConfessionViaHttp } from '$lib/server/api/discord';
+import { doDeferredResponse, hasAllPermissions } from './util';
+import { UnexpectedDiscordErrorCode } from './errors';
 
 abstract class ResendError extends Error {
     constructor(message?: string) {
@@ -61,7 +59,6 @@ class MissingLogChannelResendError extends ResendError {
  * @throws {MissingLogChannelResendError}
  */
 async function resendConfession(
-    db: Database,
     logger: Logger,
     timestamp: Date,
     permission: bigint,
@@ -181,7 +178,6 @@ async function resendConfession(
 }
 
 export async function handleResend(
-    db: Database,
     logger: Logger,
     timestamp: Date,
     permission: bigint,
@@ -195,7 +191,7 @@ export async function handleResend(
 
     const confessionId = BigInt(option.value);
     try {
-        return await resendConfession(db, logger, timestamp, permission, channelId, confessionId, moderatorId);
+        return await resendConfession(logger, timestamp, permission, channelId, confessionId, moderatorId);
     } catch (err) {
         if (err instanceof ResendError) {
             logger.error(err, err.message);

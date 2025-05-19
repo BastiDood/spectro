@@ -1,27 +1,24 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
-
-import { MalformedCustomIdFormat } from './errors';
-import { hasAllPermissions } from './util';
-
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
-
-import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
-
-import { attachment, channel, confession } from '$lib/server/database/models';
 import { eq } from 'drizzle-orm';
 
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { Embed, EmbedType } from '$lib/server/models/discord/embed';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { APP_ICON_URL, Color } from '$lib/server/constants';
+import { attachment, channel, confession } from '$lib/server/database/models';
+import { db } from '$lib/server/database';
+import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
+
+import { MalformedCustomIdFormat } from './errors';
+import { hasAllPermissions } from './util';
 
 abstract class ApprovalError extends Error {
     constructor(message?: string) {
@@ -58,7 +55,6 @@ class AlreadyApprovedApprovalError extends ApprovalError {
  * @throws {AlreadyApprovedApprovalError}
  */
 async function submitVerdict(
-    db: Database,
     logger: Logger,
     timestamp: Date,
     isApproved: boolean,
@@ -125,8 +121,7 @@ async function submitVerdict(
             };
         }
 
-        const child = logger.child({ details });
-        child.info('fetched confession details for approval');
+        logger.info({ details }, 'fetched confession details for approval');
 
         if (disabledAt !== null && disabledAt <= timestamp) throw new DisabledChannelConfessError(disabledAt);
 
@@ -229,7 +224,6 @@ async function submitVerdict(
 }
 
 export async function handleApproval(
-    db: Database,
     logger: Logger,
     timestamp: Date,
     customId: string,
@@ -256,7 +250,7 @@ export async function handleApproval(
     }
 
     try {
-        const payload = await submitVerdict(db, logger, timestamp, isApproved, internalId, userId, permissions);
+        const payload = await submitVerdict(logger, timestamp, isApproved, internalId, userId, permissions);
         return typeof payload === 'string'
             ? {
                   type: InteractionResponseType.ChannelMessageWithSource,

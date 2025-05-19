@@ -1,18 +1,18 @@
+import { strictEqual } from 'node:assert/strict';
+
+import type { Logger } from 'pino';
+import { error } from '@sveltejs/kit';
+import { parse } from 'valibot';
+import { verifyAsync } from '@noble/ed25519';
+
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
 import { IntegrationType, Webhook, WebhookEventType, WebhookType } from '$lib/server/models/discord/event';
-import { parse } from 'valibot';
 
-import assert, { strictEqual } from 'node:assert/strict';
-import { error } from '@sveltejs/kit';
-import { verifyAsync } from '@noble/ed25519';
-
-import type { Database } from '$lib/server/database';
-import type { Logger } from 'pino';
 import { handleApplicationAuthorized } from './application-authorized';
 
 // TODO: Fine-grained database-level performance logs.
-async function handleWebhook(db: Database, logger: Logger, timestamp: Date, webhook: Webhook) {
+async function handleWebhook(logger: Logger, timestamp: Date, webhook: Webhook) {
     // eslint-disable-next-line default-case
     switch (webhook.type) {
         case WebhookType.Ping:
@@ -21,12 +21,12 @@ async function handleWebhook(db: Database, logger: Logger, timestamp: Date, webh
         case WebhookType.Event:
             strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
             strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
-            await handleApplicationAuthorized(db, logger, timestamp, webhook.event.data.guild.id);
+            await handleApplicationAuthorized(logger, timestamp, webhook.event.data.guild.id);
             break;
     }
 }
 
-export async function POST({ locals: { ctx }, request }) {
+export async function POST({ locals: { logger }, request }) {
     const ed25519 = request.headers.get('X-Signature-Ed25519');
     if (ed25519 === null) error(400);
 
@@ -44,13 +44,11 @@ export async function POST({ locals: { ctx }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        assert(typeof ctx !== 'undefined');
         const event = parse(Webhook, JSON.parse(text));
-        const logger = ctx.logger.child({ event });
-        logger.info('webhook event received');
+        logger.info({ event }, 'webhook event received');
 
         const start = performance.now();
-        await handleWebhook(ctx.db, logger, datetime, event);
+        await handleWebhook(logger, datetime, event);
         const webhookTimeMillis = performance.now() - start;
         logger.info({ webhookTimeMillis }, 'webhook event processed');
 

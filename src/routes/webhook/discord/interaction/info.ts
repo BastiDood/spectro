@@ -1,10 +1,10 @@
+import type { Logger } from 'pino';
 import { strictEqual } from 'node:assert/strict';
 
 import { APP_ICON_URL, APP_WEBSITE, DEVELOPER_ICON_URL } from '$lib/server/constants';
 
 import { EmbedType } from '$lib/server/models/discord/embed';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
-import type { Logger } from 'pino';
 import type { Message } from '$lib/server/models/discord/message';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
@@ -22,7 +22,7 @@ export function handleInfo(
     logger.info({ isPublic }, 'info page summoned');
 
     return {
-        flags: isPublic ? undefined : MessageFlags.Ephemeral,
+        flags: isPublic ? void 0 : MessageFlags.Ephemeral,
         components: [
             {
                 type: MessageComponentType.ActionRow,

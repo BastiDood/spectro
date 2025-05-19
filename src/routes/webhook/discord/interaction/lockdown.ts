@@ -1,5 +1,7 @@
-import { type Database, disableConfessionChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
+
+import { db, disableConfessionChannel } from '$lib/server/database';
+
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 abstract class LockdownError extends Error {
@@ -17,7 +19,7 @@ class ChannelNotSetupLockdownError extends LockdownError {
 }
 
 /** @throws {ChannelNotSetupLockdownError} */
-async function disableConfessions(db: Database, logger: Logger, disabledAt: Date, channelId: Snowflake) {
+async function disableConfessions(logger: Logger, disabledAt: Date, channelId: Snowflake) {
     if (await disableConfessionChannel(db, channelId, disabledAt)) {
         logger.info('confessions disabled');
         return;
@@ -25,9 +27,9 @@ async function disableConfessions(db: Database, logger: Logger, disabledAt: Date
     throw new ChannelNotSetupLockdownError();
 }
 
-export async function handleLockdown(db: Database, logger: Logger, disabledAt: Date, channelId: Snowflake) {
+export async function handleLockdown(logger: Logger, disabledAt: Date, channelId: Snowflake) {
     try {
-        await disableConfessions(db, logger, disabledAt, channelId);
+        await disableConfessions(logger, disabledAt, channelId);
         return 'Confessions have been temporarily disabled for this channel.';
     } catch (err) {
         if (err instanceof LockdownError) {

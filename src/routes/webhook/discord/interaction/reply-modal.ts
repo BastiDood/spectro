@@ -1,3 +1,7 @@
+import type { Logger } from 'pino';
+
+import { db } from '$lib/server/database';
+
 import type { InteractionResponseMessage } from '$lib/server/models/discord/interaction-response/message';
 import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -5,9 +9,6 @@ import { MessageComponentTextInputStyle } from '$lib/server/models/discord/messa
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
-import type { Database } from '$lib/server/database';
-import type { Logger } from 'pino';
 
 abstract class ReplyModalError extends Error {
     constructor(message?: string) {
@@ -43,13 +44,7 @@ class ApprovalRequiredReplyModalError extends ReplyModalError {
  * @throws {DisabledChannelReplyModalError}
  * @throws {ApprovalRequiredReplyModalError}
  */
-async function renderReplyModal(
-    db: Database,
-    logger: Logger,
-    timestamp: Date,
-    channelId: Snowflake,
-    messageId: Snowflake,
-) {
+async function renderReplyModal(logger: Logger, timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
     const channel = await db.query.channel.findFirst({
         columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
         where({ id }, { eq }) {
@@ -90,15 +85,9 @@ async function renderReplyModal(
     } satisfies InteractionResponseModal;
 }
 
-export async function handleReplyModal(
-    db: Database,
-    logger: Logger,
-    timestamp: Date,
-    channelId: Snowflake,
-    messageId: Snowflake,
-) {
+export async function handleReplyModal(logger: Logger, timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
     try {
-        return await renderReplyModal(db, logger, timestamp, channelId, messageId);
+        return await renderReplyModal(logger, timestamp, channelId, messageId);
     } catch (err) {
         if (err instanceof ReplyModalError) {
             logger.error(err, err.message);

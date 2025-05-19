@@ -1,21 +1,19 @@
 import assert, { fail, strictEqual } from 'node:assert/strict';
 
-import type { Database } from '$lib/server/database';
 import type { Logger } from 'pino';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
-
-import { channel } from '$lib/server/database/models';
 import { sql } from 'drizzle-orm';
 
+import { channel } from '$lib/server/database/models';
+import { db } from '$lib/server/database';
+
+import { ChannelType } from '$lib/server/models/discord/channel';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { ChannelType } from '$lib/server/models/discord/channel';
-
 async function enableConfessions(
-    db: Database,
     logger: Logger,
     logChannelId: Snowflake,
     guildId: Snowflake,
@@ -59,7 +57,6 @@ async function enableConfessions(
 
 const HEX_COLOR = /^[0-9a-f]{6}$/iu;
 export async function handleSetup(
-    db: Database,
     logger: Logger,
     resolvedChannels: NonNullable<Resolved['channels']>,
     guildId: Snowflake,
@@ -106,7 +103,7 @@ export async function handleSetup(
     assert(typeof channel !== 'undefined');
     strictEqual(resolvedChannels[channel.toString()]?.type, ChannelType.GuildText);
 
-    const result = await enableConfessions(db, logger, channel, guildId, channelId, label, color, isApprovalRequired);
+    const result = await enableConfessions(logger, channel, guildId, channelId, label, color, isApprovalRequired);
     return result.isApprovalRequired
         ? `Only approved confessions (labelled **${result.label}**) are now enabled for this channel.`
         : `Any confessions (labelled **${result.label}**) are now enabled for this channel.`;

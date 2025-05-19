@@ -1,23 +1,22 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { doDeferredResponse, hasAllPermissions } from './util';
-import { UnexpectedDiscordErrorCode } from './errors';
-
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import type { MessageComponents } from '$lib/server/models/discord/message/component';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
-import { type Database, insertConfession, resetLogChannel } from '$lib/server/database';
 import type { Logger } from 'pino';
 
+import { db, insertConfession, resetLogChannel } from '$lib/server/database';
 import {
     dispatchConfessionViaHttp,
     logApprovedConfessionViaHttp,
     logPendingConfessionViaHttp,
 } from '$lib/server/api/discord';
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
 
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import type { MessageComponents } from '$lib/server/models/discord/message/component';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
+
+import { doDeferredResponse, hasAllPermissions } from './util';
+import { UnexpectedDiscordErrorCode } from './errors';
 
 abstract class ReplySubmitError extends Error {
     constructor(message?: string) {
@@ -54,7 +53,6 @@ class MissingLogChannelReplySubmitError extends ReplySubmitError {
  * @throws {MissingLogChannelReplySubmitError}
  */
 async function submitReply(
-    db: Database,
     logger: Logger,
     timestamp: Date,
     permissions: bigint,
@@ -209,7 +207,6 @@ async function submitReply(
 }
 
 export async function handleReplySubmit(
-    db: Database,
     logger: Logger,
     timestamp: Date,
     channelId: Snowflake,
@@ -229,16 +226,7 @@ export async function handleReplySubmit(
     const parentMessageId = BigInt(component.custom_id);
 
     try {
-        return await submitReply(
-            db,
-            logger,
-            timestamp,
-            permissions,
-            channelId,
-            parentMessageId,
-            authorId,
-            component.value,
-        );
+        return await submitReply(logger, timestamp, permissions, channelId, parentMessageId, authorId, component.value);
     } catch (err) {
         if (err instanceof ReplySubmitError) {
             logger.error(err, err.message);

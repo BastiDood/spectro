@@ -1,22 +1,21 @@
 import assert, { fail, strictEqual } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
+import type { Logger } from 'pino';
+import { error, json } from '@sveltejs/kit';
+import { parse } from 'valibot';
+import { verifyAsync } from '@noble/ed25519';
+
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
 import { DeserializedInteraction } from '$lib/server/models/discord/interaction';
+import { MANAGE_CHANNELS, MANAGE_MESSAGES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { InteractionType } from '$lib/server/models/discord/interaction/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
-
-import { error, json } from '@sveltejs/kit';
-import { parse } from 'valibot';
-import { verifyAsync } from '@noble/ed25519';
-
-import type { Database } from '$lib/server/database';
-import type { Logger } from 'pino';
 
 import { handleApproval } from './approval';
 import { handleConfess } from './confess';
@@ -27,12 +26,9 @@ import { handleReplyModal } from './reply-modal';
 import { handleReplySubmit } from './reply-submit';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
-
-import { MANAGE_CHANNELS, MANAGE_MESSAGES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import { hasAllPermissions } from './util';
 
 async function handleInteraction(
-    db: Database,
     logger: Logger, // TODO: Fine-grained database-level performance logs.
     timestamp: Date,
     interaction: DeserializedInteraction,
@@ -56,7 +52,6 @@ async function handleInteraction(
                                 data: {
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleConfess(
-                                        db,
                                         logger,
                                         timestamp,
                                         interaction.member.permissions,
@@ -83,7 +78,6 @@ async function handleInteraction(
                                 data: {
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleSetup(
-                                        db,
                                         logger,
                                         interaction.data.resolved.channels,
                                         interaction.guild_id,
@@ -100,7 +94,7 @@ async function handleInteraction(
                                 type: InteractionResponseType.ChannelMessageWithSource,
                                 data: {
                                     flags: MessageFlags.Ephemeral,
-                                    content: await handleLockdown(db, logger, timestamp, interaction.channel_id),
+                                    content: await handleLockdown(logger, timestamp, interaction.channel_id),
                                 },
                             };
                         case 'resend':
@@ -113,7 +107,6 @@ async function handleInteraction(
                                 data: {
                                     flags: MessageFlags.Ephemeral,
                                     content: await handleResend(
-                                        db,
                                         logger,
                                         timestamp,
                                         interaction.member.permissions,
@@ -140,7 +133,6 @@ async function handleInteraction(
                             assert(typeof interaction.member?.permissions !== 'undefined');
                             assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
                             return await handleReplyModal(
-                                db,
                                 logger,
                                 timestamp,
                                 interaction.channel_id,
@@ -162,7 +154,6 @@ async function handleInteraction(
             assert(typeof interaction.member.permissions !== 'undefined');
             strictEqual(interaction.data.component_type, MessageComponentType.Button);
             return await handleApproval(
-                db,
                 logger,
                 timestamp,
                 interaction.data.custom_id,
@@ -172,7 +163,6 @@ async function handleInteraction(
         case InteractionType.ModalSubmit:
             switch (interaction.data.custom_id) {
                 case 'reply':
-                    assert(typeof db !== 'undefined');
                     assert(typeof interaction.channel_id !== 'undefined');
                     assert(typeof interaction.member?.user !== 'undefined');
                     assert(typeof interaction.member.permissions !== 'undefined');
@@ -181,7 +171,6 @@ async function handleInteraction(
                         data: {
                             flags: MessageFlags.Ephemeral,
                             content: await handleReplySubmit(
-                                db,
                                 logger,
                                 timestamp,
                                 interaction.channel_id,
@@ -199,7 +188,7 @@ async function handleInteraction(
     }
 }
 
-export async function POST({ locals: { ctx }, request }) {
+export async function POST({ locals: { logger }, request }) {
     const ed25519 = request.headers.get('X-Signature-Ed25519');
     if (ed25519 === null) error(400);
 
@@ -217,13 +206,12 @@ export async function POST({ locals: { ctx }, request }) {
     const signature = Buffer.from(ed25519, 'hex');
 
     if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-        assert(typeof ctx !== 'undefined');
+        assert(typeof logger !== 'undefined');
         const interaction = parse(DeserializedInteraction, JSON.parse(text));
-        const logger = ctx.logger.child({ interaction });
         logger.info({ interaction }, 'interaction received');
 
         const start = performance.now();
-        const response = await handleInteraction(ctx.db, logger, datetime, interaction);
+        const response = await handleInteraction(logger, datetime, interaction);
         const interactionTimeMillis = performance.now() - start;
         logger.info({ interactionTimeMillis }, 'interaction processed');
 
