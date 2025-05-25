@@ -5,7 +5,12 @@ import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { type Embed, type EmbedField, EmbedType } from '$lib/server/models/discord/embed';
+import {
+  type Embed,
+  type EmbedField,
+  type EmbedImage,
+  EmbedType,
+} from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { DiscordError } from '$lib/server/models/discord/error';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
@@ -121,7 +126,17 @@ export async function logPendingConfessionViaHttp(
     },
   ];
 
-  if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let image: EmbedImage | undefined;
+  if (attachment !== null) {
+    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+    if (attachment.content_type?.startsWith('image/'))
+      image = {
+        url: new URL(attachment.url),
+        height: attachment.height ?? void 0,
+        width: attachment.width ?? void 0,
+      };
+  }
 
   const customId = internalId.toString();
   return await createMessage(
@@ -142,6 +157,7 @@ export async function logPendingConfessionViaHttp(
             icon_url: APP_ICON_URL,
           },
           fields,
+          image,
         },
       ],
       components: [
@@ -189,7 +205,17 @@ export async function logApprovedConfessionViaHttp(
     },
   ];
 
-  if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let image: EmbedImage | undefined;
+  if (attachment !== null) {
+    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+    if (attachment.content_type?.startsWith('image/'))
+      image = {
+        url: new URL(attachment.url),
+        height: attachment.height ?? void 0,
+        width: attachment.width ?? void 0,
+      };
+  }
 
   return await createMessage(
     logger,
@@ -209,6 +235,7 @@ export async function logApprovedConfessionViaHttp(
             icon_url: APP_ICON_URL,
           },
           fields,
+          image,
         },
       ],
     },
