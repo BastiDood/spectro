@@ -46,6 +46,7 @@
         <div>
           <h2 class="text-base-content mb-4 text-sm font-semibold uppercase">Legal</h2>
           <ul class="space-y-2 text-gray-400">
+            <li><a href="/terms/" class="hover:underline">Terms of Use</a></li>
             <li><a href="/privacy/" class="hover:underline">Privacy Policy</a></li>
           </ul>
         </div>
