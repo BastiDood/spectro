@@ -1,11 +1,11 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
 
-  import BaselineAnnouncement from '@iconify-icons/ic/baseline-announcement';
+  import BaselineInfo from '@iconify-icons/ic/baseline-info';
 </script>
 
 <div class="not-prose alert alert-info">
-  <Icon icon={BaselineAnnouncement} width={24} />
+  <Icon icon={BaselineInfo} width={24} />
   <span>Last updated on <time datetime="2025-02-08">February 8, 2025</time>.</span>
 </div>
 
