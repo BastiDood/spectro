@@ -42,7 +42,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.10",
-    "@types/node": "^22.15.32",
+    "@types/node": "^24.0.3",
     "@types/pg": "^8.15.4",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.0.43",
