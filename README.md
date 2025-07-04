@@ -91,7 +91,8 @@ The following variables are optional in development, but _highly_ recommended in
 pnpm install
 
 # Synchronize auto-generated files from SvelteKit.
-pnpm sync
+# This is automatically run by `pnpm install`.
+pnpm prepare
 
 # Start the development server with live reloading + hot module replacement.
 pnpm dev
