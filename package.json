@@ -27,7 +27,7 @@
     "@iconify-icons/ic": "^1.2.13",
     "@iconify-icons/simple-icons": "^1.2.74",
     "@iconify/svelte": "^5.0.1",
-    "@noble/ed25519": "^2.3.0",
+    "@noble/ed25519": "^3.0.0",
     "@sveltejs/kit": "^2.36.3",
     "drizzle-orm": "^0.44.5",
     "pg": "^8.16.3",
