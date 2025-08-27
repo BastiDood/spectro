@@ -1,6 +1,6 @@
 import { AssertionError } from 'node:assert/strict';
 
-import { type Logger, type TransportTargetOptions, pino } from 'pino';
+import { type Logger, type TransportTargetOptions, pino, transport } from 'pino';
 import { getDotPath, isValiError } from 'valibot';
 
 import { building, dev } from '$app/environment';
@@ -26,7 +26,7 @@ export const logger = pino(
       remove: true,
     },
   },
-  pino.transport({ targets }),
+  transport({ targets }),
 );
 
 export function handleFatalError(logger: Logger, error: unknown): never {
