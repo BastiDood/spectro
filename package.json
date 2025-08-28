@@ -28,11 +28,11 @@
     "@iconify-icons/simple-icons": "^1.2.74",
     "@iconify/svelte": "^5.0.1",
     "@noble/ed25519": "^3.0.0",
-    "@sveltejs/kit": "^2.36.3",
+    "@sveltejs/kit": "^2.37.0",
     "drizzle-orm": "^0.44.5",
     "pg": "^8.16.3",
     "pino": "^9.9.0",
-    "svelte": "^5.38.5",
+    "svelte": "^5.38.6",
     "valibot": "^1.1.0"
   },
   "devDependencies": {
@@ -45,7 +45,7 @@
     "@types/node": "^24.3.0",
     "@types/pg": "^8.15.5",
     "autoprefixer": "^10.4.21",
-    "daisyui": "^5.0.51",
+    "daisyui": "^5.0.54",
     "dotenv-cli": "^10.0.0",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.34.0",
