@@ -1,4 +1,4 @@
-FROM node:24.6.0-alpine3.22 AS build
+FROM node:24.8.0-alpine3.22 AS build
 WORKDIR /app
 COPY package.json pnpm-lock.yaml svelte.config.js ./
 ENV PNPM_HOME="/pnpm"
