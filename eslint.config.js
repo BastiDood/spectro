@@ -175,5 +175,9 @@ export default defineConfig(
         svelteConfig,
       },
     },
+    rules: {
+      // TODO: Reinstate when ready to restructure the docs.
+      'svelte/no-navigation-without-resolve': 'off',
+    },
   },
 );
