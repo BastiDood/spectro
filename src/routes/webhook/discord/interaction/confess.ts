@@ -86,19 +86,6 @@ export async function handleConfess(
     } satisfies InteractionResponseModal;
   }
 
-  // Convert Attachment to EmbedAttachment for the shared function
-  const embedAttachment = attachment
-    ? {
-        id: attachment.id,
-        url: attachment.url,
-        content_type: attachment.content_type,
-        width: attachment.width,
-        height: attachment.height,
-        filename: attachment.filename,
-        proxy_url: attachment.url,
-      }
-    : null;
-
   // Handle normal confession submission using shared function
   try {
     return {
@@ -112,7 +99,7 @@ export async function handleConfess(
           channelId,
           authorId,
           content,
-          embedAttachment,
+          attachment,
         ),
       },
     };
