@@ -4,7 +4,7 @@ import type { Logger } from 'pino';
 import { eq } from 'drizzle-orm';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import { Embed, EmbedType } from '$lib/server/models/discord/embed';
+import { Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -108,8 +108,8 @@ async function submitVerdict(
       const [retrieved, ...others] = await tx
         .select({
           filename: attachment.filename,
-          url: attachment.url,
           contentType: attachment.contentType,
+          url: attachment.url,
         })
         .from(attachment)
         .where(eq(attachment.id, attachmentId));
@@ -177,8 +177,17 @@ async function submitVerdict(
         },
       ];
 
-      if (embedAttachment !== null)
+      // eslint-disable-next-line @typescript-eslint/init-declarations
+      let image: EmbedImage | undefined;
+      if (embedAttachment !== null) {
         fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+        if (embedAttachment.content_type?.startsWith('image/'))
+          image = {
+            url: new URL(embedAttachment.url),
+            height: embedAttachment.height ?? void 0,
+            width: embedAttachment.width ?? void 0,
+          };
+      }
 
       return {
         type: EmbedType.Rich,
@@ -191,6 +200,7 @@ async function submitVerdict(
           icon_url: APP_ICON_URL,
         },
         fields,
+        image,
       };
     }
 
@@ -207,8 +217,17 @@ async function submitVerdict(
       },
     ];
 
-    if (embedAttachment !== null)
+    // eslint-disable-next-line @typescript-eslint/init-declarations
+    let image: EmbedImage | undefined;
+    if (embedAttachment !== null) {
       fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+      if (embedAttachment.content_type?.startsWith('image/'))
+        image = {
+          url: new URL(embedAttachment.url),
+          height: embedAttachment.height ?? void 0,
+          width: embedAttachment.width ?? void 0,
+        };
+    }
 
     await tx.delete(confession).where(eq(confession.internalId, internalId));
     logger.warn('deleted confession due to rejection');
@@ -223,6 +242,7 @@ async function submitVerdict(
         icon_url: APP_ICON_URL,
       },
       fields,
+      image,
     };
   });
 }

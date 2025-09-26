@@ -99,7 +99,7 @@ async function submitReply(
       null,
       parentMessageId,
       null,
-      false,
+      true,
     );
 
     logger.info({ internalId, confessionId }, 'reply pending approval submitted');
@@ -154,7 +154,7 @@ async function submitReply(
     timestamp,
     parentMessageId,
     null,
-    false,
+    true,
   );
 
   logger.info({ internalId, confessionId }, 'reply submitted');
