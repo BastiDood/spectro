@@ -37,9 +37,9 @@
     "options": [
       {
         "type": 3,
-        "required": true,
+        "required": false,
         "name": "content",
-        "description": "The content of the actual confession."
+        "description": "The content of the confession. Leave empty to open a modal for multi-line messages."
       },
       {
         "type": 11,

@@ -40,7 +40,11 @@ function updateLastConfession(db: Interface, guildId: Snowflake) {
     .returning({ confessionId: schema.guild.lastConfessionId });
 }
 
-async function insertAttachmentData(db: Interface, attachment: Attachment) {
+export type InsertableAttachment = Pick<
+  Attachment,
+  'id' | 'filename' | 'content_type' | 'url' | 'proxy_url'
+>;
+async function insertAttachmentData(db: Interface, attachment: InsertableAttachment) {
   const { rowCount } = await db.insert(schema.attachment).values({
     id: attachment.id,
     filename: attachment.filename,
@@ -60,7 +64,7 @@ export async function insertConfession(
   description: string,
   approvedAt: Date | null,
   parentMessageId: Snowflake | null,
-  attachment: Attachment | null,
+  attachment: InsertableAttachment | null,
 ) {
   return await db.transaction(async tx => {
     const attachmentId =

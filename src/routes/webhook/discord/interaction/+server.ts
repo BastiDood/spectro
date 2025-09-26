@@ -23,6 +23,7 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 
 import { handleApproval } from './approval';
 import { handleConfess } from './confess';
+import { handleConfessSubmit } from './confess-submit';
 import { handleHelp } from './help';
 import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';
@@ -51,21 +52,15 @@ async function handleInteraction(
               assert(typeof interaction.member?.user !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
-              return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                  flags: MessageFlags.Ephemeral,
-                  content: await handleConfess(
-                    logger,
-                    timestamp,
-                    interaction.member.permissions,
-                    interaction.channel_id,
-                    interaction.member.user.id,
-                    interaction.data.options,
-                    interaction.data.resolved ?? null,
-                  ),
-                },
-              };
+              return await handleConfess(
+                logger,
+                timestamp,
+                interaction.member.permissions,
+                interaction.channel_id,
+                interaction.member.user.id,
+                interaction.data.options,
+                interaction.data.resolved ?? null,
+              );
             case 'help':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
@@ -178,6 +173,24 @@ async function handleInteraction(
             data: {
               flags: MessageFlags.Ephemeral,
               content: await handleReplySubmit(
+                logger,
+                timestamp,
+                interaction.channel_id,
+                interaction.member.user.id,
+                interaction.member.permissions,
+                interaction.data.components,
+              ),
+            },
+          };
+        case 'confess':
+          assert(typeof interaction.channel_id !== 'undefined');
+          assert(typeof interaction.member?.user !== 'undefined');
+          assert(typeof interaction.member.permissions !== 'undefined');
+          return {
+            type: InteractionResponseType.ChannelMessageWithSource,
+            data: {
+              flags: MessageFlags.Ephemeral,
+              content: await handleConfessSubmit(
                 logger,
                 timestamp,
                 interaction.channel_id,
