@@ -69,9 +69,9 @@ export async function insertConfession(
 ) {
   return await db.transaction(async tx => {
     let attachmentId: bigint | null = null;
-    if (shouldInsertAttachment && attachment !== null) {
-      await insertAttachmentData(tx, attachment);
+    if (attachment !== null) {
       attachmentId = attachment.id;
+      if (shouldInsertAttachment) await insertAttachmentData(tx, attachment);
     }
 
     const guild = updateLastConfession(tx, guildId);
