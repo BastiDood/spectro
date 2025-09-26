@@ -60,7 +60,7 @@
         class="bg-base-300 text-primary w-fit self-center rounded-md px-4 py-2 font-mono text-lg font-bold drop-shadow-md"
       >
         <span>/confess</span>
-        <CommandOption required tooltip="Content of the confession message.">content</CommandOption>
+        <CommandOption tooltip="Content of the confession message.">content</CommandOption>
         <CommandOption tooltip="A file to attach to the confession.">attachment</CommandOption>
       </div>
       {@render permissionBadge('Send Messages')}
@@ -71,7 +71,9 @@
         >Send a confession to the current channel with an optional <code class="whitespace-nowrap"
           >attachment</code
         >.</strong
-      > This command fails if the current channel has not yet been configured by the server moderators
+      >
+      If no <code class="whitespace-nowrap">content</code> is provided, a modal will be shown for multi-line
+      messages. This command fails if the current channel has not yet been configured by the server moderators
       to accept anonymous confessions.
     </p>
   </section>
