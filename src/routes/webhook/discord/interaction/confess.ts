@@ -1,4 +1,4 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import { strictEqual } from 'node:assert/strict';
 
 import type { Logger } from 'pino';
 
