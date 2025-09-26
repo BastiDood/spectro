@@ -38,13 +38,21 @@ export async function handleConfessSubmit(
   // Fetch attachment from database if ID exists
   let attachment: InsertableAttachment | null = null;
   if (attachmentId !== null) {
+    // There's _technically_ a race condition here where it's possible for an attachment to be
+    // deleted between the time the user triggered the modal (and hence inserting the attachment
+    // to the database) and the actual getter query below.
+    //
+    // Consider the case of database cleanups. If a cleanup job happens to unfortunately
+    // run between modal trigger and modal submission, then the query below will silently fail.
+    //
+    // In practice, since we don't do database cleanups nor attachment deletions, this is not a
+    // concern for now. But, we should nevertheless be aware of this moving forward.
     const attachmentRecord = await db.query.attachment.findFirst({
       columns: { id: false },
       where({ id }, { eq }) {
         return eq(id, attachmentId);
       },
     });
-
     if (typeof attachmentRecord !== 'undefined')
       attachment = {
         id: attachmentId,
