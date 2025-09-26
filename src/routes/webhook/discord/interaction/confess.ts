@@ -28,10 +28,10 @@ export async function handleConfess(
   options: InteractionApplicationCommandChatInputOption[],
   resolved: Resolved | null,
 ): Promise<InteractionResponse> {
-  // Parse command options
+  // eslint-disable-next-line @typescript-eslint/init-declarations
   let content: string | undefined;
   let attachment: Attachment | null = null;
-  for (const option of options) {
+  for (const option of options)
     switch (option.name) {
       case 'content':
         strictEqual(option.type, InteractionApplicationCommandChatInputOptionType.String);
@@ -41,8 +41,10 @@ export async function handleConfess(
         strictEqual(option.type, InteractionApplicationCommandChatInputOptionType.Attachment);
         attachment = resolved?.attachments?.[option.value.toString()] ?? null;
         break;
+      default:
+        logger.warn({ value: option.type, name: option.name }, 'unexpected option');
+        break;
     }
-  }
 
   // If no content provided, show modal
   if (typeof content === 'undefined') {
@@ -87,14 +89,14 @@ export async function handleConfess(
   // Convert Attachment to EmbedAttachment for the shared function
   const embedAttachment = attachment
     ? {
-      id: attachment.id,
-      url: attachment.url,
-      content_type: attachment.content_type,
-      width: attachment.width,
-      height: attachment.height,
-      filename: attachment.filename,
-      proxy_url: attachment.url,
-    }
+        id: attachment.id,
+        url: attachment.url,
+        content_type: attachment.content_type,
+        width: attachment.width,
+        height: attachment.height,
+        filename: attachment.filename,
+        proxy_url: attachment.url,
+      }
     : null;
 
   // Handle normal confession submission using shared function

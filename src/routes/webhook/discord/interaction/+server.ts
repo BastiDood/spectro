@@ -48,7 +48,6 @@ async function handleInteraction(
           switch (interaction.data.name) {
             case 'confess':
               assert(typeof interaction.channel_id !== 'undefined');
-              assert(typeof interaction.data.options !== 'undefined');
               assert(typeof interaction.member?.user !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
@@ -58,7 +57,7 @@ async function handleInteraction(
                 interaction.member.permissions,
                 interaction.channel_id,
                 interaction.member.user.id,
-                interaction.data.options,
+                interaction.data.options ?? [],
                 interaction.data.resolved ?? null,
               );
             case 'help':
@@ -98,7 +97,6 @@ async function handleInteraction(
               };
             case 'resend':
               assert(typeof interaction.channel_id !== 'undefined');
-              assert(typeof interaction.data.options !== 'undefined');
               assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
@@ -112,7 +110,7 @@ async function handleInteraction(
                     interaction.member.permissions,
                     interaction.channel_id,
                     interaction.member.user.id,
-                    interaction.data.options,
+                    interaction.data.options ?? [],
                   ),
                 },
               };

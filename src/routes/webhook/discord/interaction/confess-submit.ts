@@ -45,7 +45,7 @@ export async function handleConfessSubmit(
       },
     });
 
-    if (typeof attachmentRecord !== 'undefined') {
+    if (typeof attachmentRecord !== 'undefined')
       attachment = {
         id: attachmentId,
         filename: attachmentRecord.filename,
@@ -53,7 +53,6 @@ export async function handleConfessSubmit(
         proxy_url: attachmentRecord.url,
         content_type: attachmentRecord.contentType ?? void 0,
       };
-    }
   }
 
   try {

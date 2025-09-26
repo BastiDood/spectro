@@ -6,7 +6,7 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import {
   type InsertableAttachment,
   db,
-  insertConfession,
+  rawInsertConfession,
   resetLogChannel,
 } from '$lib/server/database';
 import {
@@ -111,8 +111,9 @@ export async function submitConfession(
     throw new DisabledChannelConfessError(disabledAt);
   if (logChannelId === null) throw new MissingLogConfessError();
 
+  const attachmentId = attachment?.id ?? null;
   if (isApprovalRequired) {
-    const { internalId, confessionId } = await insertConfession(
+    const { internalId, confessionId } = await rawInsertConfession(
       db,
       timestamp,
       guildId,
@@ -121,7 +122,7 @@ export async function submitConfession(
       description,
       null,
       null,
-      attachment,
+      attachmentId,
     );
 
     logger.info({ internalId, confessionId }, 'confession pending approval submitted');
@@ -166,7 +167,7 @@ export async function submitConfession(
     return `${label} #${confessionId} has been submitted.`;
   }
 
-  const { internalId, confessionId } = await insertConfession(
+  const { internalId, confessionId } = await rawInsertConfession(
     db,
     timestamp,
     guildId,
@@ -175,7 +176,7 @@ export async function submitConfession(
     description,
     timestamp,
     null,
-    attachment,
+    attachmentId,
   );
 
   logger.info({ internalId, confessionId }, 'confession submitted');
