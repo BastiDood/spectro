@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17.5-alpine3.21
+    image: postgres:17.5-alpine3.22
     env_file:
       - .env.development
     user: postgres
