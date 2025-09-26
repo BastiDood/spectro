@@ -80,6 +80,7 @@ export async function submitConfession(
   authorId: Snowflake,
   description: string,
   attachment: InsertableAttachment | null,
+  shouldInsertAttachment: boolean,
 ) {
   if (!hasAllPermissions(permission, SEND_MESSAGES))
     throw new InsufficientSendMessagesConfessionError();
@@ -122,6 +123,7 @@ export async function submitConfession(
       null,
       null,
       attachment,
+      shouldInsertAttachment,
     );
 
     logger.info({ internalId, confessionId }, 'confession pending approval submitted');
@@ -176,6 +178,7 @@ export async function submitConfession(
     timestamp,
     null,
     attachment,
+    shouldInsertAttachment,
   );
 
   logger.info({ internalId, confessionId }, 'confession submitted');

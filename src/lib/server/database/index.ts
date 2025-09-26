@@ -55,7 +55,6 @@ async function insertAttachmentData(db: Interface, attachment: InsertableAttachm
   strictEqual(rowCount, 1);
 }
 
-/** Inserts a confession and creates new attachment data. */
 export async function insertConfession(
   db: Interface,
   timestamp: Date,
@@ -66,46 +65,22 @@ export async function insertConfession(
   approvedAt: Date | null,
   parentMessageId: Snowflake | null,
   attachment: InsertableAttachment | null,
+  shouldInsertAttachment: boolean,
 ) {
   return await db.transaction(async tx => {
-    const attachmentId =
-      attachment === null ? null : (await insertAttachmentData(tx, attachment), attachment.id);
-    const guild = updateLastConfession(tx, guildId);
-    const {
-      rows: [result, ...otherResults],
-    } = await tx.execute(
-      sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
-    );
-    strictEqual(otherResults.length, 0);
-    assert(typeof result !== 'undefined');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._internal_id === 'string');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._confession_id === 'string');
-    // eslint-disable-next-line no-underscore-dangle
-    return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
-  });
-}
+    let attachmentId: bigint | null = null;
+    if (shouldInsertAttachment && attachment !== null) {
+      await insertAttachmentData(tx, attachment);
+      attachmentId = attachment.id;
+    }
 
-/** Inserts a confession without inserting the attachment data. */
-export async function rawInsertConfession(
-  db: Interface,
-  timestamp: Date,
-  guildId: Snowflake,
-  channelId: Snowflake,
-  authorId: Snowflake,
-  description: string,
-  approvedAt: Date | null,
-  parentMessageId: Snowflake | null,
-  attachmentId: bigint | null,
-) {
-  return await db.transaction(async tx => {
     const guild = updateLastConfession(tx, guildId);
     const {
       rows: [result, ...otherResults],
     } = await tx.execute(
       sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
     );
+
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
     // eslint-disable-next-line no-underscore-dangle

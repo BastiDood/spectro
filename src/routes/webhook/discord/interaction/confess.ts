@@ -100,6 +100,7 @@ export async function handleConfess(
           authorId,
           content,
           attachment,
+          true,
         ),
       },
     };

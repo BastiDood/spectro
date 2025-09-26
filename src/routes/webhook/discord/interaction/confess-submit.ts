@@ -64,6 +64,7 @@ export async function handleConfessSubmit(
       authorId,
       component.value,
       attachment,
+      false,
     );
   } catch (err) {
     if (err instanceof ConfessError) {
