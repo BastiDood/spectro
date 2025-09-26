@@ -51,7 +51,7 @@ export async function handleConfess(
     // Store attachment in database if provided, then encode ID in custom_id
     let attachmentCustomId = 'content|';
     if (attachment !== null) {
-      assert(typeof attachment.content_type !== 'undefined', 'attachment content_type is required');
+      attachmentCustomId += attachment.id.toString();
       await db.insert(schema.attachment).values({
         id: attachment.id,
         filename: attachment.filename,
@@ -59,7 +59,6 @@ export async function handleConfess(
         url: attachment.url,
         proxyUrl: attachment.proxy_url,
       });
-      attachmentCustomId += attachment.id.toString();
     }
 
     return {
