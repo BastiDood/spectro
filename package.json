@@ -19,8 +19,7 @@
     "fmt:fix": "prettier --experimental-cli --write --cache .",
     "lint": "pnpm --workspace-root run --parallel /lint:/",
     "lint:eslint": "eslint --cache",
-    "lint:svelte": "svelte-check --tsconfig ./tsconfig.json",
-    "discord:register": "node scripts/register-slash-commands.js"
+    "lint:svelte": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
     "@axiomhq/pino": "^1.3.1",

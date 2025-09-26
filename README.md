@@ -65,7 +65,7 @@ To register the application commands in Discord, a one-time initialization scrip
 ```bash
 # Register the application commands.
 # Requires `DISCORD_APPLICATION_ID` and `DISCORD_BOT_TOKEN` already in scope.
-pnpm discord:register
+curl --request 'PUT' --header 'Content-Type: application/json' --header "Authorization: Bot $DISCORD_BOT_TOKEN" --data '@discord.json' "https://discord.com/api/v10/applications/$DISCORD_APPLICATION_ID/commands"
 ```
 
 ## Running the Web Server
