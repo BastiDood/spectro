@@ -1,5 +1,5 @@
 app = 'spectro'
-primary_region = 'hkg'
+primary_region = 'sin'
 
 [[vm]]
 size = 'shared-cpu-1x'
