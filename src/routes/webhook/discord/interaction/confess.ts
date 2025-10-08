@@ -109,7 +109,7 @@ export async function handleConfess(
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
-          flags: 64, // Ephemeral flag
+          flags: MessageFlags.Ephemeral,
           content: err.message,
         },
       };
