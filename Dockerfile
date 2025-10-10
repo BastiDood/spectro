@@ -1,10 +1,14 @@
-FROM node:24.9.0-alpine3.22 AS build
+FROM node:24.10.0-alpine3.22 AS build
 WORKDIR /app
+
 COPY package.json pnpm-lock.yaml svelte.config.js ./
+
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable pnpm
+
 RUN pnpm install
+
 COPY . .
 ENV PUBLIC_ORIGIN=https://spectro.fly.dev
 RUN pnpm build
