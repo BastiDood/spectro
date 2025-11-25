@@ -18,7 +18,7 @@
     "fmt": "prettier --experimental-cli --check .",
     "fmt:fix": "prettier --experimental-cli --write --cache .",
     "lint": "pnpm --workspace-root run --parallel /lint:/",
-    "lint:eslint": "eslint --cache",
+    "lint:eslint": "eslint --cache --concurrency auto",
     "lint:svelte": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
