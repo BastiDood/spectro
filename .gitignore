@@ -1,6 +1,9 @@
 /build
 /.eslintcache
 /.svelte-kit
+
 node_modules
 .env
 .env.*
+
+**/.claude/**.local.json
