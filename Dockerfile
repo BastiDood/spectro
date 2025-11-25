@@ -1,4 +1,4 @@
-FROM node:24.10.0-alpine3.22 AS build
+FROM node:24.11.1-alpine3.22 AS build
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml svelte.config.js ./
