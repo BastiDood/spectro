@@ -1,5 +1,5 @@
-import type { Logger } from 'pino';
-
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 import { db } from '$lib/server/database';
 
 import type { InteractionResponseMessage } from '$lib/server/models/discord/interaction-response/message';
@@ -9,6 +9,10 @@ import { MessageComponentTextInputStyle } from '$lib/server/models/discord/messa
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
+
+const SERVICE_NAME = 'webhook.interaction.reply-modal';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
 
 abstract class ReplyModalError extends Error {
   constructor(message?: string) {
@@ -46,64 +50,68 @@ class ApprovalRequiredReplyModalError extends ReplyModalError {
  * @throws {DisabledChannelReplyModalError}
  * @throws {ApprovalRequiredReplyModalError}
  */
-async function renderReplyModal(
-  logger: Logger,
-  timestamp: Date,
-  channelId: Snowflake,
-  messageId: Snowflake,
-) {
-  const channel = await db.query.channel.findFirst({
-    columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
-    where({ id }, { eq }) {
-      return eq(id, channelId);
-    },
+async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
+  return await tracer.asyncSpan('render-reply-modal', async span => {
+    span.setAttributes({
+      'channel.id': channelId.toString(),
+      'message.id': messageId.toString(),
+    });
+
+    const channel = await db.query.channel.findFirst({
+      columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
+      where({ id }, { eq }) {
+        return eq(id, channelId);
+      },
+    });
+
+    if (typeof channel === 'undefined') throw new UnknownChannelReplyModalError();
+    const { disabledAt, isApprovalRequired } = channel;
+
+    logger.debug('channel found', {
+      'guild.id': channel.guildId.toString(),
+      'approval.required': channel.isApprovalRequired,
+    });
+
+    if (disabledAt !== null && disabledAt <= timestamp)
+      throw new DisabledChannelReplyModalError(disabledAt);
+    if (isApprovalRequired) throw new ApprovalRequiredReplyModalError();
+
+    logger.debug('reply modal prompted');
+    return {
+      type: InteractionResponseType.Modal,
+      data: {
+        custom_id: 'reply',
+        title: 'Reply to a Message',
+        components: [
+          {
+            type: MessageComponentType.ActionRow,
+            components: [
+              {
+                custom_id: messageId.toString(),
+                type: MessageComponentType.TextInput,
+                style: MessageComponentTextInputStyle.Long,
+                required: true,
+                label: 'Reply',
+                placeholder: 'Hello...',
+              },
+            ],
+          },
+        ],
+      },
+    } satisfies InteractionResponseModal;
   });
-
-  if (typeof channel === 'undefined') throw new UnknownChannelReplyModalError();
-  const { disabledAt, isApprovalRequired } = channel;
-
-  logger.info({ channel }, 'channel for reply modal found');
-
-  if (disabledAt !== null && disabledAt <= timestamp)
-    throw new DisabledChannelReplyModalError(disabledAt);
-  if (isApprovalRequired) throw new ApprovalRequiredReplyModalError();
-
-  logger.info('reply modal prompted');
-  return {
-    type: InteractionResponseType.Modal,
-    data: {
-      custom_id: 'reply',
-      title: 'Reply to a Message',
-      components: [
-        {
-          type: MessageComponentType.ActionRow,
-          components: [
-            {
-              custom_id: messageId.toString(),
-              type: MessageComponentType.TextInput,
-              style: MessageComponentTextInputStyle.Long,
-              required: true,
-              label: 'Reply',
-              placeholder: 'Hello...',
-            },
-          ],
-        },
-      ],
-    },
-  } satisfies InteractionResponseModal;
 }
 
 export async function handleReplyModal(
-  logger: Logger,
   timestamp: Date,
   channelId: Snowflake,
   messageId: Snowflake,
 ) {
   try {
-    return await renderReplyModal(logger, timestamp, channelId, messageId);
+    return await renderReplyModal(timestamp, channelId, messageId);
   } catch (err) {
     if (err instanceof ReplyModalError) {
-      logger.error(err, err.message);
+      logger.error(err.message, err);
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: { flags: MessageFlags.Ephemeral, content: err.message },

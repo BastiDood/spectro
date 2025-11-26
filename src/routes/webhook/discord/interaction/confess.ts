@@ -1,6 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
-import type { Logger } from 'pino';
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
@@ -19,8 +20,11 @@ import { db } from '$lib/server/database';
 
 import { ConfessError, submitConfession } from './confession.util';
 
+const SERVICE_NAME = 'webhook.interaction.confess';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
+
 export async function handleConfess(
-  logger: Logger,
   timestamp: Date,
   permissions: bigint,
   channelId: Snowflake,
@@ -28,92 +32,106 @@ export async function handleConfess(
   options: InteractionApplicationCommandChatInputOption[],
   resolved: Resolved | null,
 ): Promise<InteractionResponse> {
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let content: string | undefined;
-  let attachment: Attachment | null = null;
-  for (const option of options)
-    switch (option.name) {
-      case 'content':
-        strictEqual(option.type, InteractionApplicationCommandChatInputOptionType.String);
-        content = option.value;
-        break;
-      case 'attachment':
-        strictEqual(option.type, InteractionApplicationCommandChatInputOptionType.Attachment);
-        attachment = resolved?.attachments?.[option.value.toString()] ?? null;
-        break;
-      default:
-        logger.warn({ value: option.type, name: option.name }, 'unexpected option');
-        break;
+  return await tracer.asyncSpan('handle-confess', async span => {
+    span.setAttributes({
+      'channel.id': channelId.toString(),
+      'author.id': authorId.toString(),
+    });
+
+    // eslint-disable-next-line @typescript-eslint/init-declarations
+    let content: string | undefined;
+    let attachment: Attachment | null = null;
+    for (const option of options)
+      switch (option.name) {
+        case 'content':
+          strictEqual(option.type, InteractionApplicationCommandChatInputOptionType.String);
+          content = option.value;
+          break;
+        case 'attachment':
+          strictEqual(option.type, InteractionApplicationCommandChatInputOptionType.Attachment);
+          attachment = resolved?.attachments?.[option.value.toString()] ?? null;
+          break;
+        default:
+          logger.warn('unexpected option', {
+            'option.type': option.type,
+            'option.name': option.name,
+          });
+          break;
+      }
+
+    span.setAttributes({
+      'has.content': typeof content !== 'undefined',
+      'has.attachment': attachment !== null,
+    });
+
+    // If no content provided, show modal
+    if (typeof content === 'undefined') {
+      // Store attachment in database if provided, then encode ID in custom_id
+      let attachmentCustomId = 'content|';
+      if (attachment !== null) {
+        attachmentCustomId += attachment.id.toString();
+        await db.insert(schema.attachment).values({
+          id: attachment.id,
+          filename: attachment.filename,
+          contentType: attachment.content_type,
+          url: attachment.url,
+          proxyUrl: attachment.proxy_url,
+        });
+      }
+
+      return {
+        type: InteractionResponseType.Modal,
+        data: {
+          custom_id: 'confess',
+          title: 'Submit Confession',
+          components: [
+            {
+              type: MessageComponentType.ActionRow,
+              components: [
+                {
+                  custom_id: attachmentCustomId,
+                  type: MessageComponentType.TextInput,
+                  style: MessageComponentTextInputStyle.Long,
+                  required: true,
+                  label: 'Confession',
+                  placeholder: 'Your message...',
+                },
+              ],
+            },
+          ],
+        },
+      } satisfies InteractionResponseModal;
     }
 
-  // If no content provided, show modal
-  if (typeof content === 'undefined') {
-    // Store attachment in database if provided, then encode ID in custom_id
-    let attachmentCustomId = 'content|';
-    if (attachment !== null) {
-      attachmentCustomId += attachment.id.toString();
-      await db.insert(schema.attachment).values({
-        id: attachment.id,
-        filename: attachment.filename,
-        contentType: attachment.content_type,
-        url: attachment.url,
-        proxyUrl: attachment.proxy_url,
-      });
-    }
-
-    return {
-      type: InteractionResponseType.Modal,
-      data: {
-        custom_id: 'confess',
-        title: 'Submit Confession',
-        components: [
-          {
-            type: MessageComponentType.ActionRow,
-            components: [
-              {
-                custom_id: attachmentCustomId,
-                type: MessageComponentType.TextInput,
-                style: MessageComponentTextInputStyle.Long,
-                required: true,
-                label: 'Confession',
-                placeholder: 'Your message...',
-              },
-            ],
-          },
-        ],
-      },
-    } satisfies InteractionResponseModal;
-  }
-
-  // Handle normal confession submission using shared function
-  try {
-    return {
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: {
-        flags: MessageFlags.Ephemeral,
-        content: await submitConfession(
-          logger,
-          timestamp,
-          permissions,
-          channelId,
-          authorId,
-          content,
-          attachment,
-          true,
-        ),
-      },
-    };
-  } catch (err) {
-    if (err instanceof ConfessError) {
-      logger.error(err, err.message);
+    // Handle normal confession submission using shared function
+    try {
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: {
           flags: MessageFlags.Ephemeral,
-          content: err.message,
+          content: await submitConfession(
+            timestamp,
+            permissions,
+            channelId,
+            authorId,
+            content,
+            attachment,
+            true,
+          ),
         },
       };
+    } catch (err) {
+      if (err instanceof ConfessError) {
+        logger.error(err.message, err);
+        return {
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            flags: MessageFlags.Ephemeral,
+            content: err.message,
+          },
+        };
+      }
+      throw err;
     }
-    throw err;
-  }
+  });
 }

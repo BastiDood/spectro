@@ -1,4 +1,3 @@
-import type { Logger } from 'pino';
 import { parse } from 'valibot';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
@@ -16,49 +15,55 @@ import { DiscordError } from '$lib/server/models/discord/error';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { Logger } from '$lib/server/telemetry/logger';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { Tracer } from '$lib/server/telemetry/tracer';
+
+const SERVICE_NAME = 'api.discord';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
-async function createMessage(
-  logger: Logger,
-  channelId: Snowflake,
-  data: CreateMessage,
-  botToken: string,
-) {
-  const body = JSON.stringify(data, (_, value) =>
-    typeof value === 'bigint' ? value.toString() : value,
-  );
-  const start = performance.now();
-  const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
-    body,
-    method: 'POST',
-    headers: {
-      Authorization: `Bot ${botToken}`,
-      'Content-Type': 'application/json',
-    },
+async function createMessage(channelId: Snowflake, data: CreateMessage, botToken: string) {
+  return await tracer.asyncSpan('create-message', async span => {
+    span.setAttribute('channel.id', channelId.toString());
+
+    const body = JSON.stringify(data, (_, value) =>
+      typeof value === 'bigint' ? value.toString() : value,
+    );
+
+    const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
+      body,
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    const json = await response.json();
+
+    if (response.status === 200) {
+      const parsed = parse(Message, json);
+      logger.debug('message created', { 'message.id': parsed.id.toString() });
+      return parsed;
+    }
+
+    const { code, message } = parse(DiscordError, json);
+    logger.error(
+      message,
+      { name: 'DiscordError', code, message },
+      { statusCode: response.status, code },
+    );
+    return code;
   });
-  const json = await response.json();
-  const createMessageTimeMillis = performance.now() - start;
-  const child = logger.child({ createMessageTimeMillis });
-
-  if (response.status === 200) {
-    const parsed = parse(Message, json);
-    child.info({ createMessage: parsed });
-    return parsed;
-  }
-
-  const { code, message } = parse(DiscordError, json);
-  child.error({ statusCode: response.status }, message);
-  return code;
 }
 
 export async function dispatchConfessionViaHttp(
-  logger: Logger,
   timestamp: Date,
   channelId: Snowflake,
   confessionId: bigint,
@@ -98,7 +103,7 @@ export async function dispatchConfessionViaHttp(
       fail_if_not_exists: false,
     };
 
-  return await createMessage(logger, channelId, params, botToken);
+  return await createMessage(channelId, params, botToken);
 }
 
 export interface ExternalChannelReference {
@@ -107,7 +112,6 @@ export interface ExternalChannelReference {
 }
 
 export async function logPendingConfessionViaHttp(
-  logger: Logger,
   timestamp: Date,
   channelId: Snowflake,
   internalId: bigint,
@@ -140,7 +144,6 @@ export async function logPendingConfessionViaHttp(
 
   const customId = internalId.toString();
   return await createMessage(
-    logger,
     channelId,
     {
       flags: MessageFlags.SuppressNotifications,
@@ -187,7 +190,6 @@ export async function logPendingConfessionViaHttp(
 }
 
 export async function logApprovedConfessionViaHttp(
-  logger: Logger,
   timestamp: Date,
   channelId: Snowflake,
   confessionId: bigint,
@@ -218,7 +220,6 @@ export async function logApprovedConfessionViaHttp(
   }
 
   return await createMessage(
-    logger,
     channelId,
     {
       flags: MessageFlags.SuppressNotifications,
@@ -244,7 +245,6 @@ export async function logApprovedConfessionViaHttp(
 }
 
 export async function logResentConfessionViaHttp(
-  logger: Logger,
   timestamp: Date,
   channelId: Snowflake,
   confessionId: bigint,
@@ -271,7 +271,6 @@ export async function logResentConfessionViaHttp(
   if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
 
   return await createMessage(
-    logger,
     channelId,
     {
       flags: MessageFlags.SuppressNotifications,
@@ -296,7 +295,6 @@ export async function logResentConfessionViaHttp(
 }
 
 async function createInteractionResponse(
-  logger: Logger,
   interactionId: Snowflake,
   interactionToken: string,
   data: InteractionResponse,
@@ -306,40 +304,41 @@ async function createInteractionResponse(
     typeof value === 'bigint' ? value.toString() : value,
   );
 
-  const start = performance.now();
-  const response = await fetch(
-    `${DISCORD_API_BASE_URL}/interactions/${interactionId}/${interactionToken}/callback`,
-    {
-      body,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bot ${botToken}`,
+  return await tracer.asyncSpan('create-interaction-response', async () => {
+    const response = await fetch(
+      `${DISCORD_API_BASE_URL}/interactions/${interactionId}/${interactionToken}/callback`,
+      {
+        body,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bot ${botToken}`,
+        },
       },
-    },
-  );
-  const createInteractionResponseTimeMillis = performance.now() - start;
-  const child = logger.child({ createInteractionResponseTimeMillis });
+    );
 
-  if (response.status === 204) {
-    child.info('interaction response created');
-    return null;
-  }
+    if (response.status === 204) {
+      logger.debug('interaction response created');
+      return null;
+    }
 
-  const json = await response.json();
-  const { code, message } = parse(DiscordError, json);
-  child.error({ statusCode: response.status }, message);
-  return code;
+    const json = await response.json();
+    const { code, message } = parse(DiscordError, json);
+    logger.error(
+      message,
+      { name: 'DiscordError', code, message },
+      { statusCode: response.status, code },
+    );
+    return code;
+  });
 }
 
 export async function deferResponse(
-  logger: Logger,
   interactionId: Snowflake,
   interactionToken: string,
   botToken = DISCORD_BOT_TOKEN,
 ) {
   return await createInteractionResponse(
-    logger,
     interactionId,
     interactionToken,
     {
