@@ -1,15 +1,14 @@
 name: spectro
+
 services:
   db:
     image: postgres:18.1-alpine3.22
-    env_file:
-      - .env.development
+    environment:
+      # Development-only credentials!
+      POSTGRES_PASSWORD: password
     user: postgres
-    restart: always
     ports:
       - 5432:5432
-    profiles:
-      - dev
     volumes:
       - postgres:/var/lib/postgresql/data
     healthcheck:
@@ -19,5 +18,20 @@ services:
       interval: 1s
       timeout: 5s
       retries: 10
+    restart: always
+  o2:
+    image: public.ecr.aws/zinclabs/openobserve:v0.20.0-rc2
+    environment:
+      ZO_DATA_DIR: /data
+      # Development-only credentials!
+      ZO_ROOT_USER_EMAIL: admin@example.com
+      ZO_ROOT_USER_PASSWORD: password
+    ports:
+      - 5080:5080
+    volumes:
+      - open-observe:/data
+    restart: always
+
 volumes:
   postgres:
+  open-observe:
