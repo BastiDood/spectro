@@ -40,6 +40,7 @@
     "@opentelemetry/semantic-conventions": "^1.38.0",
     "@sveltejs/kit": "^2.49.0",
     "drizzle-orm": "^0.44.7",
+    "inngest": "^3.46.0",
     "pg": "^8.16.3",
     "svelte": "^5.45.2",
     "valibot": "^1.2.0"
