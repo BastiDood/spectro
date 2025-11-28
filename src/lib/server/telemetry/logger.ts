@@ -45,6 +45,14 @@ export class Logger {
     this.#logger = logs.getLogger(name);
   }
 
+  trace(body: string, attributes?: AnyValueMap) {
+    this.#logger.emit({
+      severityNumber: SeverityNumber.TRACE,
+      body,
+      attributes,
+    });
+  }
+
   debug(body: string, attributes?: AnyValueMap) {
     this.#logger.emit({
       severityNumber: SeverityNumber.DEBUG,

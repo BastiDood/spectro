@@ -56,7 +56,7 @@ async function insertAttachmentData(db: Interface, attachment: InsertableAttachm
 }
 
 export async function insertConfession(
-  db: Interface,
+  db: Transaction,
   timestamp: Date,
   guildId: Snowflake,
   channelId: Snowflake,
@@ -67,29 +67,27 @@ export async function insertConfession(
   attachment: InsertableAttachment | null,
   shouldInsertAttachment: boolean,
 ) {
-  return await db.transaction(async tx => {
-    let attachmentId: bigint | null = null;
-    if (attachment !== null) {
-      attachmentId = attachment.id;
-      if (shouldInsertAttachment) await insertAttachmentData(tx, attachment);
-    }
+  let attachmentId: bigint | null = null;
+  if (attachment !== null) {
+    attachmentId = attachment.id;
+    if (shouldInsertAttachment) await insertAttachmentData(db, attachment);
+  }
 
-    const guild = updateLastConfession(tx, guildId);
-    const {
-      rows: [result, ...otherResults],
-    } = await tx.execute(
-      sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
-    );
+  const guild = updateLastConfession(db, guildId);
+  const {
+    rows: [result, ...otherResults],
+  } = await db.execute(
+    sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
+  );
 
-    strictEqual(otherResults.length, 0);
-    assert(typeof result !== 'undefined');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._internal_id === 'string');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._confession_id === 'string');
-    // eslint-disable-next-line no-underscore-dangle
-    return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
-  });
+  strictEqual(otherResults.length, 0);
+  assert(typeof result !== 'undefined');
+  // eslint-disable-next-line no-underscore-dangle
+  assert(typeof result._internal_id === 'string');
+  // eslint-disable-next-line no-underscore-dangle
+  assert(typeof result._confession_id === 'string');
+  // eslint-disable-next-line no-underscore-dangle
+  return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
 }
 
 /**

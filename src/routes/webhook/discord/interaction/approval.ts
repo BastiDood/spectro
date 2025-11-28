@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import { Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
@@ -16,7 +15,7 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { attachment, channel, confession } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
-import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
+import { inngest } from '$lib/server/inngest/client';
 
 import { MalformedCustomIdFormat } from './errors';
 import { hasAllPermissions } from './util';
@@ -61,11 +60,12 @@ class AlreadyApprovedApprovalError extends ApprovalError {
  */
 async function submitVerdict(
   timestamp: Date,
+  interactionToken: string,
   isApproved: boolean,
   internalId: bigint,
   moderatorId: Snowflake,
   permissions: bigint,
-): Promise<Embed | string> {
+) {
   return await tracer.asyncSpan('submit-verdict', async span => {
     span.setAttributes({
       'internal.id': internalId.toString(),
@@ -81,14 +81,10 @@ async function submitVerdict(
         .select({
           disabledAt: channel.disabledAt,
           label: channel.label,
-          color: channel.color,
-          parentMessageId: confession.parentMessageId,
-          confessionChannelId: confession.channelId,
-          confessionId: confession.confessionId,
           authorId: confession.authorId,
-          createdAt: confession.createdAt,
           approvedAt: confession.approvedAt,
           content: confession.content,
+          confessionId: confession.confessionId,
           attachmentId: confession.attachmentId,
         })
         .from(confession)
@@ -98,20 +94,8 @@ async function submitVerdict(
         .for('update');
       strictEqual(rest.length, 0);
       assert(typeof details !== 'undefined');
-      const {
-        approvedAt,
-        createdAt,
-        disabledAt,
-        authorId,
-        confessionChannelId,
-        confessionId,
-        parentMessageId,
-        color,
-        label,
-        content,
-        attachmentId,
-      } = details;
-      const hex = color === null ? void 0 : Number.parseInt(color, 2);
+      const { approvedAt, disabledAt, authorId, confessionId, label, content, attachmentId } =
+        details;
 
       // TODO: Refactor to Relations API once the `bigint` bug is fixed.
       let embedAttachment: EmbedAttachment | null = null;
@@ -150,33 +134,15 @@ async function submitVerdict(
           .where(eq(confession.internalId, internalId));
         strictEqual(rowCount, 1);
 
-        const discordErrorCode = await dispatchConfessionViaHttp(
-          createdAt,
-          confessionChannelId,
-          confessionId,
-          label,
-          hex,
-          content,
-          parentMessageId,
-          embedAttachment,
-        );
-
-        if (typeof discordErrorCode === 'number')
-          switch (discordErrorCode) {
-            case DiscordErrorCode.UnknownChannel:
-              logger.error('confession channel no longer exists');
-              return `${label} #${confessionId} has been approved internally, but the confession channel no longer exists.`;
-            case DiscordErrorCode.MissingAccess:
-              logger.warn('insufficient channel permissions for the confession channel');
-              return `${label} #${confessionId} has been approved internally, but Spectro does not have the permission to send messages to the confession channel. The confession can be resent once this has been resolved.`;
-            default:
-              logger.error(
-                'unexpected error code when publishing to the confession channel',
-                void 0,
-                { discordErrorCode },
-              );
-              return `${label} #${confessionId} has been approved internally, but Spectro encountered an unexpected error (${discordErrorCode}) from Discord while publishing to the confession channel. Kindly inform the developers and the moderators about this issue.`;
-          }
+        // Emit Inngest event for async dispatch (will send follow-up on failure)
+        const { ids } = await inngest.send({
+          name: 'discord/confession.approve',
+          data: {
+            interactionToken,
+            internalId: internalId.toString(),
+          },
+        });
+        logger.debug('inngest event emitted', { 'inngest.events.id': ids });
 
         const fields = [
           {
@@ -265,6 +231,7 @@ async function submitVerdict(
 
 export async function handleApproval(
   timestamp: Date,
+  interactionToken: string,
   customId: string,
   userId: Snowflake,
   permissions: bigint,
@@ -289,16 +256,18 @@ export async function handleApproval(
   }
 
   try {
-    const payload = await submitVerdict(timestamp, isApproved, internalId, userId, permissions);
-    return typeof payload === 'string'
-      ? {
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: { flags: MessageFlags.Ephemeral, content: payload },
-        }
-      : {
-          type: InteractionResponseType.UpdateMessage,
-          data: { components: [], embeds: [payload] },
-        };
+    const embed = await submitVerdict(
+      timestamp,
+      interactionToken,
+      isApproved,
+      internalId,
+      userId,
+      permissions,
+    );
+    return {
+      type: InteractionResponseType.UpdateMessage,
+      data: { components: [], embeds: [embed] },
+    };
   } catch (err) {
     if (err instanceof ApprovalError) {
       logger.error(err.message, err);

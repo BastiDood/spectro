@@ -26,6 +26,7 @@ const tracer = new Tracer(SERVICE_NAME);
 
 export async function handleConfess(
   timestamp: Date,
+  interactionToken: string,
   permissions: bigint,
   channelId: Snowflake,
   authorId: Snowflake,
@@ -111,6 +112,7 @@ export async function handleConfess(
           flags: MessageFlags.Ephemeral,
           content: await submitConfession(
             timestamp,
+            interactionToken,
             permissions,
             channelId,
             authorId,

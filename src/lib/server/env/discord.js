@@ -1,7 +1,8 @@
+import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+
 import { building, dev } from '$app/environment';
 
-import { Buffer } from 'node:buffer';
-import assert from 'node:assert/strict';
 import { env } from '$env/dynamic/private';
 
 if (!building && !dev) {

@@ -1,6 +1,6 @@
-import { building, dev } from '$app/environment';
-
 import assert from 'node:assert/strict';
+
+import { building, dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 
 if (!building && !dev)

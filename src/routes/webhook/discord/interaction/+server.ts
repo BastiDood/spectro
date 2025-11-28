@@ -57,6 +57,7 @@ async function handleInteraction(
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
               return await handleConfess(
                 timestamp,
+                interaction.token,
                 interaction.member.permissions,
                 interaction.channel_id,
                 interaction.member.user.id,
@@ -107,7 +108,7 @@ async function handleInteraction(
                 data: {
                   flags: MessageFlags.Ephemeral,
                   content: await handleResend(
-                    timestamp,
+                    interaction.token,
                     interaction.member.permissions,
                     interaction.channel_id,
                     interaction.member.user.id,
@@ -155,6 +156,7 @@ async function handleInteraction(
       strictEqual(interaction.data.component_type, MessageComponentType.Button);
       return await handleApproval(
         timestamp,
+        interaction.token,
         interaction.data.custom_id,
         interaction.member.user.id,
         interaction.member.permissions,
@@ -171,6 +173,7 @@ async function handleInteraction(
               flags: MessageFlags.Ephemeral,
               content: await handleReplySubmit(
                 timestamp,
+                interaction.token,
                 interaction.channel_id,
                 interaction.member.user.id,
                 interaction.member.permissions,
@@ -188,6 +191,7 @@ async function handleInteraction(
               flags: MessageFlags.Ephemeral,
               content: await handleConfessSubmit(
                 timestamp,
+                interaction.token,
                 interaction.channel_id,
                 interaction.member.user.id,
                 interaction.member.permissions,

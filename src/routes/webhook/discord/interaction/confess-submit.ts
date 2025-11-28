@@ -16,6 +16,7 @@ const tracer = new Tracer(SERVICE_NAME);
 
 export async function handleConfessSubmit(
   timestamp: Date,
+  interactionToken: string,
   channelId: Snowflake,
   authorId: Snowflake,
   permissions: bigint,
@@ -79,6 +80,7 @@ export async function handleConfessSubmit(
     try {
       return await submitConfession(
         timestamp,
+        interactionToken,
         permissions,
         channelId,
         authorId,

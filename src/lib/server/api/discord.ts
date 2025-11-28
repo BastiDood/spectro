@@ -1,7 +1,7 @@
 import { parse } from 'valibot';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
+import { DISCORD_APPLICATION_ID, DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import {
@@ -11,7 +11,7 @@ import {
   EmbedType,
 } from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
-import { DiscordError } from '$lib/server/models/discord/error';
+import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/error';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -53,13 +53,13 @@ async function createMessage(channelId: Snowflake, data: CreateMessage, botToken
       return parsed;
     }
 
-    const { code, message } = parse(DiscordError, json);
+    const { code, message } = parse(DiscordErrorResponse, json);
     logger.error(
       message,
       { name: 'DiscordError', code, message },
       { statusCode: response.status, code },
     );
-    return code;
+    throw new DiscordError(code, message);
   });
 }
 
@@ -134,7 +134,7 @@ export async function logPendingConfessionViaHttp(
   let image: EmbedImage | undefined;
   if (attachment !== null) {
     fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    if (attachment.content_type?.startsWith('image/'))
+    if (attachment.content_type?.startsWith('image/') === true)
       image = {
         url: new URL(attachment.url),
         height: attachment.height ?? void 0,
@@ -211,7 +211,7 @@ export async function logApprovedConfessionViaHttp(
   let image: EmbedImage | undefined;
   if (attachment !== null) {
     fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    if (attachment.content_type?.startsWith('image/'))
+    if (attachment.content_type?.startsWith('image/') === true)
       image = {
         url: new URL(attachment.url),
         height: attachment.height ?? void 0,
@@ -323,13 +323,13 @@ async function createInteractionResponse(
     }
 
     const json = await response.json();
-    const { code, message } = parse(DiscordError, json);
+    const { code, message } = parse(DiscordErrorResponse, json);
     logger.error(
       message,
       { name: 'DiscordError', code, message },
       { statusCode: response.status, code },
     );
-    return code;
+    throw new DiscordError(code, message);
   });
 }
 
@@ -347,4 +347,82 @@ export async function deferResponse(
     },
     botToken,
   );
+}
+
+export async function sendFollowupMessage(
+  interactionToken: string,
+  content: string,
+  ephemeral = true,
+  applicationId = DISCORD_APPLICATION_ID,
+  botToken = DISCORD_BOT_TOKEN,
+) {
+  return await tracer.asyncSpan('send-followup-message', async () => {
+    const response = await fetch(
+      `${DISCORD_API_BASE_URL}/webhooks/${applicationId}/${interactionToken}`,
+      {
+        body: JSON.stringify({
+          content,
+          flags: ephemeral ? MessageFlags.Ephemeral : 0,
+        }),
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bot ${botToken}`,
+        },
+      },
+    );
+
+    if (response.ok) {
+      const json = await response.json();
+      const parsed = parse(Message, json);
+      logger.debug('follow-up message sent', { 'message.id': parsed.id.toString() });
+      return parsed;
+    }
+
+    const json = await response.json();
+    const { code, message } = parse(DiscordErrorResponse, json);
+    logger.error(
+      message,
+      { name: 'DiscordError', code, message },
+      { statusCode: response.status, code },
+    );
+    throw new DiscordError(code, message);
+  });
+}
+
+export async function editOriginalResponse(
+  interactionToken: string,
+  content: string,
+  applicationId = DISCORD_APPLICATION_ID,
+  botToken = DISCORD_BOT_TOKEN,
+) {
+  return await tracer.asyncSpan('edit-original-response', async () => {
+    const response = await fetch(
+      `${DISCORD_API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+      {
+        body: JSON.stringify({ content }),
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bot ${botToken}`,
+        },
+      },
+    );
+
+    if (response.ok) {
+      const json = await response.json();
+      const parsed = parse(Message, json);
+      logger.debug('original response edited', { 'message.id': parsed.id.toString() });
+      return parsed;
+    }
+
+    const json = await response.json();
+    const { code, message } = parse(DiscordErrorResponse, json);
+    logger.error(
+      message,
+      { name: 'DiscordError', code, message },
+      { statusCode: response.status, code },
+    );
+    throw new DiscordError(code, message);
+  });
 }
