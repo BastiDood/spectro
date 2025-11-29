@@ -1,9 +1,11 @@
-import { type InferOutput, object, string } from 'valibot';
+import { type InferOutput, object, optional, string } from 'valibot';
 
-/** For new confession submissions (triggers post-confession + log-confession fan-out) */
+/** For confession submissions and resends (triggers post-confession + log-confession fan-out) */
 export const ConfessionSubmitEventData = object({
   interactionToken: string(),
   internalId: string(),
+  /** Present for resend, absent for fresh submit */
+  moderatorId: optional(string()),
 });
 export type ConfessionSubmitEventData = InferOutput<typeof ConfessionSubmitEventData>;
 
@@ -13,11 +15,3 @@ export const ApprovalEventData = object({
   internalId: string(),
 });
 export type ApprovalEventData = InferOutput<typeof ApprovalEventData>;
-
-/** For resending previously approved confessions */
-export const ResendConfessionEventData = object({
-  interactionToken: string(),
-  internalId: string(),
-  moderatorId: string(),
-});
-export type ResendConfessionEventData = InferOutput<typeof ResendConfessionEventData>;

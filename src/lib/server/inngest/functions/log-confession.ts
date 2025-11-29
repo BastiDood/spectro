@@ -1,81 +1,162 @@
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import { fetchConfessionForLog } from '$lib/server/database';
-import { Logger } from '$lib/server/telemetry/logger';
-import { logPostedConfession } from '$lib/server/confession';
-import { sendFollowupMessage } from '$lib/server/api/discord';
-import { Tracer } from '$lib/server/telemetry/tracer';
+import { NonRetriableError } from 'inngest';
 
-import { inngest } from '../client';
+import {
+  ConfessionChannel,
+  createLogPayload,
+  getConfessionErrorMessage,
+  type LogPayloadMode,
+  LogPayloadType,
+} from '$lib/server/confession';
+import { createMessage, sendFollowupMessage } from '$lib/server/api/discord';
+import { db, fetchConfessionForLog, resetLogChannel } from '$lib/server/database';
+import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
+import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error';
+import { inngest } from '$lib/server/inngest/client';
+import type { Message } from '$lib/server/models/discord/message';
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'inngest.log-confession';
 const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
+
+const enum Result {
+  Success = 'success',
+  MissingChannel = 'missing-channel',
+  Failure = 'failure',
+}
+
+interface Success {
+  type: Result.Success;
+}
+
+interface MissingChannel {
+  type: Result.MissingChannel;
+  channelLabel: string;
+  confessionId: string;
+}
+
+interface Failure {
+  type: Result.Failure;
+  message: string;
+}
 
 export const logConfession = inngest.createFunction(
   { id: 'discord/interaction.log', name: 'Log Confession' },
   { event: 'discord/confession.submit' },
   async ({ event, step }) => {
     return await tracer.asyncSpan('log-confession', async span => {
-      const internalId = BigInt(event.data.internalId);
       span.setAttribute('confession.internal.id', event.data.internalId);
 
-      const confession = await step.run(
-        'fetch-confession',
-        async () => await fetchConfessionForLog(internalId),
-      );
+      const result = await step.run({ id: 'log-confession', name: 'Log Confession' }, async () => {
+        // We refetch per step to avoid caching sensitive confessions in Inngest.
+        const confession = await fetchConfessionForLog(BigInt(event.data.internalId));
+        if (confession === null) throw new NonRetriableError('confession not found');
 
-      if (confession === null) {
-        logger.error('confession not found', void 0, { internalId: event.data.internalId });
-        return;
-      }
+        // Should be impossible to reach this case because we were
+        // presumably approved prior to dispatching this Inngest event.
+        if (confession.approvedAt === null)
+          throw new NonRetriableError('confession not yet approved');
 
-      const { logChannelId } = confession.channel;
-      if (logChannelId === null) {
-        logger.warn('no log channel configured');
-        return;
-      }
+        if (confession.channel.logChannelId === null) {
+          logger.warn('no log channel configured');
+          return {
+            type: Result.MissingChannel,
+            channelLabel: confession.channel.label,
+            confessionId: confession.confessionId,
+          } as MissingChannel;
+        }
 
-      span.setAttributes({
-        'confession.id': confession.confessionId,
-        'log.channel.id': logChannelId,
-      });
-
-      const result = await step.run(
-        'log-confession',
-        async () => await logPostedConfession(confession),
-      );
-
-      if (result.ok) {
-        logger.info('confession logged', { confessionId: confession.confessionId });
-        logger.trace('confession logged to channel', {
-          'discord.message.id': result.messageId,
-          'discord.channel.id': result.channelId,
+        logger.debug('fetched confession', {
+          'confession.created': confession.createdAt,
+          'confession.approved': confession.approvedAt,
+          'confession.id': confession.confessionId,
+          'confession.channel.id': confession.channelId,
         });
-        return;
-      }
 
-      await step.run('notify-log-failure', async () => {
-        const confessionStatus = confession.channel.isApprovalRequired
-          ? 'submitted, but its publication is pending approval'
-          : 'published';
+        const mode: LogPayloadMode =
+          typeof event.data.moderatorId === 'undefined'
+            ? confession.channel.isApprovalRequired
+              ? { type: LogPayloadType.Pending, internalId: BigInt(confession.internalId) }
+              : { type: LogPayloadType.Approved }
+            : { type: LogPayloadType.Resent, moderatorId: BigInt(event.data.moderatorId) };
 
         // eslint-disable-next-line @typescript-eslint/init-declarations
-        let warningMessage: string;
-        switch (result.code) {
-          case DiscordErrorCode.UnknownChannel:
-            warningMessage = `${confession.channel.label} #${confession.confessionId} has been ${confessionStatus}. Also kindly inform the moderators that Spectro has detected that the log channel had been deleted.`;
-            break;
-          case DiscordErrorCode.MissingAccess:
-            warningMessage = `${confession.channel.label} #${confession.confessionId} has been ${confessionStatus}. Also kindly inform the moderators that Spectro cannot access the log channel.`;
-            break;
-          case DiscordErrorCode.MissingPermissions:
-            warningMessage = `${confession.channel.label} #${confession.confessionId} has been ${confessionStatus}. Also kindly inform the moderators that Spectro doesn't have permission to send messages in the log channel.`;
-            break;
-          default:
-            warningMessage = `${confession.channel.label} #${confession.confessionId} has been ${confessionStatus}. Also kindly inform the moderators that an unexpected error occurred while logging the confession.`;
+        let message: Message;
+        try {
+          message = await createMessage(
+            BigInt(confession.channel.logChannelId),
+            createLogPayload(confession, mode),
+            DISCORD_BOT_TOKEN,
+          );
+        } catch (err) {
+          if (err instanceof DiscordError)
+            switch (err.code) {
+              case DiscordErrorCode.UnknownChannel:
+                await resetLogChannel(db, BigInt(confession.channelId));
+                logger.warn('log channel reset');
+              // fall through to return failure
+              case DiscordErrorCode.MissingAccess:
+              case DiscordErrorCode.MissingPermissions:
+                return {
+                  type: Result.Failure,
+                  message: getConfessionErrorMessage(err.code, {
+                    label: confession.channel.label,
+                    confessionId: confession.confessionId,
+                    channel: ConfessionChannel.Log,
+                    status:
+                      typeof event.data.moderatorId === 'undefined'
+                        ? confession.channel.isApprovalRequired
+                          ? 'submitted, but its publication is pending approval'
+                          : 'published'
+                        : 'resent',
+                  }),
+                } as Failure;
+
+              default:
+                break;
+            }
+          throw err;
         }
-        await sendFollowupMessage(event.data.interactionToken, warningMessage);
+
+        logger.trace('confession logged', {
+          'discord.message.id': message.id.toString(),
+          'discord.channel.id': message.channel_id.toString(),
+          'discord.message.timestamp': message.timestamp.toISOString(),
+        });
+
+        return { type: Result.Success } as Success;
       });
+
+      switch (result.type) {
+        case Result.Success:
+          break; // silent logging on success
+        case Result.MissingChannel:
+          await step.run(
+            { id: 'send-missing-channel', name: 'Send Missing Channel Message' },
+            async () => {
+              const message = await sendFollowupMessage(
+                event.data.interactionToken,
+                `Spectro has received your confession, but the moderators have not yet configured a channel for logging confessions. Kindly remind the server moderators to set up the logging channel and ask them resend your confession: ${result.channelLabel} #${result.confessionId}.`,
+              );
+              logger.info('missing channel message sent', {
+                'discord.message.id': message.id.toString(),
+                'discord.message.channel.id': message.channel_id.toString(),
+                'discord.message.timestamp': message.timestamp.toISOString(),
+              });
+            },
+          );
+          break;
+        case Result.Failure:
+          await step.run({ id: 'send-failure', name: 'Send Failure Message' }, async () => {
+            const message = await sendFollowupMessage(event.data.interactionToken, result.message);
+            logger.info('failure message sent', {
+              'discord.message.id': message.id.toString(),
+              'discord.message.channel.id': message.channel_id.toString(),
+              'discord.message.timestamp': message.timestamp.toISOString(),
+            });
+          });
+      }
     });
   },
 );

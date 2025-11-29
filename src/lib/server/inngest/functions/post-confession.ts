@@ -1,70 +1,121 @@
-import { dispatchConfession } from '$lib/server/confession';
-import { fetchConfessionForDispatch } from '$lib/server/database';
-import { Logger } from '$lib/server/telemetry/logger';
-import { sendFollowupMessage } from '$lib/server/api/discord';
-import { Tracer } from '$lib/server/telemetry/tracer';
+import { NonRetriableError } from 'inngest';
 
-import { inngest } from '../client';
+import {
+  ConfessionChannel,
+  createConfessionPayload,
+  getConfessionErrorMessage,
+} from '$lib/server/confession';
+import { createMessage, sendFollowupMessage } from '$lib/server/api/discord';
+import { fetchConfessionForDispatch } from '$lib/server/database';
+import { inngest } from '$lib/server/inngest/client';
+import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
+import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error';
+import type { Message } from '$lib/server/models/discord/message';
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'inngest.post-confession';
 const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
+
+interface Success {
+  ok: true;
+  confessionId: string;
+  channelLabel: string;
+}
+
+interface Failure {
+  ok: false;
+  message: string;
+}
 
 export const postConfession = inngest.createFunction(
   { id: 'discord/interaction.post', name: 'Post Confession to Channel' },
   { event: 'discord/confession.submit' },
   async ({ event, step }) => {
     return await tracer.asyncSpan('post-confession', async span => {
-      const internalId = BigInt(event.data.internalId);
-      span.setAttribute('confession.internal.id', event.data.internalId);
-
-      const confession = await step.run(
-        'fetch-confession',
-        async () => await fetchConfessionForDispatch(internalId),
-      );
-
-      if (confession === null) {
-        logger.error('confession not found', void 0, { internalId: event.data.internalId });
-        return;
-      }
-
-      // Skip dispatch if pending approval (approvedAt is null)
-      if (confession.approvedAt === null) {
-        logger.debug('confession pending approval, skipping dispatch', {
-          confessionId: confession.confessionId,
-        });
-        return;
-      }
-
-      span.setAttributes({
-        'confession.id': confession.confessionId,
-        'channel.id': confession.channelId,
-      });
+      span.setAttribute('confession', event.data.internalId);
+      if (typeof event.data.moderatorId !== 'undefined')
+        span.setAttribute('confession.moderator.id', event.data.moderatorId);
 
       const result = await step.run(
-        'dispatch-confession',
-        async () => await dispatchConfession(confession),
+        { id: 'post-confession', name: 'Post Confession' },
+        async () => {
+          // We refetch per step to avoid caching sensitive confessions in Inngest.
+          const confession = await fetchConfessionForDispatch(BigInt(event.data.internalId));
+          if (confession === null) throw new NonRetriableError('confession not found');
+
+          // Should be impossible to reach this case because we were
+          // presumably approved prior to dispatching this Inngest event.
+          if (confession.approvedAt === null)
+            throw new NonRetriableError('confession not yet approved');
+
+          logger.debug('fetched confession', {
+            'confession.created': confession.createdAt,
+            'confession.approved': confession.approvedAt,
+            'confession.id': confession.confessionId,
+            'confession.channel.id': confession.channelId,
+            'confession.parent.message.id': confession.parentMessageId,
+          });
+
+          // eslint-disable-next-line @typescript-eslint/init-declarations
+          let message: Message;
+          try {
+            message = await createMessage(
+              BigInt(confession.channelId),
+              createConfessionPayload(confession),
+              DISCORD_BOT_TOKEN,
+            );
+          } catch (err) {
+            if (err instanceof DiscordError)
+              switch (err.code) {
+                case DiscordErrorCode.UnknownChannel:
+                case DiscordErrorCode.MissingAccess:
+                case DiscordErrorCode.MissingPermissions:
+                  return {
+                    ok: false,
+                    message: getConfessionErrorMessage(err.code, {
+                      label: confession.channel.label,
+                      confessionId: confession.confessionId,
+                      channel: ConfessionChannel.Confession,
+                      status: 'submitted',
+                    }),
+                  } as Failure;
+                default:
+                  break; // might be a transient error?
+              }
+            throw err;
+          }
+
+          logger.info('confession published', {
+            'discord.message.id': message.id.toString(),
+            'discord.message.channel.id': message.channel_id.toString(),
+            'discord.message.timestamp': message.timestamp.toISOString(),
+          });
+
+          return {
+            ok: true,
+            confessionId: confession.confessionId,
+            channelLabel: confession.channel.label,
+          } as Success;
+        },
       );
 
-      if (!result.ok) {
-        await step.run('notify-dispatch-failure', async () => {
-          await sendFollowupMessage(
-            event.data.interactionToken,
-            'Spectro does not have the permission to send messages in this channel.',
-          );
+      await step.run({ id: 'send-acknowledgement', name: 'Send Acknowledgement' }, async () => {
+        // eslint-disable-next-line @typescript-eslint/init-declarations
+        let acknowledgement: string;
+        if (result.ok) {
+          const verb = typeof event.data.moderatorId === 'undefined' ? 'published' : 'resent';
+          acknowledgement = `${result.channelLabel} #${result.confessionId} has been ${verb}.`;
+        } else {
+          acknowledgement = result.message;
+        }
+        const message = await sendFollowupMessage(event.data.interactionToken, acknowledgement);
+        logger.info('acknowledgement sent', {
+          'discord.message.id': message.id.toString(),
+          'discord.message.channel.id': message.channel_id.toString(),
+          'discord.message.timestamp': message.timestamp.toISOString(),
         });
-        return;
-      }
-
-      logger.info('confession dispatched', { confessionId: confession.confessionId });
-      logger.trace('confession dispatched to channel', {
-        'discord.message.id': result.messageId,
-        'discord.channel.id': result.channelId,
-      });
-
-      await step.run('send-acknowledgement', async () => {
-        const message = `${confession.channel.label} #${confession.confessionId} has been published.`;
-        await sendFollowupMessage(event.data.interactionToken, message);
       });
     });
   },

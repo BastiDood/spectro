@@ -5,7 +5,6 @@ import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq, sql } from 'drizzle-orm';
 
-import { assertDefined } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -217,146 +216,120 @@ function serializeAttachment(
 
 /** Fetch confession for dispatch operations (post-confession, dispatch-approval) */
 export async function fetchConfessionForDispatch(confessionInternalId: bigint) {
-  const {
-    confessionId,
-    channelId,
-    content,
-    createdAt,
-    approvedAt,
-    parentMessageId,
-    channel,
-    attachment,
-  } = await db.query.confession
-    .findFirst({
-      where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
-      columns: {
-        confessionId: true,
-        channelId: true,
-        content: true,
-        createdAt: true,
-        approvedAt: true,
-        parentMessageId: true,
-      },
-      with: {
-        channel: {
-          columns: {
-            label: true,
-            color: true,
-          },
+  const confession = await db.query.confession.findFirst({
+    where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
+    columns: {
+      confessionId: true,
+      channelId: true,
+      content: true,
+      createdAt: true,
+      approvedAt: true,
+      parentMessageId: true,
+    },
+    with: {
+      channel: {
+        columns: {
+          label: true,
+          color: true,
         },
-        attachment: true,
       },
-    })
-    .then(assertDefined);
+      attachment: true,
+    },
+  });
+  if (typeof confession === 'undefined') return null;
   return {
-    confessionId: confessionId.toString(),
-    channelId: channelId.toString(),
-    content,
-    createdAt: createdAt.toISOString(),
-    approvedAt: approvedAt?.toISOString() ?? null,
-    parentMessageId: parentMessageId?.toString() ?? null,
-    channel,
-    attachment: serializeAttachment(attachment),
+    confessionId: confession.confessionId.toString(),
+    channelId: confession.channelId.toString(),
+    content: confession.content,
+    createdAt: confession.createdAt.toISOString(),
+    approvedAt: confession.approvedAt?.toISOString() ?? null,
+    parentMessageId: confession.parentMessageId?.toString() ?? null,
+    channel: {
+      label: confession.channel.label,
+      color: confession.channel.color,
+    },
+    attachment: serializeAttachment(confession.attachment),
   } as SerializedConfessionForDispatch;
 }
 
 /** Fetch confession for log operations (log-confession) */
 export async function fetchConfessionForLog(confessionInternalId: bigint) {
-  const {
-    internalId,
-    confessionId,
-    channelId,
-    authorId,
-    content,
-    createdAt,
-    approvedAt,
-    channel,
-    attachment,
-  } = await db.query.confession
-    .findFirst({
-      where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
-      columns: {
-        internalId: true,
-        confessionId: true,
-        channelId: true,
-        authorId: true,
-        content: true,
-        createdAt: true,
-        approvedAt: true,
-      },
-      with: {
-        channel: {
-          columns: {
-            label: true,
-            logChannelId: true,
-            isApprovalRequired: true,
-          },
-        },
-        attachment: true,
-      },
-    })
-    .then(assertDefined);
-  return {
-    internalId: internalId.toString(),
-    confessionId: confessionId.toString(),
-    channelId: channelId.toString(),
-    authorId: authorId.toString(),
-    content,
-    createdAt: createdAt.toISOString(),
-    approvedAt: approvedAt?.toISOString() ?? null,
-    channel: {
-      ...channel,
-      logChannelId: channel.logChannelId?.toString() ?? null,
+  const confession = await db.query.confession.findFirst({
+    where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
+    columns: {
+      internalId: true,
+      confessionId: true,
+      channelId: true,
+      authorId: true,
+      content: true,
+      createdAt: true,
+      approvedAt: true,
     },
-    attachment: serializeAttachment(attachment),
+    with: {
+      channel: {
+        columns: {
+          label: true,
+          logChannelId: true,
+          isApprovalRequired: true,
+        },
+      },
+      attachment: true,
+    },
+  });
+  if (typeof confession === 'undefined') return null;
+  return {
+    internalId: confession.internalId.toString(),
+    confessionId: confession.confessionId.toString(),
+    channelId: confession.channelId.toString(),
+    authorId: confession.authorId.toString(),
+    content: confession.content,
+    createdAt: confession.createdAt.toISOString(),
+    approvedAt: confession.approvedAt?.toISOString() ?? null,
+    channel: {
+      ...confession.channel,
+      logChannelId: confession.channel.logChannelId?.toString() ?? null,
+    },
+    attachment: serializeAttachment(confession.attachment),
   } as SerializedConfessionForLog;
 }
 
 /** Fetch confession for resend operations (resend-confession) */
 export async function fetchConfessionForResend(confessionInternalId: bigint) {
-  const {
-    confessionId,
-    channelId,
-    authorId,
-    content,
-    createdAt,
-    approvedAt,
-    parentMessageId,
-    channel,
-    attachment,
-  } = await db.query.confession
-    .findFirst({
-      where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
-      columns: {
-        confessionId: true,
-        channelId: true,
-        authorId: true,
-        content: true,
-        createdAt: true,
-        approvedAt: true,
-        parentMessageId: true,
-      },
-      with: {
-        channel: {
-          columns: {
-            label: true,
-            color: true,
-            logChannelId: true,
-          },
+  const confession = await db.query.confession.findFirst({
+    where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
+    columns: {
+      confessionId: true,
+      channelId: true,
+      authorId: true,
+      content: true,
+      createdAt: true,
+      approvedAt: true,
+      parentMessageId: true,
+    },
+    with: {
+      channel: {
+        columns: {
+          label: true,
+          color: true,
+          logChannelId: true,
         },
-        attachment: true,
       },
-    })
-    .then(assertDefined);
+      attachment: true,
+    },
+  });
+  if (typeof confession === 'undefined') return null;
   return {
-    confessionId: confessionId.toString(),
-    channelId: channelId.toString(),
-    authorId: authorId.toString(),
-    content,
-    createdAt: createdAt.toISOString(),
-    approvedAt: approvedAt?.toISOString() ?? null,
-    parentMessageId: parentMessageId?.toString() ?? null,
-    channel,
-    attachment: serializeAttachment(attachment),
+    confessionId: confession.confessionId.toString(),
+    channelId: confession.channelId.toString(),
+    authorId: confession.authorId.toString(),
+    content: confession.content,
+    createdAt: confession.createdAt.toISOString(),
+    approvedAt: confession.approvedAt?.toISOString() ?? null,
+    parentMessageId: confession.parentMessageId?.toString() ?? null,
+    channel: {
+      ...confession.channel,
+      logChannelId: confession.channel.logChannelId?.toString() ?? null,
+    },
+    attachment: serializeAttachment(confession.attachment),
   } as SerializedConfessionForResend;
 }

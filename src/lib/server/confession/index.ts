@@ -1,35 +1,61 @@
-import { APP_ICON_URL } from '$lib/server/constants';
-import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
+import { fail } from 'node:assert/strict';
+
+import { APP_ICON_URL, Color } from '$lib/server/constants';
 
 import type { CreateMessage } from '$lib/server/models/discord/message';
-import { createMessage, LogConfessionMode, logConfessionViaHttp } from '$lib/server/api/discord';
-import {
-  db,
-  resetLogChannel,
-  type SerializedAttachment,
-  type SerializedConfessionForDispatch,
-  type SerializedConfessionForLog,
-  type SerializedConfessionForResend,
+import type {
+  SerializedAttachment,
+  SerializedConfessionForDispatch,
+  SerializedConfessionForLog,
+  SerializedConfessionForResend,
 } from '$lib/server/database';
-import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error';
-import { type Embed, EmbedType } from '$lib/server/models/discord/embed';
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import {
+  type Embed,
+  type EmbedField,
+  type EmbedImage,
+  EmbedType,
+} from '$lib/server/models/discord/embed';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
+import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 
-// Result types for dispatch/log operations
-interface ConfessionOperationSuccess {
-  ok: true;
-  messageId: string;
-  channelId: string;
+export const enum LogPayloadType {
+  Pending = 'pending',
+  Approved = 'approved',
+  Resent = 'resent',
 }
 
-interface ConfessionOperationFailure {
-  ok: false;
-  code: DiscordErrorCode;
+export interface PendingLogPayload {
+  type: LogPayloadType.Pending;
+  internalId: bigint;
 }
 
-export type ConfessionOperationResult = ConfessionOperationSuccess | ConfessionOperationFailure;
+export interface ApprovedLogPayload {
+  type: LogPayloadType.Approved;
+}
 
-// Helper to deserialize attachment for Discord API
+export interface ResentLogPayload {
+  type: LogPayloadType.Resent;
+  moderatorId: bigint;
+}
+
+export type LogPayloadMode = PendingLogPayload | ApprovedLogPayload | ResentLogPayload;
+
+export const enum ConfessionChannel {
+  Confession = 'confession channel',
+  Log = 'log channel',
+}
+
+interface ErrorMessageContext {
+  label: string;
+  confessionId: string;
+  channel: ConfessionChannel;
+  status: string;
+}
+
 function deserializeAttachment(attachment: SerializedAttachment | null) {
   return attachment === null
     ? null
@@ -43,11 +69,11 @@ function deserializeAttachment(attachment: SerializedAttachment | null) {
       };
 }
 
-export async function dispatchConfession(
+/** Create a confession message payload for the public confession channel */
+export function createConfessionPayload(
   confession: SerializedConfessionForDispatch | SerializedConfessionForResend,
   timestampOverride?: Date,
 ) {
-  const channelId = BigInt(confession.channelId);
   const confessionId = BigInt(confession.confessionId);
   const hex = confession.channel.color ? Number.parseInt(confession.channel.color, 2) : void 0;
   const parentMessageId = confession.parentMessageId ? BigInt(confession.parentMessageId) : null;
@@ -75,6 +101,7 @@ export async function dispatchConfession(
     else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
 
   const params: CreateMessage = { embeds: [embed] };
+
   if (parentMessageId !== null)
     params.message_reference = {
       type: MessageReferenceType.Default,
@@ -82,114 +109,121 @@ export async function dispatchConfession(
       fail_if_not_exists: false,
     };
 
-  try {
-    const result = await createMessage(channelId, params, DISCORD_BOT_TOKEN);
-    return {
-      ok: true as const,
-      messageId: result.id.toString(),
-      channelId: result.channel_id.toString(),
-    };
-  } catch (err) {
-    if (err instanceof DiscordError)
-      switch (err.code) {
-        case DiscordErrorCode.UnknownChannel:
-        case DiscordErrorCode.MissingAccess:
-        case DiscordErrorCode.MissingPermissions:
-          return { ok: false as const, code: err.code };
-        default:
-          break;
-      }
-    throw err;
-  }
+  return params;
 }
 
-/** Reset log channel when it's been deleted */
-async function handleUnknownLogChannel(channelId: string) {
-  const channelIdBigInt = BigInt(channelId);
-  await resetLogChannel(db, channelIdBigInt);
-}
-
-/** Log a posted confession (pending or approved) to the log channel */
-export async function logPostedConfession(confession: SerializedConfessionForLog) {
-  const logChannelId = BigInt(confession.channel.logChannelId!);
-  const confessionId = BigInt(confession.confessionId);
-  const authorId = BigInt(confession.authorId);
-  const attachment = deserializeAttachment(confession.attachment);
-
-  const options = confession.channel.isApprovalRequired
-    ? { mode: LogConfessionMode.Pending as const, internalId: BigInt(confession.internalId) }
-    : { mode: LogConfessionMode.Approved as const };
-
-  try {
-    const result = await logConfessionViaHttp(
-      new Date(confession.createdAt),
-      logChannelId,
-      confessionId,
-      authorId,
-      confession.channel.label,
-      confession.content,
-      attachment,
-      options,
-    );
-    return {
-      ok: true as const,
-      messageId: result.id.toString(),
-      channelId: result.channel_id.toString(),
-    };
-  } catch (err) {
-    if (err instanceof DiscordError)
-      switch (err.code) {
-        case DiscordErrorCode.UnknownChannel:
-          await handleUnknownLogChannel(confession.channelId);
-          return { ok: false as const, code: err.code };
-        case DiscordErrorCode.MissingAccess:
-        case DiscordErrorCode.MissingPermissions:
-          return { ok: false as const, code: err.code };
-        default:
-          break;
-      }
-    throw err;
-  }
-}
-
-/** Log a resent confession to the log channel */
-export async function logResentConfession(
-  confession: SerializedConfessionForResend,
-  moderatorId: bigint,
+/** Create a log message payload for the moderator log channel */
+export function createLogPayload(
+  confession: SerializedConfessionForLog | SerializedConfessionForResend,
+  mode: LogPayloadMode,
 ) {
-  const logChannelId = BigInt(confession.channel.logChannelId!);
   const confessionId = BigInt(confession.confessionId);
   const authorId = BigInt(confession.authorId);
   const attachment = deserializeAttachment(confession.attachment);
 
-  try {
-    const result = await logConfessionViaHttp(
-      new Date(), // Use current timestamp for resent logs
-      logChannelId,
-      confessionId,
-      authorId,
-      confession.channel.label,
-      confession.content,
-      attachment,
-      { mode: LogConfessionMode.Resent, moderatorId },
-    );
-    return {
-      ok: true as const,
-      messageId: result.id.toString(),
-      channelId: result.channel_id.toString(),
-    };
-  } catch (err) {
-    if (err instanceof DiscordError)
-      switch (err.code) {
-        case DiscordErrorCode.UnknownChannel:
-          await handleUnknownLogChannel(confession.channelId);
-          return { ok: false as const, code: err.code };
-        case DiscordErrorCode.MissingAccess:
-        case DiscordErrorCode.MissingPermissions:
-          return { ok: false as const, code: err.code };
-        default:
-          break;
-      }
-    throw err;
+  const fields: EmbedField[] = [{ name: 'Authored by', value: `||<@${authorId}>||`, inline: true }];
+
+  if (mode.type === LogPayloadType.Resent)
+    fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
+
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let image: EmbedImage | undefined;
+  if (attachment !== null) {
+    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+    // Resent mode does not embed images
+    if (mode.type !== LogPayloadType.Resent && attachment.content_type?.startsWith('image/'))
+      image = {
+        url: new URL(attachment.url),
+        height: attachment.height ?? void 0,
+        width: attachment.width ?? void 0,
+      };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let color: Color;
+  switch (mode.type) {
+    case LogPayloadType.Pending:
+      color = Color.Pending;
+      break;
+    case LogPayloadType.Approved:
+      color = Color.Success;
+      break;
+    case LogPayloadType.Resent:
+      color = Color.Replay;
+      break;
+    default:
+      fail('unreachable');
+  }
+
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let timestamp: Date;
+  switch (mode.type) {
+    case LogPayloadType.Resent:
+      timestamp = new Date();
+      break;
+    case LogPayloadType.Approved:
+    case LogPayloadType.Pending:
+      timestamp = new Date(confession.createdAt);
+      break;
+    default:
+      fail('unreachable');
+  }
+
+  const params: CreateMessage = {
+    flags: MessageFlags.SuppressNotifications,
+    allowed_mentions: { parse: [AllowedMentionType.Users] },
+    embeds: [
+      {
+        type: EmbedType.Rich,
+        title: `${confession.channel.label} #${confessionId}`,
+        color,
+        timestamp,
+        description: confession.content,
+        footer: { text: 'Spectro Logs', icon_url: APP_ICON_URL },
+        fields,
+        image,
+      },
+    ],
+  };
+
+  // Add approval buttons for pending mode
+  if (mode.type === LogPayloadType.Pending) {
+    const customId = mode.internalId.toString();
+    params.components = [
+      {
+        type: MessageComponentType.ActionRow,
+        components: [
+          {
+            type: MessageComponentType.Button,
+            style: MessageComponentButtonStyle.Success,
+            label: 'Publish',
+            emoji: { name: '\u{2712}\u{fe0f}' },
+            custom_id: `publish:${customId}`,
+          },
+          {
+            type: MessageComponentType.Button,
+            style: MessageComponentButtonStyle.Danger,
+            label: 'Delete',
+            emoji: { name: '\u{1f5d1}\u{fe0f}' },
+            custom_id: `delete:${customId}`,
+          },
+        ],
+      },
+    ];
+  }
+
+  return params;
+}
+
+export function getConfessionErrorMessage(code: DiscordErrorCode, ctx: ErrorMessageContext) {
+  switch (code) {
+    case DiscordErrorCode.UnknownChannel:
+      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but the ${ctx.channel} no longer exists.`;
+    case DiscordErrorCode.MissingAccess:
+      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but Spectro cannot access the ${ctx.channel}.`;
+    case DiscordErrorCode.MissingPermissions:
+      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but Spectro doesn't have permission to send messages in the ${ctx.channel}.`;
+    default:
+      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but an unexpected error occurred. Please report this bug to the Spectro developers.`;
   }
 }

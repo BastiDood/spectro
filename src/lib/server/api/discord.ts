@@ -1,19 +1,11 @@
-import { fail } from 'node:assert/strict';
-
 import { parse } from 'valibot';
 
-import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_APPLICATION_ID, DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { type EmbedField, type EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/error';
-import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { Logger } from '$lib/server/telemetry/logger';
-import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -40,6 +32,7 @@ export async function createMessage(channelId: Snowflake, data: CreateMessage, b
         'Content-Type': 'application/json',
       },
     });
+
     const json = await response.json();
 
     if (response.status === 200) {
@@ -56,131 +49,6 @@ export async function createMessage(channelId: Snowflake, data: CreateMessage, b
 export interface ExternalChannelReference {
   channelId: bigint;
   messageId: bigint;
-}
-
-export const enum LogConfessionMode {
-  Pending = 0,
-  Approved = 1,
-  Resent = 2,
-}
-
-interface PendingLogOptions {
-  mode: LogConfessionMode.Pending;
-  internalId: bigint;
-}
-
-interface ApprovedLogOptions {
-  mode: LogConfessionMode.Approved;
-}
-
-interface ResentLogOptions {
-  mode: LogConfessionMode.Resent;
-  moderatorId: bigint;
-}
-
-export type LogConfessionOptions = PendingLogOptions | ApprovedLogOptions | ResentLogOptions;
-
-export async function logConfessionViaHttp(
-  timestamp: Date,
-  channelId: Snowflake,
-  confessionId: bigint,
-  authorId: Snowflake,
-  label: string,
-  description: string,
-  attachment: EmbedAttachment | null,
-  options: LogConfessionOptions,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  const fields: EmbedField[] = [
-    {
-      name: 'Authored by',
-      value: `||<@${authorId}>||`,
-      inline: true,
-    },
-  ];
-
-  if (options.mode === LogConfessionMode.Resent)
-    fields.push({
-      name: 'Resent by',
-      value: `<@${options.moderatorId}>`,
-      inline: true,
-    });
-
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let image: EmbedImage | undefined;
-  if (attachment !== null) {
-    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    // Resent mode does not embed images
-    if (options.mode !== LogConfessionMode.Resent && attachment.content_type?.startsWith('image/'))
-      image = {
-        url: new URL(attachment.url),
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-  }
-
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let color: Color;
-  switch (options.mode) {
-    case LogConfessionMode.Pending:
-      color = Color.Pending;
-      break;
-    case LogConfessionMode.Approved:
-      color = Color.Success;
-      break;
-    case LogConfessionMode.Resent:
-      color = Color.Replay;
-      break;
-    default:
-      fail('unreachable');
-  }
-
-  const params: CreateMessage = {
-    flags: MessageFlags.SuppressNotifications,
-    allowed_mentions: { parse: [AllowedMentionType.Users] },
-    embeds: [
-      {
-        type: EmbedType.Rich,
-        title: `${label} #${confessionId}`,
-        color,
-        timestamp,
-        description,
-        footer: {
-          text: 'Spectro Logs',
-          icon_url: APP_ICON_URL,
-        },
-        fields,
-        image,
-      },
-    ],
-  };
-
-  if (options.mode === LogConfessionMode.Pending) {
-    const customId = options.internalId.toString();
-    params.components = [
-      {
-        type: MessageComponentType.ActionRow,
-        components: [
-          {
-            type: MessageComponentType.Button,
-            style: MessageComponentButtonStyle.Success,
-            label: 'Publish',
-            emoji: { name: '\u{2712}\u{fe0f}' },
-            custom_id: `publish:${customId}`,
-          },
-          {
-            type: MessageComponentType.Button,
-            style: MessageComponentButtonStyle.Danger,
-            label: 'Delete',
-            emoji: { name: '\u{1f5d1}\u{fe0f}' },
-            custom_id: `delete:${customId}`,
-          },
-        ],
-      },
-    ];
-  }
-
-  return await createMessage(channelId, params, botToken);
 }
 
 export async function deferResponse(

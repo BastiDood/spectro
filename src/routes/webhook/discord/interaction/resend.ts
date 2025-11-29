@@ -113,9 +113,9 @@ async function resendConfession(
     if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
       throw new InsufficientPermissionsResendError();
 
-    // Emit Inngest event for async processing
+    // Emit Inngest event for async processing (fans out to post-confession + log-confession)
     const { ids } = await inngest.send({
-      name: 'discord/confession.resend',
+      name: 'discord/confession.submit',
       data: {
         interactionToken,
         internalId: internalId.toString(),

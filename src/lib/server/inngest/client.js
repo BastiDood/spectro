@@ -4,7 +4,7 @@ import { INNGEST_EVENT_KEY } from '$lib/server/env/inngest';
 import { Logger } from '$lib/server/telemetry/logger';
 import { version } from '$app/environment';
 
-import { ApprovalEventData, ConfessionSubmitEventData, ResendConfessionEventData } from './schema';
+import { ApprovalEventData, ConfessionSubmitEventData } from './schema';
 
 export const inngest = new Inngest({
   id: 'spectro',
@@ -15,6 +15,5 @@ export const inngest = new Inngest({
   schemas: new EventSchemas().fromSchema({
     'discord/confession.submit': ConfessionSubmitEventData,
     'discord/confession.approve': ApprovalEventData,
-    'discord/confession.resend': ResendConfessionEventData,
   }),
 });
