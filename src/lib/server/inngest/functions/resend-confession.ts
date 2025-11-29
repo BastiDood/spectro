@@ -1,11 +1,8 @@
-import { db, resetLogChannel } from '$lib/server/database';
-import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error';
-import {
-  dispatchConfessionViaHttp,
-  logResentConfessionViaHttp,
-  sendFollowupMessage,
-} from '$lib/server/api/discord';
+import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import { dispatchConfession, logResentConfession } from '$lib/server/confession';
+import { fetchConfessionForResend } from '$lib/server/database';
 import { Logger } from '$lib/server/telemetry/logger';
+import { sendFollowupMessage } from '$lib/server/api/discord';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { inngest } from '../client';
@@ -14,66 +11,26 @@ const SERVICE_NAME = 'inngest.resend-confession';
 const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
-const enum ErrorReason {
-  UnknownChannel = 'unknown_channel',
-  Permission = 'permission',
-}
-
 export const resendConfession = inngest.createFunction(
   { id: 'discord/interaction.resend', name: 'Resend Confession' },
   { event: 'discord/confession.resend' },
   async ({ event, step }) => {
     return await tracer.asyncSpan('resend-confession', async span => {
-      const internalId = BigInt(event.data.internalId);
-      const moderatorId = BigInt(event.data.moderatorId);
       span.setAttributes({
         'confession.internal.id': event.data.internalId,
         'moderator.id': event.data.moderatorId,
       });
 
-      const confession = await step.run('fetch-confession', async () => {
-        const result = await db.query.confession.findFirst({
-          where: ({ internalId: id }, { eq }) => eq(id, internalId),
-          columns: {
-            confessionId: true,
-            channelId: true,
-            authorId: true,
-            content: true,
-            createdAt: true,
-            approvedAt: true,
-            parentMessageId: true,
-          },
-          with: {
-            channel: {
-              columns: {
-                label: true,
-                color: true,
-                logChannelId: true,
-              },
-            },
-            attachment: true,
-          },
-        });
-        // Serialize bigints for Inngest step memoization
-        if (!result) return null;
-        return {
-          ...result,
-          confessionId: result.confessionId.toString(),
-          channelId: result.channelId.toString(),
-          authorId: result.authorId.toString(),
-          parentMessageId: result.parentMessageId?.toString() ?? null,
-          channel: {
-            ...result.channel,
-            logChannelId: result.channel.logChannelId?.toString() ?? null,
-          },
-          attachment: result.attachment
-            ? { ...result.attachment, id: result.attachment.id.toString() }
-            : null,
-        };
-      });
+      const internalId = BigInt(event.data.internalId);
+      const moderatorId = BigInt(event.data.moderatorId);
+
+      const confession = await step.run(
+        'fetch-confession',
+        async () => await fetchConfessionForResend(internalId),
+      );
 
       if (confession === null) {
-        logger.error('confession not found', undefined, { internalId: event.data.internalId });
+        logger.error('confession not found', void 0, { internalId: event.data.internalId });
         await step.run('notify-not-found', async () => {
           await sendFollowupMessage(
             event.data.interactionToken,
@@ -85,7 +42,7 @@ export const resendConfession = inngest.createFunction(
 
       // Verify confession is approved
       if (confession.approvedAt === null) {
-        logger.error('confession not approved for resend', undefined, {
+        logger.error('confession not approved for resend', void 0, {
           internalId: event.data.internalId,
         });
         await step.run('notify-not-approved', async () => {
@@ -102,58 +59,40 @@ export const resendConfession = inngest.createFunction(
         'channel.id': confession.channelId,
       });
 
-      const dispatched = await step.run('dispatch-confession', async () => {
-        const channelId = BigInt(confession.channelId);
-        const confessionId = BigInt(confession.confessionId);
-        const hex = confession.channel.color
-          ? Number.parseInt(confession.channel.color, 2)
-          : undefined;
-        const parentMessageId = confession.parentMessageId
-          ? BigInt(confession.parentMessageId)
-          : null;
-        const attachment = confession.attachment
-          ? { ...confession.attachment, id: BigInt(confession.attachment.id) }
-          : null;
+      const dispatchResult = await step.run(
+        'dispatch-confession',
+        async () => await dispatchConfession(confession),
+      );
 
-        try {
-          const result = await dispatchConfessionViaHttp(
-            new Date(confession.createdAt),
-            channelId,
-            confessionId,
-            confession.channel.label,
-            hex,
-            confession.content,
-            parentMessageId,
-            attachment,
-          );
-          logger.trace('resent confession dispatched', {
-            'discord.message.id': result.id.toString(),
-            'discord.channel.id': result.channel_id.toString(),
-          });
-          return true;
-        } catch (err) {
-          if (err instanceof DiscordError) {
-            switch (err.code) {
-              case DiscordErrorCode.MissingAccess:
-              case DiscordErrorCode.MissingPermissions:
-                return false;
-            }
-          }
-          throw err;
-        }
-      });
-
-      if (!dispatched) {
+      if (!dispatchResult.ok) {
         await step.run('notify-dispatch-failure', async () => {
-          await sendFollowupMessage(
-            event.data.interactionToken,
-            'Spectro does not have the permission to resend confessions to this channel.',
-          );
+          // eslint-disable-next-line @typescript-eslint/init-declarations
+          let errorMessage: string;
+          switch (dispatchResult.code) {
+            case DiscordErrorCode.UnknownChannel:
+              errorMessage = `${confession.channel.label} #${confession.confessionId} could not be resent because the confession channel no longer exists.`;
+              break;
+            case DiscordErrorCode.MissingAccess:
+              errorMessage = `${confession.channel.label} #${confession.confessionId} could not be resent because Spectro cannot access the confession channel.`;
+              break;
+            case DiscordErrorCode.MissingPermissions:
+              errorMessage = `${confession.channel.label} #${confession.confessionId} could not be resent because Spectro does not have the permission to send messages to the confession channel.`;
+              break;
+            default:
+              errorMessage = `${confession.channel.label} #${confession.confessionId} could not be resent due to an unexpected error.`;
+          }
+          await sendFollowupMessage(event.data.interactionToken, errorMessage);
         });
         return;
       }
 
-      const logChannelId = confession.channel.logChannelId;
+      logger.info('resent confession dispatched', { confessionId: confession.confessionId });
+      logger.trace('resent confession dispatched to channel', {
+        'discord.message.id': dispatchResult.messageId,
+        'discord.channel.id': dispatchResult.channelId,
+      });
+
+      const { logChannelId } = confession.channel;
       if (logChannelId === null) {
         logger.warn('no log channel configured for resend');
         await step.run('send-acknowledgement-no-log', async () => {
@@ -165,61 +104,27 @@ export const resendConfession = inngest.createFunction(
         return;
       }
 
-      const logResult = await step.run('log-resent', async () => {
-        const logChannelIdBigInt = BigInt(logChannelId);
-        const confessionIdBigInt = BigInt(confession.confessionId);
-        const authorIdBigInt = BigInt(confession.authorId);
-        const attachment = confession.attachment
-          ? { ...confession.attachment, id: BigInt(confession.attachment.id) }
-          : null;
+      const logResult = await step.run(
+        'log-resent',
+        async () => await logResentConfession(confession, moderatorId),
+      );
 
-        try {
-          // Use current timestamp for the log entry
-          const result = await logResentConfessionViaHttp(
-            new Date(),
-            logChannelIdBigInt,
-            confessionIdBigInt,
-            authorIdBigInt,
-            moderatorId,
-            confession.channel.label,
-            confession.content,
-            attachment,
-          );
-          logger.trace('resent confession logged', {
-            'discord.message.id': result.id.toString(),
-            'discord.channel.id': result.channel_id.toString(),
-          });
-          return;
-        } catch (err) {
-          if (err instanceof DiscordError) {
-            switch (err.code) {
-              case DiscordErrorCode.UnknownChannel: {
-                const channelIdBigInt = BigInt(confession.channelId);
-                if (await resetLogChannel(db, channelIdBigInt))
-                  logger.error('log channel reset due to unknown channel');
-                else logger.warn('log channel previously reset due to unknown channel');
-                return ErrorReason.UnknownChannel;
-              }
-              case DiscordErrorCode.MissingAccess:
-              case DiscordErrorCode.MissingPermissions:
-                return ErrorReason.Permission;
-            }
-          }
-          throw err;
-        }
-      });
-
-      if (logResult !== null) {
+      if (!logResult.ok) {
         await step.run('notify-log-failure', async () => {
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let warningMessage: string;
-          switch (logResult) {
-            case ErrorReason.UnknownChannel:
+          switch (logResult.code) {
+            case DiscordErrorCode.UnknownChannel:
               warningMessage = `${confession.channel.label} #${confession.confessionId} has been resent, but Spectro couldn't log the confession because the log channel had been deleted.`;
               break;
-            case ErrorReason.Permission:
-              warningMessage = `${confession.channel.label} #${confession.confessionId} has been resent, but Spectro couldn't log the confession due to insufficient log channel permissions.`;
+            case DiscordErrorCode.MissingAccess:
+              warningMessage = `${confession.channel.label} #${confession.confessionId} has been resent, but Spectro cannot access the log channel.`;
               break;
+            case DiscordErrorCode.MissingPermissions:
+              warningMessage = `${confession.channel.label} #${confession.confessionId} has been resent, but Spectro doesn't have permission to send messages in the log channel.`;
+              break;
+            default:
+              warningMessage = `${confession.channel.label} #${confession.confessionId} has been resent, but an unexpected error occurred while logging the confession.`;
           }
           await sendFollowupMessage(event.data.interactionToken, warningMessage);
         });
@@ -227,6 +132,11 @@ export const resendConfession = inngest.createFunction(
       }
 
       logger.info('resent confession logged', { confessionId: confession.confessionId });
+      logger.trace('resent confession logged to channel', {
+        'discord.message.id': logResult.messageId,
+        'discord.channel.id': logResult.channelId,
+      });
+
       await step.run('send-acknowledgement', async () => {
         await sendFollowupMessage(
           event.data.interactionToken,

@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import { EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -68,9 +68,9 @@ async function submitVerdict(
 ) {
   return await tracer.asyncSpan('submit-verdict', async span => {
     span.setAttributes({
-      'internal.id': internalId.toString(),
+      'confession.id': internalId.toString(),
       'moderator.id': moderatorId.toString(),
-      'is.approved': isApproved,
+      'verdict.approved': isApproved,
     });
 
     if (!hasAllPermissions(permissions, MANAGE_MESSAGES))

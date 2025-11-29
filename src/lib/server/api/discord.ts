@@ -1,25 +1,20 @@
+import { fail } from 'node:assert/strict';
+
 import { parse } from 'valibot';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { DISCORD_APPLICATION_ID, DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
-import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import {
-  type Embed,
-  type EmbedField,
-  type EmbedImage,
-  EmbedType,
-} from '$lib/server/models/discord/embed';
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
+import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+import { type EmbedField, type EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/error';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
-import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { Logger } from '$lib/server/telemetry/logger';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
-import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
@@ -29,7 +24,7 @@ const tracer = new Tracer(SERVICE_NAME);
 
 const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
-async function createMessage(channelId: Snowflake, data: CreateMessage, botToken: string) {
+export async function createMessage(channelId: Snowflake, data: CreateMessage, botToken: string) {
   return await tracer.asyncSpan('create-message', async span => {
     span.setAttribute('channel.id', channelId.toString());
 
@@ -54,56 +49,8 @@ async function createMessage(channelId: Snowflake, data: CreateMessage, botToken
     }
 
     const { code, message } = parse(DiscordErrorResponse, json);
-    logger.error(
-      message,
-      { name: 'DiscordError', code, message },
-      { statusCode: response.status, code },
-    );
     throw new DiscordError(code, message);
   });
-}
-
-export async function dispatchConfessionViaHttp(
-  timestamp: Date,
-  channelId: Snowflake,
-  confessionId: bigint,
-  label: string,
-  color: number | undefined,
-  description: string,
-  replyToMessageId: Snowflake | null,
-  attachment: EmbedAttachment | null,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  const embed: Embed = {
-    type: EmbedType.Rich,
-    title: `${label} #${confessionId}`,
-    description,
-    timestamp,
-    color,
-    footer: {
-      text: "Admins can access Spectro's confession logs",
-      icon_url: APP_ICON_URL,
-    },
-  };
-
-  if (attachment !== null)
-    if (attachment.content_type?.includes('image') === true)
-      embed.image = {
-        url: new URL(attachment.url),
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-    else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
-
-  const params: CreateMessage = { embeds: [embed] };
-  if (replyToMessageId !== null)
-    params.message_reference = {
-      type: MessageReferenceType.Default,
-      message_id: replyToMessageId,
-      fail_if_not_exists: false,
-    };
-
-  return await createMessage(channelId, params, botToken);
 }
 
 export interface ExternalChannelReference {
@@ -111,15 +58,37 @@ export interface ExternalChannelReference {
   messageId: bigint;
 }
 
-export async function logPendingConfessionViaHttp(
+export const enum LogConfessionMode {
+  Pending = 0,
+  Approved = 1,
+  Resent = 2,
+}
+
+interface PendingLogOptions {
+  mode: LogConfessionMode.Pending;
+  internalId: bigint;
+}
+
+interface ApprovedLogOptions {
+  mode: LogConfessionMode.Approved;
+}
+
+interface ResentLogOptions {
+  mode: LogConfessionMode.Resent;
+  moderatorId: bigint;
+}
+
+export type LogConfessionOptions = PendingLogOptions | ApprovedLogOptions | ResentLogOptions;
+
+export async function logConfessionViaHttp(
   timestamp: Date,
   channelId: Snowflake,
-  internalId: bigint,
   confessionId: bigint,
   authorId: Snowflake,
   label: string,
   description: string,
   attachment: EmbedAttachment | null,
+  options: LogConfessionOptions,
   botToken = DISCORD_BOT_TOKEN,
 ) {
   const fields: EmbedField[] = [
@@ -130,186 +99,104 @@ export async function logPendingConfessionViaHttp(
     },
   ];
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let image: EmbedImage | undefined;
-  if (attachment !== null) {
-    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    if (attachment.content_type?.startsWith('image/') === true)
-      image = {
-        url: new URL(attachment.url),
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-  }
-
-  const customId = internalId.toString();
-  return await createMessage(
-    channelId,
-    {
-      flags: MessageFlags.SuppressNotifications,
-      allowed_mentions: { parse: [AllowedMentionType.Users] },
-      embeds: [
-        {
-          type: EmbedType.Rich,
-          title: `${label} #${confessionId}`,
-          color: Color.Pending,
-          timestamp,
-          description,
-          footer: {
-            text: 'Spectro Logs',
-            icon_url: APP_ICON_URL,
-          },
-          fields,
-          image,
-        },
-      ],
-      components: [
-        {
-          type: MessageComponentType.ActionRow,
-          components: [
-            {
-              type: MessageComponentType.Button,
-              style: MessageComponentButtonStyle.Success,
-              label: 'Publish',
-              emoji: { name: '\u{2712}\u{fe0f}' },
-              custom_id: `publish:${customId}`,
-            },
-            {
-              type: MessageComponentType.Button,
-              style: MessageComponentButtonStyle.Danger,
-              label: 'Delete',
-              emoji: { name: '\u{1f5d1}\u{fe0f}' },
-              custom_id: `delete:${customId}`,
-            },
-          ],
-        },
-      ],
-    },
-    botToken,
-  );
-}
-
-export async function logApprovedConfessionViaHttp(
-  timestamp: Date,
-  channelId: Snowflake,
-  confessionId: bigint,
-  authorId: Snowflake,
-  label: string,
-  description: string,
-  attachment: EmbedAttachment | null,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  const fields = [
-    {
-      name: 'Authored by',
-      value: `||<@${authorId}>||`,
-      inline: true,
-    },
-  ];
-
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let image: EmbedImage | undefined;
-  if (attachment !== null) {
-    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    if (attachment.content_type?.startsWith('image/') === true)
-      image = {
-        url: new URL(attachment.url),
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-  }
-
-  return await createMessage(
-    channelId,
-    {
-      flags: MessageFlags.SuppressNotifications,
-      allowed_mentions: { parse: [AllowedMentionType.Users] },
-      embeds: [
-        {
-          type: EmbedType.Rich,
-          title: `${label} #${confessionId}`,
-          color: Color.Success,
-          timestamp,
-          description,
-          footer: {
-            text: 'Spectro Logs',
-            icon_url: APP_ICON_URL,
-          },
-          fields,
-          image,
-        },
-      ],
-    },
-    botToken,
-  );
-}
-
-export async function logResentConfessionViaHttp(
-  timestamp: Date,
-  channelId: Snowflake,
-  confessionId: bigint,
-  authorId: Snowflake,
-  moderatorId: Snowflake,
-  label: string,
-  description: string,
-  attachment: EmbedAttachment | null,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  const fields = [
-    {
-      name: 'Authored by',
-      value: `||<@${authorId}>||`,
-      inline: true,
-    },
-    {
+  if (options.mode === LogConfessionMode.Resent)
+    fields.push({
       name: 'Resent by',
-      value: `<@${moderatorId}>`,
+      value: `<@${options.moderatorId}>`,
       inline: true,
-    },
-  ];
+    });
 
-  if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let image: EmbedImage | undefined;
+  if (attachment !== null) {
+    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+    // Resent mode does not embed images
+    if (options.mode !== LogConfessionMode.Resent && attachment.content_type?.startsWith('image/'))
+      image = {
+        url: new URL(attachment.url),
+        height: attachment.height ?? void 0,
+        width: attachment.width ?? void 0,
+      };
+  }
 
-  return await createMessage(
-    channelId,
-    {
-      flags: MessageFlags.SuppressNotifications,
-      allowed_mentions: { parse: [AllowedMentionType.Users] },
-      embeds: [
-        {
-          type: EmbedType.Rich,
-          title: `${label} #${confessionId}`,
-          color: Color.Replay,
-          timestamp,
-          description,
-          footer: {
-            text: 'Spectro Logs',
-            icon_url: APP_ICON_URL,
-          },
-          fields,
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let color: Color;
+  switch (options.mode) {
+    case LogConfessionMode.Pending:
+      color = Color.Pending;
+      break;
+    case LogConfessionMode.Approved:
+      color = Color.Success;
+      break;
+    case LogConfessionMode.Resent:
+      color = Color.Replay;
+      break;
+    default:
+      fail('unreachable');
+  }
+
+  const params: CreateMessage = {
+    flags: MessageFlags.SuppressNotifications,
+    allowed_mentions: { parse: [AllowedMentionType.Users] },
+    embeds: [
+      {
+        type: EmbedType.Rich,
+        title: `${label} #${confessionId}`,
+        color,
+        timestamp,
+        description,
+        footer: {
+          text: 'Spectro Logs',
+          icon_url: APP_ICON_URL,
         },
-      ],
-    },
-    botToken,
-  );
+        fields,
+        image,
+      },
+    ],
+  };
+
+  if (options.mode === LogConfessionMode.Pending) {
+    const customId = options.internalId.toString();
+    params.components = [
+      {
+        type: MessageComponentType.ActionRow,
+        components: [
+          {
+            type: MessageComponentType.Button,
+            style: MessageComponentButtonStyle.Success,
+            label: 'Publish',
+            emoji: { name: '\u{2712}\u{fe0f}' },
+            custom_id: `publish:${customId}`,
+          },
+          {
+            type: MessageComponentType.Button,
+            style: MessageComponentButtonStyle.Danger,
+            label: 'Delete',
+            emoji: { name: '\u{1f5d1}\u{fe0f}' },
+            custom_id: `delete:${customId}`,
+          },
+        ],
+      },
+    ];
+  }
+
+  return await createMessage(channelId, params, botToken);
 }
 
-async function createInteractionResponse(
+export async function deferResponse(
   interactionId: Snowflake,
   interactionToken: string,
-  data: InteractionResponse,
-  botToken: string,
+  botToken = DISCORD_BOT_TOKEN,
 ) {
-  const body = JSON.stringify(data, (_, value) =>
-    typeof value === 'bigint' ? value.toString() : value,
-  );
-
   return await tracer.asyncSpan('create-interaction-response', async () => {
     const response = await fetch(
       `${DISCORD_API_BASE_URL}/interactions/${interactionId}/${interactionToken}/callback`,
       {
-        body,
         method: 'POST',
+        body: JSON.stringify({
+          type: InteractionResponseType.DeferredChannelMessageWithSource,
+          data: { flags: MessageFlags.Ephemeral },
+        }),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bot ${botToken}`,
@@ -324,29 +211,8 @@ async function createInteractionResponse(
 
     const json = await response.json();
     const { code, message } = parse(DiscordErrorResponse, json);
-    logger.error(
-      message,
-      { name: 'DiscordError', code, message },
-      { statusCode: response.status, code },
-    );
     throw new DiscordError(code, message);
   });
-}
-
-export async function deferResponse(
-  interactionId: Snowflake,
-  interactionToken: string,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  return await createInteractionResponse(
-    interactionId,
-    interactionToken,
-    {
-      type: InteractionResponseType.DeferredChannelMessageWithSource,
-      data: { flags: MessageFlags.Ephemeral },
-    },
-    botToken,
-  );
 }
 
 export async function sendFollowupMessage(
@@ -381,11 +247,6 @@ export async function sendFollowupMessage(
 
     const json = await response.json();
     const { code, message } = parse(DiscordErrorResponse, json);
-    logger.error(
-      message,
-      { name: 'DiscordError', code, message },
-      { statusCode: response.status, code },
-    );
     throw new DiscordError(code, message);
   });
 }
@@ -418,11 +279,6 @@ export async function editOriginalResponse(
 
     const json = await response.json();
     const { code, message } = parse(DiscordErrorResponse, json);
-    logger.error(
-      message,
-      { name: 'DiscordError', code, message },
-      { statusCode: response.status, code },
-    );
     throw new DiscordError(code, message);
   });
 }

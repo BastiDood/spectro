@@ -96,19 +96,20 @@ async function submitReply(
     if (logChannelId === null) throw new MissingLogChannelReplySubmitError();
 
     // Insert reply to database
-    const { internalId, confessionId } = await db.transaction(async tx =>
-      insertConfession(
-        tx,
-        timestamp,
-        guildId,
-        confessionChannelId,
-        authorId,
-        content,
-        isApprovalRequired ? null : timestamp, // approvedAt
-        parentMessageId,
-        null,
-        true,
-      ),
+    const { internalId, confessionId } = await db.transaction(
+      async tx =>
+        await insertConfession(
+          tx,
+          timestamp,
+          guildId,
+          confessionChannelId,
+          authorId,
+          content,
+          isApprovalRequired ? null : timestamp,
+          parentMessageId,
+          null,
+          true,
+        ),
     );
 
     logger.debug('reply inserted', {
