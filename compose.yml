@@ -28,7 +28,7 @@ services:
       - dev
       - '--no-discovery'
       - '--sdk-url'
-      - 'http://host.docker.internal:5173/api/inngest' # Vite
+      - 'http://host.docker.internal:5173/webhook/inngest' # Vite
     restart: always
   o2:
     image: public.ecr.aws/zinclabs/openobserve:v0.20.0-rc2
