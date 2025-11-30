@@ -77,14 +77,11 @@ export async function submitConfession(
   shouldInsertAttachment: boolean,
 ) {
   return await tracer.asyncSpan('submit-confession', async span => {
-    span.setAttributes({
-      'channel.id': confessionChannelId.toString(),
-      'author.id': authorId.toString(),
-    });
+    span.setAttributes({ 'channel.id': confessionChannelId, 'author.id': authorId });
 
     if (attachment !== null)
       span.setAttributes({
-        'attachment.id': attachment.id.toString(),
+        'attachment.id': attachment.id,
         'attachment.url': attachment.url,
         'attachment.proxy_url': attachment.proxy_url,
         'attachment.content_type': attachment.content_type,
@@ -106,7 +103,7 @@ export async function submitConfession(
         label: true,
       },
       where({ id }, { eq }) {
-        return eq(id, confessionChannelId);
+        return eq(id, BigInt(confessionChannelId));
       },
     });
 
@@ -130,8 +127,8 @@ export async function submitConfession(
           db,
           timestamp,
           guildId,
-          confessionChannelId,
-          authorId,
+          BigInt(confessionChannelId),
+          BigInt(authorId),
           description,
           isApprovalRequired ? null : timestamp, // approvedAt
           null, // parentMessageId

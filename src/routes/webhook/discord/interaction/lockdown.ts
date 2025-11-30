@@ -24,10 +24,10 @@ class ChannelNotSetupLockdownError extends LockdownError {
 /** @throws {ChannelNotSetupLockdownError} */
 async function disableConfessions(disabledAt: Date, channelId: Snowflake) {
   return await tracer.asyncSpan('disable-confessions', async span => {
-    span.setAttribute('channel.id', channelId.toString());
+    span.setAttribute('channel.id', channelId);
 
-    if (await disableConfessionChannel(db, channelId, disabledAt)) {
-      logger.info('confessions disabled', { 'channel.id': channelId.toString() });
+    if (await disableConfessionChannel(db, BigInt(channelId), disabledAt)) {
+      logger.info('confessions disabled', { 'channel.id': channelId });
       return;
     }
     throw new ChannelNotSetupLockdownError();

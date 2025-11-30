@@ -23,10 +23,7 @@ export async function handleConfessSubmit(
   [row, ...otherRows]: MessageComponents,
 ) {
   return await tracer.asyncSpan('handle-confess-submit', async span => {
-    span.setAttributes({
-      'channel.id': channelId.toString(),
-      'author.id': authorId.toString(),
-    });
+    span.setAttributes({ 'channel.id': channelId, 'author.id': authorId });
 
     strictEqual(otherRows.length, 0);
     assert(typeof row !== 'undefined');
@@ -67,7 +64,7 @@ export async function handleConfessSubmit(
       });
       if (typeof attachmentRecord !== 'undefined')
         attachment = {
-          id: attachmentId,
+          id: attachmentId.toString(),
           filename: attachmentRecord.filename,
           url: attachmentRecord.url,
           proxy_url: attachmentRecord.url,

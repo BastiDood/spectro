@@ -18,14 +18,10 @@ const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
 
 export async function createMessage(channelId: Snowflake, data: CreateMessage, botToken: string) {
   return await tracer.asyncSpan('create-message', async span => {
-    span.setAttribute('channel.id', channelId.toString());
-
-    const body = JSON.stringify(data, (_, value) =>
-      typeof value === 'bigint' ? value.toString() : value,
-    );
+    span.setAttribute('channel.id', channelId);
 
     const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
-      body,
+      body: JSON.stringify(data),
       method: 'POST',
       headers: {
         Authorization: `Bot ${botToken}`,
@@ -37,7 +33,7 @@ export async function createMessage(channelId: Snowflake, data: CreateMessage, b
 
     if (response.status === 200) {
       const parsed = parse(Message, json);
-      logger.debug('message created', { 'message.id': parsed.id.toString() });
+      logger.debug('message created', { 'message.id': parsed.id });
       return parsed;
     }
 
@@ -47,8 +43,8 @@ export async function createMessage(channelId: Snowflake, data: CreateMessage, b
 }
 
 export interface ExternalChannelReference {
-  channelId: bigint;
-  messageId: bigint;
+  channelId: string;
+  messageId: string;
 }
 
 export async function deferResponse(
@@ -109,7 +105,7 @@ export async function sendFollowupMessage(
     if (response.ok) {
       const json = await response.json();
       const parsed = parse(Message, json);
-      logger.debug('follow-up message sent', { 'message.id': parsed.id.toString() });
+      logger.debug('follow-up message sent', { 'message.id': parsed.id });
       return parsed;
     }
 
@@ -141,7 +137,7 @@ export async function editOriginalResponse(
     if (response.ok) {
       const json = await response.json();
       const parsed = parse(Message, json);
-      logger.debug('original response edited', { 'message.id': parsed.id.toString() });
+      logger.debug('original response edited', { 'message.id': parsed.id });
       return parsed;
     }
 

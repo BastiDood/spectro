@@ -53,14 +53,14 @@ class ApprovalRequiredReplyModalError extends ReplyModalError {
 async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
   return await tracer.asyncSpan('render-reply-modal', async span => {
     span.setAttributes({
-      'channel.id': channelId.toString(),
-      'message.id': messageId.toString(),
+      'channel.id': channelId,
+      'message.id': messageId,
     });
 
     const channel = await db.query.channel.findFirst({
       columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
       where({ id }, { eq }) {
-        return eq(id, channelId);
+        return eq(id, BigInt(channelId));
       },
     });
 
@@ -87,7 +87,7 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
             type: MessageComponentType.ActionRow,
             components: [
               {
-                custom_id: messageId.toString(),
+                custom_id: messageId,
                 type: MessageComponentType.TextInput,
                 style: MessageComponentTextInputStyle.Long,
                 required: true,

@@ -69,7 +69,7 @@ async function submitVerdict(
   return await tracer.asyncSpan('submit-verdict', async span => {
     span.setAttributes({
       'confession.id': internalId.toString(),
-      'moderator.id': moderatorId.toString(),
+      'moderator.id': moderatorId,
       'verdict.approved': isApproved,
     });
 
@@ -163,7 +163,7 @@ async function submitVerdict(
           fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
           if (embedAttachment.content_type?.startsWith('image/'))
             image = {
-              url: new URL(embedAttachment.url),
+              url: embedAttachment.url,
               height: embedAttachment.height ?? void 0,
               width: embedAttachment.width ?? void 0,
             };
@@ -174,7 +174,7 @@ async function submitVerdict(
           type: EmbedType.Rich,
           title: `${label} #${confessionId}`,
           color: Color.Success,
-          timestamp,
+          timestamp: timestamp.toISOString(),
           description: content,
           footer: {
             text: 'Spectro Logs',
@@ -204,7 +204,7 @@ async function submitVerdict(
         fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
         if (embedAttachment.content_type?.startsWith('image/'))
           image = {
-            url: new URL(embedAttachment.url),
+            url: embedAttachment.url,
             height: embedAttachment.height ?? void 0,
             width: embedAttachment.width ?? void 0,
           };
@@ -216,7 +216,7 @@ async function submitVerdict(
         type: EmbedType.Rich,
         title: `${label} #${confessionId}`,
         color: Color.Failure,
-        timestamp,
+        timestamp: timestamp.toISOString(),
         description: content,
         footer: {
           text: 'Spectro Logs',

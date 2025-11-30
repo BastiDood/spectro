@@ -47,7 +47,7 @@ export const dispatchApproval = inngest.createFunction(
           let message: Message;
           try {
             message = await createMessage(
-              BigInt(confession.channelId),
+              confession.channelId,
               createConfessionPayload(confession),
               DISCORD_BOT_TOKEN,
             );
@@ -72,9 +72,9 @@ export const dispatchApproval = inngest.createFunction(
 
           logger.info('approved confession dispatched', { confessionId: confession.confessionId });
           logger.trace('approved confession dispatched', {
-            'discord.message.id': message.id.toString(),
-            'discord.channel.id': message.channel_id.toString(),
-            'discord.message.timestamp': message.timestamp.toISOString(),
+            'discord.message.id': message.id,
+            'discord.channel.id': message.channel_id,
+            'discord.message.timestamp': message.timestamp,
           });
         },
       );
@@ -84,9 +84,9 @@ export const dispatchApproval = inngest.createFunction(
       await step.run({ id: 'send-failure', name: 'Send Failure Message' }, async () => {
         const message = await sendFollowupMessage(event.data.interactionToken, error);
         logger.info('failure message sent', {
-          'discord.message.id': message.id.toString(),
-          'discord.channel.id': message.channel_id.toString(),
-          'discord.message.timestamp': message.timestamp.toISOString(),
+          'discord.message.id': message.id,
+          'discord.channel.id': message.channel_id,
+          'discord.message.timestamp': message.timestamp,
         });
       });
     });

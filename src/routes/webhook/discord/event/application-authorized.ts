@@ -10,10 +10,10 @@ const tracer = new Tracer(SERVICE_NAME);
 
 export async function handleApplicationAuthorized(createdAt: Date, guildId: Snowflake) {
   return await tracer.asyncSpan('handle-application-authorized', async span => {
-    span.setAttribute('guild.id', guildId.toString());
+    span.setAttribute('guild.id', guildId);
     const { rowCount } = await db
       .insert(guild)
-      .values({ id: guildId, createdAt })
+      .values({ id: BigInt(guildId), createdAt })
       .onConflictDoNothing({ target: guild.id });
     logger.debug('guild upserted', { 'row.count': rowCount });
   });

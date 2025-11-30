@@ -91,7 +91,7 @@ async function resendConfession(
       .leftJoin(attachment, eq(confession.attachmentId, attachment.id))
       .where(
         and(
-          eq(confession.channelId, confessionChannelId),
+          eq(confession.channelId, BigInt(confessionChannelId)),
           eq(confession.confessionId, confessionId),
         ),
       )

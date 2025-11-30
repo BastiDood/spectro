@@ -75,6 +75,7 @@ export const logConfession = inngest.createFunction(
         });
 
         const mode: LogPayloadMode =
+          // eslint-disable-next-line no-nested-ternary
           typeof event.data.moderatorId === 'undefined'
             ? confession.channel.isApprovalRequired
               ? { type: LogPayloadType.Pending, internalId: BigInt(confession.internalId) }
@@ -85,7 +86,7 @@ export const logConfession = inngest.createFunction(
         let message: Message;
         try {
           message = await createMessage(
-            BigInt(confession.channel.logChannelId),
+            confession.channel.logChannelId,
             createLogPayload(confession, mode),
             DISCORD_BOT_TOKEN,
           );
@@ -105,6 +106,7 @@ export const logConfession = inngest.createFunction(
                     confessionId: confession.confessionId,
                     channel: ConfessionChannel.Log,
                     status:
+                      // eslint-disable-next-line no-nested-ternary
                       typeof event.data.moderatorId === 'undefined'
                         ? confession.channel.isApprovalRequired
                           ? 'submitted, but its publication is pending approval'
@@ -120,9 +122,9 @@ export const logConfession = inngest.createFunction(
         }
 
         logger.trace('confession logged', {
-          'discord.message.id': message.id.toString(),
-          'discord.channel.id': message.channel_id.toString(),
-          'discord.message.timestamp': message.timestamp.toISOString(),
+          'discord.message.id': message.id,
+          'discord.channel.id': message.channel_id,
+          'discord.message.timestamp': message.timestamp,
         });
 
         return { type: Result.Success } as Success;
@@ -140,9 +142,9 @@ export const logConfession = inngest.createFunction(
                 `Spectro has received your confession, but the moderators have not yet configured a channel for logging confessions. Kindly remind the server moderators to set up the logging channel and ask them resend your confession: ${result.channelLabel} #${result.confessionId}.`,
               );
               logger.info('missing channel message sent', {
-                'discord.message.id': message.id.toString(),
-                'discord.message.channel.id': message.channel_id.toString(),
-                'discord.message.timestamp': message.timestamp.toISOString(),
+                'discord.message.id': message.id,
+                'discord.message.channel.id': message.channel_id,
+                'discord.message.timestamp': message.timestamp,
               });
             },
           );
@@ -151,11 +153,14 @@ export const logConfession = inngest.createFunction(
           await step.run({ id: 'send-failure', name: 'Send Failure Message' }, async () => {
             const message = await sendFollowupMessage(event.data.interactionToken, result.message);
             logger.info('failure message sent', {
-              'discord.message.id': message.id.toString(),
-              'discord.message.channel.id': message.channel_id.toString(),
-              'discord.message.timestamp': message.timestamp.toISOString(),
+              'discord.message.id': message.id,
+              'discord.message.channel.id': message.channel_id,
+              'discord.message.timestamp': message.timestamp,
             });
           });
+          break;
+        default:
+          result satisfies never;
       }
     });
   },

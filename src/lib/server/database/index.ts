@@ -7,7 +7,6 @@ import { eq, sql } from 'drizzle-orm';
 
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import * as schema from './models';
 import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from './error';
@@ -31,7 +30,7 @@ const CONFESSION_ATTACHMENT_ID = sql.raw(schema.confession.attachmentId.name);
 
 const GUILD_LAST_CONFESSION_ID = sql.raw(schema.guild.lastConfessionId.name);
 
-function updateLastConfession(db: Interface, guildId: Snowflake) {
+function updateLastConfession(db: Interface, guildId: bigint) {
   return db
     .update(schema.guild)
     .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
@@ -45,7 +44,7 @@ export type InsertableAttachment = Pick<
 >;
 async function insertAttachmentData(db: Interface, attachment: InsertableAttachment) {
   const { rowCount } = await db.insert(schema.attachment).values({
-    id: attachment.id,
+    id: BigInt(attachment.id),
     filename: attachment.filename,
     contentType: attachment.content_type,
     url: attachment.url,
@@ -57,18 +56,18 @@ async function insertAttachmentData(db: Interface, attachment: InsertableAttachm
 export async function insertConfession(
   db: Transaction,
   timestamp: Date,
-  guildId: Snowflake,
-  channelId: Snowflake,
-  authorId: Snowflake,
+  guildId: bigint,
+  channelId: bigint,
+  authorId: bigint,
   description: string,
   approvedAt: Date | null,
-  parentMessageId: Snowflake | null,
+  parentMessageId: bigint | null,
   attachment: InsertableAttachment | null,
   shouldInsertAttachment: boolean,
 ) {
   let attachmentId: bigint | null = null;
   if (attachment !== null) {
-    attachmentId = attachment.id;
+    attachmentId = BigInt(attachment.id);
     if (shouldInsertAttachment) await insertAttachmentData(db, attachment);
   }
 
@@ -93,11 +92,7 @@ export async function insertConfession(
  * @throws {MissingRowCountDatabaseError}
  * @throws {UnexpectedRowCountDatabaseError}
  */
-export async function disableConfessionChannel(
-  db: Interface,
-  channelId: Snowflake,
-  disabledAt: Date,
-) {
+export async function disableConfessionChannel(db: Interface, channelId: bigint, disabledAt: Date) {
   const { rowCount } = await db
     .update(schema.channel)
     .set({ disabledAt })
@@ -118,7 +113,7 @@ export async function disableConfessionChannel(
  * @throws {MissingRowCountDatabaseError}
  * @throws {UnexpectedRowCountDatabaseError}
  */
-export async function resetLogChannel(db: Interface, channelId: Snowflake) {
+export async function resetLogChannel(db: Interface, channelId: bigint) {
   const { rowCount } = await db
     .update(schema.channel)
     .set({ logChannelId: null })

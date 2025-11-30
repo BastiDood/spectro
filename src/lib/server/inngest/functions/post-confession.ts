@@ -62,7 +62,7 @@ export const postConfession = inngest.createFunction(
           let message: Message;
           try {
             message = await createMessage(
-              BigInt(confession.channelId),
+              confession.channelId,
               createConfessionPayload(confession),
               DISCORD_BOT_TOKEN,
             );
@@ -88,9 +88,9 @@ export const postConfession = inngest.createFunction(
           }
 
           logger.info('confession published', {
-            'discord.message.id': message.id.toString(),
-            'discord.message.channel.id': message.channel_id.toString(),
-            'discord.message.timestamp': message.timestamp.toISOString(),
+            'discord.message.id': message.id,
+            'discord.message.channel.id': message.channel_id,
+            'discord.message.timestamp': message.timestamp,
           });
 
           return {
@@ -112,9 +112,9 @@ export const postConfession = inngest.createFunction(
         }
         const message = await sendFollowupMessage(event.data.interactionToken, acknowledgement);
         logger.info('acknowledgement sent', {
-          'discord.message.id': message.id.toString(),
-          'discord.message.channel.id': message.channel_id.toString(),
-          'discord.message.timestamp': message.timestamp.toISOString(),
+          'discord.message.id': message.id,
+          'discord.message.channel.id': message.channel_id,
+          'discord.message.timestamp': message.timestamp,
         });
       });
     });

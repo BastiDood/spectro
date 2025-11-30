@@ -61,9 +61,9 @@ async function submitReply(
 ) {
   return await tracer.asyncSpan('submit-reply', async span => {
     span.setAttributes({
-      'channel.id': confessionChannelId.toString(),
-      'author.id': authorId.toString(),
-      'parent.message.id': parentMessageId.toString(),
+      'channel.id': confessionChannelId,
+      'author.id': authorId,
+      'parent.message.id': parentMessageId,
     });
 
     if (!hasAllPermissions(permissions, SEND_MESSAGES))
@@ -78,7 +78,7 @@ async function submitReply(
         label: true,
       },
       where({ id }, { eq }) {
-        return eq(id, confessionChannelId);
+        return eq(id, BigInt(confessionChannelId));
       },
     });
 
@@ -102,11 +102,11 @@ async function submitReply(
           tx,
           timestamp,
           guildId,
-          confessionChannelId,
-          authorId,
+          BigInt(confessionChannelId),
+          BigInt(authorId),
           content,
           isApprovalRequired ? null : timestamp,
-          parentMessageId,
+          BigInt(parentMessageId),
           null,
           true,
         ),
@@ -152,7 +152,7 @@ export async function handleReplySubmit(
 
   strictEqual(component?.type, MessageComponentType.TextInput);
   assert(typeof component.value !== 'undefined');
-  const parentMessageId = BigInt(component.custom_id);
+  const parentMessageId = component.custom_id;
 
   try {
     return await submitReply(

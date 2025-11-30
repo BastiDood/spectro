@@ -74,16 +74,14 @@ export function createConfessionPayload(
   confession: SerializedConfessionForDispatch | SerializedConfessionForResend,
   timestampOverride?: Date,
 ) {
-  const confessionId = BigInt(confession.confessionId);
   const hex = confession.channel.color ? Number.parseInt(confession.channel.color, 2) : void 0;
-  const parentMessageId = confession.parentMessageId ? BigInt(confession.parentMessageId) : null;
   const attachment = deserializeAttachment(confession.attachment);
 
   const embed: Embed = {
     type: EmbedType.Rich,
-    title: `${confession.channel.label} #${confessionId}`,
+    title: `${confession.channel.label} #${confession.confessionId}`,
     description: confession.content,
-    timestamp: timestampOverride ?? new Date(confession.createdAt),
+    timestamp: timestampOverride?.toISOString() ?? confession.createdAt,
     color: hex,
     footer: {
       text: "Admins can access Spectro's confession logs",
@@ -94,7 +92,7 @@ export function createConfessionPayload(
   if (attachment !== null)
     if (attachment.content_type?.includes('image') === true)
       embed.image = {
-        url: new URL(attachment.url),
+        url: attachment.url,
         height: attachment.height ?? void 0,
         width: attachment.width ?? void 0,
       };
@@ -102,10 +100,10 @@ export function createConfessionPayload(
 
   const params: CreateMessage = { embeds: [embed] };
 
-  if (parentMessageId !== null)
+  if (confession.parentMessageId !== null)
     params.message_reference = {
       type: MessageReferenceType.Default,
-      message_id: parentMessageId,
+      message_id: confession.parentMessageId,
       fail_if_not_exists: false,
     };
 
@@ -117,11 +115,11 @@ export function createLogPayload(
   confession: SerializedConfessionForLog | SerializedConfessionForResend,
   mode: LogPayloadMode,
 ) {
-  const confessionId = BigInt(confession.confessionId);
-  const authorId = BigInt(confession.authorId);
   const attachment = deserializeAttachment(confession.attachment);
 
-  const fields: EmbedField[] = [{ name: 'Authored by', value: `||<@${authorId}>||`, inline: true }];
+  const fields: EmbedField[] = [
+    { name: 'Authored by', value: `||<@${confession.authorId}>||`, inline: true },
+  ];
 
   if (mode.type === LogPayloadType.Resent)
     fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
@@ -133,7 +131,7 @@ export function createLogPayload(
     // Resent mode does not embed images
     if (mode.type !== LogPayloadType.Resent && attachment.content_type?.startsWith('image/'))
       image = {
-        url: new URL(attachment.url),
+        url: attachment.url,
         height: attachment.height ?? void 0,
         width: attachment.width ?? void 0,
       };
@@ -156,14 +154,14 @@ export function createLogPayload(
   }
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
-  let timestamp: Date;
+  let timestamp: string;
   switch (mode.type) {
     case LogPayloadType.Resent:
-      timestamp = new Date();
+      timestamp = new Date().toISOString();
       break;
     case LogPayloadType.Approved:
     case LogPayloadType.Pending:
-      timestamp = new Date(confession.createdAt);
+      timestamp = confession.createdAt;
       break;
     default:
       fail('unreachable');
@@ -175,7 +173,7 @@ export function createLogPayload(
     embeds: [
       {
         type: EmbedType.Rich,
-        title: `${confession.channel.label} #${confessionId}`,
+        title: `${confession.channel.label} #${confession.confessionId}`,
         color,
         timestamp,
         description: confession.content,

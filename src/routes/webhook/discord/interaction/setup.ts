@@ -28,9 +28,9 @@ async function enableConfessions(
 ) {
   return await tracer.asyncSpan('enable-confessions', async span => {
     span.setAttributes({
-      'log.channel.id': logChannelId.toString(),
-      'guild.id': guildId.toString(),
-      'channel.id': channelId.toString(),
+      'log.channel.id': logChannelId,
+      'guild.id': guildId,
+      'channel.id': channelId,
     });
     if (typeof label !== 'undefined') span.setAttribute('label', label);
     if (typeof color !== 'undefined') span.setAttribute('color', color);
@@ -50,9 +50,9 @@ async function enableConfessions(
     const [result, ...otherResults] = await db
       .insert(channel)
       .values({
-        id: channelId,
-        guildId,
-        logChannelId,
+        id: BigInt(channelId),
+        guildId: BigInt(guildId),
+        logChannelId: BigInt(logChannelId),
         label,
         isApprovalRequired,
         color: color?.toString(2).padStart(24, '0'),
@@ -66,7 +66,7 @@ async function enableConfessions(
     // TODO: Send a test message to the log channel.
     // TODO: Send a test message to the confession channel.
 
-    logger.info('confessions enabled', { 'channel.id': channelId.toString() });
+    logger.info('confessions enabled', { 'channel.id': channelId });
     return result;
   });
 }
@@ -116,7 +116,7 @@ export async function handleSetup(
     }
 
   assert(typeof channel !== 'undefined');
-  strictEqual(resolvedChannels[channel.toString()]?.type, ChannelType.GuildText);
+  strictEqual(resolvedChannels[channel]?.type, ChannelType.GuildText);
 
   const result = await enableConfessions(
     channel,
