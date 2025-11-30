@@ -15,6 +15,6 @@ export async function handleApplicationAuthorized(createdAt: Date, guildId: Snow
       .insert(guild)
       .values({ id: BigInt(guildId), createdAt })
       .onConflictDoNothing({ target: guild.id });
-    logger.debug('guild upserted', { 'row.count': rowCount });
+    logger.info('guild authorized application', { 'row.count': rowCount });
   });
 }
