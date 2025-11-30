@@ -2,8 +2,11 @@ import assert, { strictEqual } from 'node:assert/strict';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { MessageComponents } from '$lib/server/models/discord/message/component';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { db, type InsertableAttachment } from '$lib/server/database';
 
@@ -21,7 +24,7 @@ export async function handleConfessSubmit(
   authorId: Snowflake,
   permissions: bigint,
   [row, ...otherRows]: MessageComponents,
-) {
+): Promise<InteractionResponse> {
   return await tracer.asyncSpan('handle-confess-submit', async span => {
     span.setAttributes({ 'channel.id': channelId, 'author.id': authorId });
 
@@ -75,7 +78,7 @@ export async function handleConfessSubmit(
     if (attachmentId !== null) span.setAttribute('attachment.id', attachmentId.toString());
 
     try {
-      return await submitConfession(
+      await submitConfession(
         timestamp,
         interactionToken,
         permissions,
@@ -88,9 +91,17 @@ export async function handleConfessSubmit(
     } catch (err) {
       if (err instanceof ConfessError) {
         logger.error(err.message, err);
-        return err.message;
+        return {
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: { flags: MessageFlags.Ephemeral, content: err.message },
+        };
       }
       throw err;
     }
+
+    return {
+      type: InteractionResponseType.DeferredChannelMessageWithSource,
+      data: { flags: MessageFlags.Ephemeral },
+    };
   });
 }

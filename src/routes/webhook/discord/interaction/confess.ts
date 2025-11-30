@@ -95,10 +95,8 @@ export async function handleConfess(
       } satisfies InteractionResponseModal;
     }
 
-    // eslint-disable-next-line @typescript-eslint/init-declarations
-    let confession: string;
     try {
-      confession = await submitConfession(
+      await submitConfession(
         timestamp,
         interactionToken,
         permissions,
@@ -113,21 +111,15 @@ export async function handleConfess(
         logger.error(err.message, err);
         return {
           type: InteractionResponseType.ChannelMessageWithSource,
-          data: {
-            flags: MessageFlags.Ephemeral,
-            content: err.message,
-          },
+          data: { flags: MessageFlags.Ephemeral, content: err.message },
         };
       }
       throw err;
     }
 
     return {
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: {
-        flags: MessageFlags.Ephemeral,
-        content: confession,
-      },
+      type: InteractionResponseType.DeferredChannelMessageWithSource,
+      data: { flags: MessageFlags.Ephemeral },
     };
   });
 }

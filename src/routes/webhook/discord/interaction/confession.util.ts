@@ -108,7 +108,7 @@ export async function submitConfession(
     });
 
     if (typeof channel === 'undefined') throw new UnknownChannelConfessError();
-    const { logChannelId, guildId, disabledAt, label, isApprovalRequired } = channel;
+    const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
     logger.debug('channel found', {
       'guild.id': channel.guildId.toString(),
@@ -150,12 +150,10 @@ export async function submitConfession(
         internalId: internalId.toString(),
       },
     });
-    logger.debug('inngest event emitted', { 'inngest.events.id': ids });
 
     logger.info(isApprovalRequired ? 'confession pending approval' : 'confession submitted', {
+      'inngest.events.id': ids,
       'confession.id': confessionId.toString(),
     });
-
-    return `${label} #${confessionId} has been submitted.`;
   });
 }

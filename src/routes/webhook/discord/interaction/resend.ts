@@ -11,6 +11,9 @@ import { inngest } from '$lib/server/inngest/client';
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { hasAllPermissions } from './util';
@@ -99,7 +102,7 @@ async function resendConfession(
     strictEqual(others.length, 0);
 
     if (typeof result === 'undefined') throw new ConfessionNotFoundResendError(confessionId);
-    const { internalId, approvedAt, logChannelId, label, retrievedAttachment } = result;
+    const { internalId, approvedAt, logChannelId, retrievedAttachment } = result;
 
     logger.debug('confession found', {
       label: result.label,
@@ -122,10 +125,11 @@ async function resendConfession(
         moderatorId: moderatorId.toString(),
       },
     });
-    logger.debug('inngest event emitted', { 'inngest.events.id': ids });
 
-    logger.info('confession resend submitted', { 'confession.id': confessionId.toString() });
-    return `${label} #${confessionId} has been submitted for resend.`;
+    logger.info('confession resend submitted', {
+      'inngest.events.id': ids,
+      'confession.id': confessionId.toString(),
+    });
   });
 }
 
@@ -135,25 +139,27 @@ export async function handleResend(
   channelId: Snowflake,
   moderatorId: Snowflake,
   [option, ...options]: InteractionApplicationCommandChatInputOption[],
-) {
+): Promise<InteractionResponse> {
   strictEqual(options.length, 0);
   strictEqual(option?.type, InteractionApplicationCommandChatInputOptionType.Integer);
   strictEqual(option.name, 'confession');
 
   const confessionId = BigInt(option.value);
   try {
-    return await resendConfession(
-      interactionToken,
-      permission,
-      channelId,
-      confessionId,
-      moderatorId,
-    );
+    await resendConfession(interactionToken, permission, channelId, confessionId, moderatorId);
   } catch (err) {
     if (err instanceof ResendError) {
       logger.error(err.message, err);
-      return err.message;
+      return {
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: { flags: MessageFlags.Ephemeral, content: err.message },
+      };
     }
     throw err;
   }
+
+  return {
+    type: InteractionResponseType.DeferredChannelMessageWithSource,
+    data: { flags: MessageFlags.Ephemeral },
+  };
 }

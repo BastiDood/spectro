@@ -5,8 +5,11 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import { db, insertConfession } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { MessageComponents } from '$lib/server/models/discord/message/component';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
 
@@ -83,7 +86,7 @@ async function submitReply(
     });
 
     assert(typeof channel !== 'undefined');
-    const { logChannelId, guildId, disabledAt, label, isApprovalRequired } = channel;
+    const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
     logger.debug('channel found', {
       'guild.id': channel.guildId.toString(),
@@ -125,13 +128,11 @@ async function submitReply(
         internalId: internalId.toString(),
       },
     });
-    logger.debug('inngest event emitted', { 'inngest.events.id': ids });
 
     logger.info(isApprovalRequired ? 'reply pending approval' : 'reply submitted', {
+      'inngest.events.id': ids,
       'confession.id': confessionId.toString(),
     });
-
-    return `${label} #${confessionId} has been submitted.`;
   });
 }
 
@@ -142,7 +143,7 @@ export async function handleReplySubmit(
   authorId: Snowflake,
   permissions: bigint,
   [row, ...otherRows]: MessageComponents,
-) {
+): Promise<InteractionResponse> {
   strictEqual(otherRows.length, 0);
   assert(typeof row !== 'undefined');
 
@@ -155,7 +156,7 @@ export async function handleReplySubmit(
   const parentMessageId = component.custom_id;
 
   try {
-    return await submitReply(
+    await submitReply(
       timestamp,
       interactionToken,
       permissions,
@@ -167,8 +168,16 @@ export async function handleReplySubmit(
   } catch (err) {
     if (err instanceof ReplySubmitError) {
       logger.error(err.message, err);
-      return err.message;
+      return {
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: { flags: MessageFlags.Ephemeral, content: err.message },
+      };
     }
     throw err;
   }
+
+  return {
+    type: InteractionResponseType.DeferredChannelMessageWithSource,
+    data: { flags: MessageFlags.Ephemeral },
+  };
 }

@@ -103,19 +103,13 @@ async function handleInteraction(
               assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
-              return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                  flags: MessageFlags.Ephemeral,
-                  content: await handleResend(
-                    interaction.token,
-                    interaction.member.permissions,
-                    interaction.channel_id,
-                    interaction.member.user.id,
-                    interaction.data.options ?? [],
-                  ),
-                },
-              };
+              return await handleResend(
+                interaction.token,
+                interaction.member.permissions,
+                interaction.channel_id,
+                interaction.member.user.id,
+                interaction.data.options ?? [],
+              );
             case 'info':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
@@ -167,38 +161,26 @@ async function handleInteraction(
           assert(typeof interaction.channel_id !== 'undefined');
           assert(typeof interaction.member?.user !== 'undefined');
           assert(typeof interaction.member.permissions !== 'undefined');
-          return {
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-              flags: MessageFlags.Ephemeral,
-              content: await handleReplySubmit(
-                timestamp,
-                interaction.token,
-                interaction.channel_id,
-                interaction.member.user.id,
-                interaction.member.permissions,
-                interaction.data.components,
-              ),
-            },
-          };
+          return await handleReplySubmit(
+            timestamp,
+            interaction.token,
+            interaction.channel_id,
+            interaction.member.user.id,
+            interaction.member.permissions,
+            interaction.data.components,
+          );
         case 'confess':
           assert(typeof interaction.channel_id !== 'undefined');
           assert(typeof interaction.member?.user !== 'undefined');
           assert(typeof interaction.member.permissions !== 'undefined');
-          return {
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-              flags: MessageFlags.Ephemeral,
-              content: await handleConfessSubmit(
-                timestamp,
-                interaction.token,
-                interaction.channel_id,
-                interaction.member.user.id,
-                interaction.member.permissions,
-                interaction.data.components,
-              ),
-            },
-          };
+          return await handleConfessSubmit(
+            timestamp,
+            interaction.token,
+            interaction.channel_id,
+            interaction.member.user.id,
+            interaction.member.permissions,
+            interaction.data.components,
+          );
         default:
           fail(`unexpected modal submit ${interaction.data.custom_id}`);
           break;
