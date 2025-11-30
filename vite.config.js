@@ -3,4 +3,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 import tailwind from '@tailwindcss/vite';
 
-export default defineConfig({ plugins: [tailwind(), sveltekit()] });
+export default defineConfig({
+  plugins: [tailwind(), sveltekit()],
+  server: { allowedHosts: ['host.docker.internal'] },
+});
