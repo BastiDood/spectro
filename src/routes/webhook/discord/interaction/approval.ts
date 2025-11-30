@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import { type Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -255,8 +255,10 @@ export async function handleApproval(
       throw new MalformedCustomIdFormat(key);
   }
 
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let embed: Embed;
   try {
-    const embed = await submitVerdict(
+    embed = await submitVerdict(
       timestamp,
       interactionToken,
       isApproved,
@@ -264,10 +266,6 @@ export async function handleApproval(
       userId,
       permissions,
     );
-    return {
-      type: InteractionResponseType.UpdateMessage,
-      data: { components: [], embeds: [embed] },
-    };
   } catch (err) {
     if (err instanceof ApprovalError) {
       logger.error(err.message, err);
@@ -278,4 +276,9 @@ export async function handleApproval(
     }
     throw err;
   }
+
+  return {
+    type: InteractionResponseType.UpdateMessage,
+    data: { components: [], embeds: [embed] },
+  };
 }
