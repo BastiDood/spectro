@@ -2,7 +2,7 @@ name: spectro
 
 services:
   db:
-    image: postgres:18.1-alpine3.22
+    image: postgres:18.1-alpine3.23
     environment:
       # Development-only credentials!
       POSTGRES_PASSWORD: password
@@ -20,7 +20,7 @@ services:
       retries: 10
     restart: always
   inngest:
-    image: inngest/inngest:v1.14.0
+    image: inngest/inngest:v1.14.3
     ports:
       - 8288:8288
     command:
