@@ -88,11 +88,19 @@ export async function submitConfession(
         'attachment.filename': attachment.filename,
       });
 
-    if (!hasAllPermissions(permission, SEND_MESSAGES))
+    if (!hasAllPermissions(permission, SEND_MESSAGES)) {
+      logger.error('insufficient send messages permission', void 0, {
+        permissions: permission.toString(),
+      });
       throw new InsufficientSendMessagesConfessionError();
+    }
 
-    if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
+    if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES)) {
+      logger.error('insufficient attach files permission', void 0, {
+        permissions: permission.toString(),
+      });
       throw new InsufficientPermissionsConfessionError();
+    }
 
     const channel = await db.query.channel.findFirst({
       columns: {
@@ -107,7 +115,10 @@ export async function submitConfession(
       },
     });
 
-    if (typeof channel === 'undefined') throw new UnknownChannelConfessError();
+    if (typeof channel === 'undefined') {
+      logger.error('unknown confession channel');
+      throw new UnknownChannelConfessError();
+    }
     const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
     logger.debug('channel found', {
@@ -116,9 +127,16 @@ export async function submitConfession(
       'approval.required': channel.isApprovalRequired,
     });
 
-    if (disabledAt !== null && disabledAt <= timestamp)
+    if (disabledAt !== null && disabledAt <= timestamp) {
+      logger.warn('confession channel disabled', {
+        'disabled.at': disabledAt.toISOString(),
+      });
       throw new DisabledChannelConfessError(disabledAt);
-    if (logChannelId === null) throw new MissingLogConfessError();
+    }
+    if (logChannelId === null) {
+      logger.error('missing log channel for confession');
+      throw new MissingLogConfessError();
+    }
 
     // Insert confession to database
     const { internalId, confessionId } = await db.transaction(

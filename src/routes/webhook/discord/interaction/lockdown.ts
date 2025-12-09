@@ -30,6 +30,8 @@ async function disableConfessions(disabledAt: Date, channelId: Snowflake) {
       logger.info('confessions disabled', { 'channel.id': channelId });
       return;
     }
+
+    logger.error('channel not setup for lockdown');
     throw new ChannelNotSetupLockdownError();
   });
 }

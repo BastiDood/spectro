@@ -43,12 +43,21 @@ export const postConfession = inngest.createFunction(
         async () => {
           // We refetch per step to avoid caching sensitive confessions in Inngest.
           const confession = await fetchConfessionForDispatch(db, BigInt(event.data.internalId));
-          if (confession === null) throw new NonRetriableError('confession not found');
+          if (confession === null) {
+            logger.error('confession not found for post', void 0, {
+              'confession.internal.id': event.data.internalId,
+            });
+            throw new NonRetriableError('confession not found');
+          }
 
           // Should be impossible to reach this case because we were
           // presumably approved prior to dispatching this Inngest event.
-          if (confession.approvedAt === null)
+          if (confession.approvedAt === null) {
+            logger.error('confession not yet approved for post', void 0, {
+              'confession.internal.id': event.data.internalId,
+            });
             throw new NonRetriableError('confession not yet approved');
+          }
 
           logger.debug('fetched confession', {
             'confession.created': confession.createdAt,

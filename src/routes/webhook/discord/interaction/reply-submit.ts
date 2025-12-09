@@ -5,6 +5,7 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import { db, insertConfession } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 
+import { assertDefined } from '$lib/assert';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
@@ -69,23 +70,28 @@ async function submitReply(
       'parent.message.id': parentMessageId,
     });
 
-    if (!hasAllPermissions(permissions, SEND_MESSAGES))
+    if (!hasAllPermissions(permissions, SEND_MESSAGES)) {
+      logger.error('insufficient permissions for reply submit', void 0, {
+        permissions: permissions.toString(),
+      });
       throw new InsufficientPermissionsReplySubmitError();
+    }
 
-    const channel = await db.query.channel.findFirst({
-      columns: {
-        logChannelId: true,
-        guildId: true,
-        disabledAt: true,
-        isApprovalRequired: true,
-        label: true,
-      },
-      where({ id }, { eq }) {
-        return eq(id, BigInt(confessionChannelId));
-      },
-    });
+    const channel = await db.query.channel
+      .findFirst({
+        columns: {
+          logChannelId: true,
+          guildId: true,
+          disabledAt: true,
+          isApprovalRequired: true,
+          label: true,
+        },
+        where({ id }, { eq }) {
+          return eq(id, BigInt(confessionChannelId));
+        },
+      })
+      .then(assertDefined);
 
-    assert(typeof channel !== 'undefined');
     const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
     logger.debug('channel found', {
@@ -94,9 +100,16 @@ async function submitReply(
       'approval.required': channel.isApprovalRequired,
     });
 
-    if (disabledAt !== null && disabledAt <= timestamp)
+    if (disabledAt !== null && disabledAt <= timestamp) {
+      logger.warn('channel disabled for reply submit', {
+        'disabled.at': disabledAt.toISOString(),
+      });
       throw new DisabledChannelReplySubmitError(disabledAt);
-    if (logChannelId === null) throw new MissingLogChannelReplySubmitError();
+    }
+    if (logChannelId === null) {
+      logger.error('missing log channel for reply submit');
+      throw new MissingLogChannelReplySubmitError();
+    }
 
     // Insert reply to database
     const { internalId, confessionId } = await db.transaction(

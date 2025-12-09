@@ -8,9 +8,13 @@ import { eq, sql } from 'drizzle-orm';
 import { assertOptional } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
+import { Logger } from '$lib/server/telemetry/logger';
 
 import * as schema from './models';
 import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from './error';
+
+const SERVICE_NAME = 'database';
+const logger = new Logger(SERVICE_NAME);
 
 const pool = new pg.Pool({ connectionString: POSTGRES_DATABASE_URL });
 process.once('sveltekit:shutdown', () => void pool.end());
@@ -100,12 +104,19 @@ export async function disableConfessionChannel(db: Interface, channelId: bigint,
     .where(eq(schema.channel.id, channelId));
   switch (rowCount) {
     case null:
+      logger.error('missing row count in disableConfessionChannel', void 0, {
+        'channel.id': channelId.toString(),
+      });
       throw new MissingRowCountDatabaseError();
     case 0:
       return false;
     case 1:
       return true;
     default:
+      logger.error('unexpected row count in disableConfessionChannel', void 0, {
+        'channel.id': channelId.toString(),
+        'row.count': rowCount,
+      });
       throw new UnexpectedRowCountDatabaseError(rowCount);
   }
 }
@@ -121,12 +132,19 @@ export async function resetLogChannel(db: Interface, channelId: bigint) {
     .where(eq(schema.channel.id, channelId));
   switch (rowCount) {
     case null:
+      logger.error('missing row count in resetLogChannel', void 0, {
+        'channel.id': channelId.toString(),
+      });
       throw new MissingRowCountDatabaseError();
     case 0:
       return false;
     case 1:
       return true;
     default:
+      logger.error('unexpected row count in resetLogChannel', void 0, {
+        'channel.id': channelId.toString(),
+        'row.count': rowCount,
+      });
       throw new UnexpectedRowCountDatabaseError(rowCount);
   }
 }
@@ -219,7 +237,12 @@ export async function fetchConfessionForDispatch(db: Interface, confessionIntern
     .limit(1)
     .then(assertOptional);
 
-  if (typeof result === 'undefined') return null;
+  if (typeof result === 'undefined') {
+    logger.warn('confession not found for dispatch', {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    return null;
+  }
 
   let attachment: SerializedAttachment | null = null;
   if (result.attachmentId !== null) {
@@ -277,7 +300,12 @@ export async function fetchConfessionForLog(db: Interface, confessionInternalId:
     .limit(1)
     .then(assertOptional);
 
-  if (typeof result === 'undefined') return null;
+  if (typeof result === 'undefined') {
+    logger.warn('confession not found for log', {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    return null;
+  }
 
   let attachment: SerializedAttachment | null = null;
   if (result.attachmentId !== null) {
@@ -337,7 +365,12 @@ export async function fetchConfessionForResend(db: Interface, confessionInternal
     .limit(1)
     .then(assertOptional);
 
-  if (typeof result === 'undefined') return null;
+  if (typeof result === 'undefined') {
+    logger.warn('confession not found for resend', {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    return null;
+  }
 
   let attachment: SerializedAttachment | null = null;
   if (result.attachmentId !== null) {

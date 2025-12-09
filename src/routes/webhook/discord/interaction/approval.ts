@@ -73,8 +73,12 @@ async function submitVerdict(
       'verdict.approved': isApproved,
     });
 
-    if (!hasAllPermissions(permissions, MANAGE_MESSAGES))
+    if (!hasAllPermissions(permissions, MANAGE_MESSAGES)) {
+      logger.error('insufficient permissions for approval', void 0, {
+        permissions: permissions.toString(),
+      });
       throw new InsufficientPermissionsApprovalError();
+    }
 
     return await db.transaction(async tx => {
       const [details, ...rest] = await tx
@@ -122,10 +126,19 @@ async function submitVerdict(
         label: details.label,
       });
 
-      if (disabledAt !== null && disabledAt <= timestamp)
+      if (disabledAt !== null && disabledAt <= timestamp) {
+        logger.warn('channel disabled for approval', {
+          'disabled.at': disabledAt.toISOString(),
+        });
         throw new DisabledChannelConfessError(disabledAt);
+      }
 
-      if (approvedAt !== null) throw new AlreadyApprovedApprovalError(approvedAt);
+      if (approvedAt !== null) {
+        logger.error('confession already approved', void 0, {
+          'approved.at': approvedAt.toISOString(),
+        });
+        throw new AlreadyApprovedApprovalError(approvedAt);
+      }
 
       if (isApproved) {
         const { rowCount } = await tx
@@ -252,6 +265,10 @@ export async function handleApproval(
       isApproved = false;
       break;
     default:
+      logger.error('malformed custom id format', void 0, {
+        'custom.id': customId,
+        key,
+      });
       throw new MalformedCustomIdFormat(key);
   }
 

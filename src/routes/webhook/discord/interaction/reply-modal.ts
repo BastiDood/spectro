@@ -64,7 +64,11 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
       },
     });
 
-    if (typeof channel === 'undefined') throw new UnknownChannelReplyModalError();
+    if (typeof channel === 'undefined') {
+      logger.error('unknown channel for reply modal');
+      throw new UnknownChannelReplyModalError();
+    }
+
     const { disabledAt, isApprovalRequired } = channel;
 
     logger.debug('channel found', {
@@ -72,9 +76,16 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
       'approval.required': channel.isApprovalRequired,
     });
 
-    if (disabledAt !== null && disabledAt <= timestamp)
+    if (disabledAt !== null && disabledAt <= timestamp) {
+      logger.warn('channel disabled for reply modal', {
+        'disabled.at': disabledAt.toISOString(),
+      });
       throw new DisabledChannelReplyModalError(disabledAt);
-    if (isApprovalRequired) throw new ApprovalRequiredReplyModalError();
+    }
+    if (isApprovalRequired) {
+      logger.warn('approval required for reply modal');
+      throw new ApprovalRequiredReplyModalError();
+    }
 
     logger.debug('reply modal prompted');
     return {

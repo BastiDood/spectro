@@ -38,6 +38,11 @@ export async function createMessage(channelId: Snowflake, data: CreateMessage, b
     }
 
     const { code, message } = parse(DiscordErrorResponse, json);
+    logger.error('discord api error in createMessage', void 0, {
+      'discord.error.code': code,
+      'discord.error.message': message,
+      'discord.channel.id': channelId,
+    });
     throw new DiscordError(code, message);
   });
 }
@@ -75,6 +80,11 @@ export async function deferResponse(
 
     const json = await response.json();
     const { code, message } = parse(DiscordErrorResponse, json);
+    logger.error('discord api error in deferResponse', void 0, {
+      'discord.error.code': code,
+      'discord.error.message': message,
+      'discord.interaction.id': interactionId,
+    });
     throw new DiscordError(code, message);
   });
 }
@@ -111,6 +121,10 @@ export async function sendFollowupMessage(
 
     const json = await response.json();
     const { code, message } = parse(DiscordErrorResponse, json);
+    logger.error('discord api error in sendFollowupMessage', void 0, {
+      'discord.error.code': code,
+      'discord.error.message': message,
+    });
     throw new DiscordError(code, message);
   });
 }
@@ -143,6 +157,10 @@ export async function editOriginalResponse(
 
     const json = await response.json();
     const { code, message } = parse(DiscordErrorResponse, json);
+    logger.error('discord api error in editOriginalResponse', void 0, {
+      'discord.error.code': code,
+      'discord.error.message': message,
+    });
     throw new DiscordError(code, message);
   });
 }

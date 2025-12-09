@@ -8,6 +8,7 @@ import { attachment, channel, confession } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 
+import { assertOptional } from '$lib/assert';
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
@@ -79,7 +80,7 @@ async function resendConfession(
       'moderator.id': moderatorId.toString(),
     });
 
-    const [result, ...others] = await db
+    const result = await db
       .select({
         internalId: confession.internalId,
         logChannelId: channel.logChannelId,
@@ -98,10 +99,14 @@ async function resendConfession(
           eq(confession.confessionId, confessionId),
         ),
       )
-      .limit(1);
-    strictEqual(others.length, 0);
+      .limit(1)
+      .then(assertOptional);
 
-    if (typeof result === 'undefined') throw new ConfessionNotFoundResendError(confessionId);
+    if (typeof result === 'undefined') {
+      logger.error('confession not found for resend');
+      throw new ConfessionNotFoundResendError(confessionId);
+    }
+
     const { internalId, approvedAt, logChannelId, retrievedAttachment } = result;
 
     logger.debug('confession found', {
@@ -109,12 +114,21 @@ async function resendConfession(
       'internal.id': result.internalId.toString(),
     });
 
-    if (approvedAt === null) throw new PendingApprovalResendError(confessionId);
-    if (logChannelId === null) throw new MissingLogChannelResendError();
+    if (approvedAt === null) {
+      logger.error('confession pending approval for resend');
+      throw new PendingApprovalResendError(confessionId);
+    }
+
+    if (logChannelId === null) {
+      logger.error('missing log channel for resend');
+      throw new MissingLogChannelResendError();
+    }
 
     // Check permission if attachment exists
-    if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
+    if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES)) {
+      logger.error('insufficient permissions for resend with attachment');
       throw new InsufficientPermissionsResendError();
+    }
 
     // Emit Inngest event for async processing (fans out to post-confession + log-confession)
     const { ids } = await inngest.send({
