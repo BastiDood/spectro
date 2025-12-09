@@ -5,6 +5,7 @@ import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq, sql } from 'drizzle-orm';
 
+import { assertOptional } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 
@@ -189,142 +190,182 @@ export interface SerializedConfessionForResend {
   attachment: SerializedAttachment | null;
 }
 
-function serializeAttachment(
-  attachment: {
-    id: bigint;
-    filename: string;
-    contentType: string | null;
-    url: string;
-    proxyUrl: string;
-  } | null,
-) {
-  return attachment === null
-    ? null
-    : ({
-        id: attachment.id.toString(),
-        filename: attachment.filename,
-        contentType: attachment.contentType,
-        url: attachment.url,
-        proxyUrl: attachment.proxyUrl,
-      } as SerializedAttachment);
-}
+// HACK: Do NOT use the Relations API (`db.query.*.findFirst()` with `with` clauses) in Drizzle.
+// The Relations API is not compatible with OpenTelemetry instrumentation, so we use plain query
+// builders with explicit `innerJoin`/`leftJoin` operations instead.
 
 /** Fetch confession for dispatch operations (post-confession, dispatch-approval) */
-export async function fetchConfessionForDispatch(confessionInternalId: bigint) {
-  const confession = await db.query.confession.findFirst({
-    where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
-    columns: {
-      confessionId: true,
-      channelId: true,
-      content: true,
-      createdAt: true,
-      approvedAt: true,
-      parentMessageId: true,
-    },
-    with: {
-      channel: {
-        columns: {
-          label: true,
-          color: true,
-        },
-      },
-      attachment: true,
-    },
-  });
-  if (typeof confession === 'undefined') return null;
+export async function fetchConfessionForDispatch(db: Interface, confessionInternalId: bigint) {
+  const result = await db
+    .select({
+      confessionId: schema.confession.confessionId,
+      channelId: schema.confession.channelId,
+      content: schema.confession.content,
+      createdAt: schema.confession.createdAt,
+      approvedAt: schema.confession.approvedAt,
+      parentMessageId: schema.confession.parentMessageId,
+      channelLabel: schema.channel.label,
+      channelColor: schema.channel.color,
+      attachmentId: schema.attachment.id,
+      attachmentFilename: schema.attachment.filename,
+      attachmentContentType: schema.attachment.contentType,
+      attachmentUrl: schema.attachment.url,
+      attachmentProxyUrl: schema.attachment.proxyUrl,
+    })
+    .from(schema.confession)
+    .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+    .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+    .where(eq(schema.confession.internalId, confessionInternalId))
+    .limit(1)
+    .then(assertOptional);
+
+  if (typeof result === 'undefined') return null;
+
+  let attachment: SerializedAttachment | null = null;
+  if (result.attachmentId !== null) {
+    assert(result.attachmentFilename !== null);
+    assert(result.attachmentUrl !== null);
+    assert(result.attachmentProxyUrl !== null);
+    attachment = {
+      id: result.attachmentId.toString(),
+      filename: result.attachmentFilename,
+      contentType: result.attachmentContentType,
+      url: result.attachmentUrl,
+      proxyUrl: result.attachmentProxyUrl,
+    };
+  }
+
   return {
-    confessionId: confession.confessionId.toString(),
-    channelId: confession.channelId.toString(),
-    content: confession.content,
-    createdAt: confession.createdAt.toISOString(),
-    approvedAt: confession.approvedAt?.toISOString() ?? null,
-    parentMessageId: confession.parentMessageId?.toString() ?? null,
+    confessionId: result.confessionId.toString(),
+    channelId: result.channelId.toString(),
+    content: result.content,
+    createdAt: result.createdAt.toISOString(),
+    approvedAt: result.approvedAt?.toISOString() ?? null,
+    parentMessageId: result.parentMessageId?.toString() ?? null,
     channel: {
-      label: confession.channel.label,
-      color: confession.channel.color,
+      label: result.channelLabel,
+      color: result.channelColor,
     },
-    attachment: serializeAttachment(confession.attachment),
-  } as SerializedConfessionForDispatch;
+    attachment,
+  } satisfies SerializedConfessionForDispatch;
 }
 
 /** Fetch confession for log operations (log-confession) */
-export async function fetchConfessionForLog(confessionInternalId: bigint) {
-  const confession = await db.query.confession.findFirst({
-    where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
-    columns: {
-      internalId: true,
-      confessionId: true,
-      channelId: true,
-      authorId: true,
-      content: true,
-      createdAt: true,
-      approvedAt: true,
-    },
-    with: {
-      channel: {
-        columns: {
-          label: true,
-          logChannelId: true,
-          isApprovalRequired: true,
-        },
-      },
-      attachment: true,
-    },
-  });
-  if (typeof confession === 'undefined') return null;
+export async function fetchConfessionForLog(db: Interface, confessionInternalId: bigint) {
+  const result = await db
+    .select({
+      internalId: schema.confession.internalId,
+      confessionId: schema.confession.confessionId,
+      channelId: schema.confession.channelId,
+      authorId: schema.confession.authorId,
+      content: schema.confession.content,
+      createdAt: schema.confession.createdAt,
+      approvedAt: schema.confession.approvedAt,
+      channelLabel: schema.channel.label,
+      channelLogChannelId: schema.channel.logChannelId,
+      channelIsApprovalRequired: schema.channel.isApprovalRequired,
+      attachmentId: schema.attachment.id,
+      attachmentFilename: schema.attachment.filename,
+      attachmentContentType: schema.attachment.contentType,
+      attachmentUrl: schema.attachment.url,
+      attachmentProxyUrl: schema.attachment.proxyUrl,
+    })
+    .from(schema.confession)
+    .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+    .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+    .where(eq(schema.confession.internalId, confessionInternalId))
+    .limit(1)
+    .then(assertOptional);
+
+  if (typeof result === 'undefined') return null;
+
+  let attachment: SerializedAttachment | null = null;
+  if (result.attachmentId !== null) {
+    assert(result.attachmentFilename !== null);
+    assert(result.attachmentUrl !== null);
+    assert(result.attachmentProxyUrl !== null);
+    attachment = {
+      id: result.attachmentId.toString(),
+      filename: result.attachmentFilename,
+      contentType: result.attachmentContentType,
+      url: result.attachmentUrl,
+      proxyUrl: result.attachmentProxyUrl,
+    };
+  }
+
   return {
-    internalId: confession.internalId.toString(),
-    confessionId: confession.confessionId.toString(),
-    channelId: confession.channelId.toString(),
-    authorId: confession.authorId.toString(),
-    content: confession.content,
-    createdAt: confession.createdAt.toISOString(),
-    approvedAt: confession.approvedAt?.toISOString() ?? null,
+    internalId: result.internalId.toString(),
+    confessionId: result.confessionId.toString(),
+    channelId: result.channelId.toString(),
+    authorId: result.authorId.toString(),
+    content: result.content,
+    createdAt: result.createdAt.toISOString(),
+    approvedAt: result.approvedAt?.toISOString() ?? null,
     channel: {
-      ...confession.channel,
-      logChannelId: confession.channel.logChannelId?.toString() ?? null,
+      label: result.channelLabel,
+      logChannelId: result.channelLogChannelId?.toString() ?? null,
+      isApprovalRequired: result.channelIsApprovalRequired,
     },
-    attachment: serializeAttachment(confession.attachment),
-  } as SerializedConfessionForLog;
+    attachment,
+  } satisfies SerializedConfessionForLog;
 }
 
 /** Fetch confession for resend operations (resend-confession) */
-export async function fetchConfessionForResend(confessionInternalId: bigint) {
-  const confession = await db.query.confession.findFirst({
-    where: ({ internalId }, { eq }) => eq(internalId, confessionInternalId),
-    columns: {
-      confessionId: true,
-      channelId: true,
-      authorId: true,
-      content: true,
-      createdAt: true,
-      approvedAt: true,
-      parentMessageId: true,
-    },
-    with: {
-      channel: {
-        columns: {
-          label: true,
-          color: true,
-          logChannelId: true,
-        },
-      },
-      attachment: true,
-    },
-  });
-  if (typeof confession === 'undefined') return null;
+export async function fetchConfessionForResend(db: Interface, confessionInternalId: bigint) {
+  const result = await db
+    .select({
+      confessionId: schema.confession.confessionId,
+      channelId: schema.confession.channelId,
+      authorId: schema.confession.authorId,
+      content: schema.confession.content,
+      createdAt: schema.confession.createdAt,
+      approvedAt: schema.confession.approvedAt,
+      parentMessageId: schema.confession.parentMessageId,
+      channelLabel: schema.channel.label,
+      channelColor: schema.channel.color,
+      channelLogChannelId: schema.channel.logChannelId,
+      attachmentId: schema.attachment.id,
+      attachmentFilename: schema.attachment.filename,
+      attachmentContentType: schema.attachment.contentType,
+      attachmentUrl: schema.attachment.url,
+      attachmentProxyUrl: schema.attachment.proxyUrl,
+    })
+    .from(schema.confession)
+    .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+    .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+    .where(eq(schema.confession.internalId, confessionInternalId))
+    .limit(1)
+    .then(assertOptional);
+
+  if (typeof result === 'undefined') return null;
+
+  let attachment: SerializedAttachment | null = null;
+  if (result.attachmentId !== null) {
+    assert(result.attachmentFilename !== null);
+    assert(result.attachmentUrl !== null);
+    assert(result.attachmentProxyUrl !== null);
+    attachment = {
+      id: result.attachmentId.toString(),
+      filename: result.attachmentFilename,
+      contentType: result.attachmentContentType,
+      url: result.attachmentUrl,
+      proxyUrl: result.attachmentProxyUrl,
+    };
+  }
+
   return {
-    confessionId: confession.confessionId.toString(),
-    channelId: confession.channelId.toString(),
-    authorId: confession.authorId.toString(),
-    content: confession.content,
-    createdAt: confession.createdAt.toISOString(),
-    approvedAt: confession.approvedAt?.toISOString() ?? null,
-    parentMessageId: confession.parentMessageId?.toString() ?? null,
+    confessionId: result.confessionId.toString(),
+    channelId: result.channelId.toString(),
+    authorId: result.authorId.toString(),
+    content: result.content,
+    createdAt: result.createdAt.toISOString(),
+    approvedAt: result.approvedAt?.toISOString() ?? null,
+    parentMessageId: result.parentMessageId?.toString() ?? null,
     channel: {
-      ...confession.channel,
-      logChannelId: confession.channel.logChannelId?.toString() ?? null,
+      label: result.channelLabel,
+      color: result.channelColor,
+      logChannelId: result.channelLogChannelId?.toString() ?? null,
     },
-    attachment: serializeAttachment(confession.attachment),
-  } as SerializedConfessionForResend;
+    attachment,
+  } satisfies SerializedConfessionForResend;
 }

@@ -6,7 +6,7 @@ import {
   getConfessionErrorMessage,
 } from '$lib/server/confession';
 import { createMessage, sendFollowupMessage } from '$lib/server/api/discord';
-import { fetchConfessionForDispatch } from '$lib/server/database';
+import { db, fetchConfessionForDispatch } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error';
@@ -42,7 +42,7 @@ export const postConfession = inngest.createFunction(
         { id: 'post-confession', name: 'Post Confession' },
         async () => {
           // We refetch per step to avoid caching sensitive confessions in Inngest.
-          const confession = await fetchConfessionForDispatch(BigInt(event.data.internalId));
+          const confession = await fetchConfessionForDispatch(db, BigInt(event.data.internalId));
           if (confession === null) throw new NonRetriableError('confession not found');
 
           // Should be impossible to reach this case because we were

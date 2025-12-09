@@ -50,7 +50,7 @@ export const logConfession = inngest.createFunction(
 
       const result = await step.run({ id: 'log-confession', name: 'Log Confession' }, async () => {
         // We refetch per step to avoid caching sensitive confessions in Inngest.
-        const confession = await fetchConfessionForLog(BigInt(event.data.internalId));
+        const confession = await fetchConfessionForLog(db, BigInt(event.data.internalId));
         if (confession === null) throw new NonRetriableError('confession not found');
 
         // Should be impossible to reach this case because we were
@@ -114,7 +114,6 @@ export const logConfession = inngest.createFunction(
                         : 'resent',
                   }),
                 } as Failure;
-
               default:
                 break;
             }

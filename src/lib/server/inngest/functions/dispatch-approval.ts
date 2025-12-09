@@ -6,7 +6,7 @@ import {
   getConfessionErrorMessage,
 } from '$lib/server/confession';
 import { createMessage, sendFollowupMessage } from '$lib/server/api/discord';
-import { fetchConfessionForDispatch } from '$lib/server/database';
+import { db, fetchConfessionForDispatch } from '$lib/server/database';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error';
 import { inngest } from '$lib/server/inngest/client';
@@ -28,7 +28,7 @@ export const dispatchApproval = inngest.createFunction(
       const error = await step.run(
         { id: 'dispatch-approval', name: 'Dispatch Approved Confession' },
         async () => {
-          const confession = await fetchConfessionForDispatch(BigInt(event.data.internalId));
+          const confession = await fetchConfessionForDispatch(db, BigInt(event.data.internalId));
           if (confession === null) throw new NonRetriableError('confession not found');
 
           // Verify confession is actually approved (sanity check)
@@ -63,7 +63,6 @@ export const dispatchApproval = inngest.createFunction(
                     channel: ConfessionChannel.Confession,
                     status: 'approved internally',
                   });
-
                 default:
                   break;
               }
