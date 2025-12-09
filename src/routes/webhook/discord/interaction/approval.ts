@@ -74,10 +74,11 @@ async function submitVerdict(
     });
 
     if (!hasAllPermissions(permissions, MANAGE_MESSAGES)) {
-      logger.error('insufficient permissions for approval', void 0, {
+      const error = new InsufficientPermissionsApprovalError();
+      logger.error('insufficient permissions for approval', error, {
         permissions: permissions.toString(),
       });
-      throw new InsufficientPermissionsApprovalError();
+      throw error;
     }
 
     return await db.transaction(async tx => {
@@ -134,10 +135,11 @@ async function submitVerdict(
       }
 
       if (approvedAt !== null) {
-        logger.error('confession already approved', void 0, {
+        const error = new AlreadyApprovedApprovalError(approvedAt);
+        logger.error('confession already approved', error, {
           'approved.at': approvedAt.toISOString(),
         });
-        throw new AlreadyApprovedApprovalError(approvedAt);
+        throw error;
       }
 
       if (isApproved) {
@@ -264,12 +266,14 @@ export async function handleApproval(
     case 'delete':
       isApproved = false;
       break;
-    default:
-      logger.error('malformed custom id format', void 0, {
+    default: {
+      const error = new MalformedCustomIdFormat(key);
+      logger.error('malformed custom id format', error, {
         'custom.id': customId,
         key,
       });
-      throw new MalformedCustomIdFormat(key);
+      throw error;
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/init-declarations

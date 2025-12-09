@@ -12,18 +12,20 @@ export class AssertionError extends Error {
 
 export function assertDefined<T>(value?: T | undefined) {
   if (typeof value === 'undefined') {
-    logger.error('value must be defined');
-    throw new AssertionError('value must be defined');
+    const error = new AssertionError('value must be defined');
+    logger.error('value must be defined', error);
+    throw error;
   }
   return value;
 }
 
 export function assertOptional<T>([value, ...values]: T[]) {
   if (values.length > 0) {
-    logger.error('expected at most one value', void 0, {
+    const error = new AssertionError('expected at most one value');
+    logger.error('expected at most one value', error, {
       'values.length': values.length,
     });
-    throw new AssertionError('expected at most one value');
+    throw error;
   }
   return value;
 }

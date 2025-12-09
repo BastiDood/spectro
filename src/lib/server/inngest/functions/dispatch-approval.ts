@@ -30,18 +30,20 @@ export const dispatchApproval = inngest.createFunction(
         async () => {
           const confession = await fetchConfessionForDispatch(db, BigInt(event.data.internalId));
           if (confession === null) {
-            logger.error('confession not found for dispatch', void 0, {
+            const error = new NonRetriableError('confession not found');
+            logger.error('confession not found for dispatch', error, {
               'confession.internal.id': event.data.internalId,
             });
-            throw new NonRetriableError('confession not found');
+            throw error;
           }
 
           // Verify confession is actually approved (sanity check)
           if (confession.approvedAt === null) {
-            logger.error('confession not approved for dispatch', void 0, {
+            const error = new NonRetriableError('confession not approved');
+            logger.error('confession not approved for dispatch', error, {
               'confession.internal.id': event.data.internalId,
             });
-            throw new NonRetriableError('confession not approved');
+            throw error;
           }
 
           logger.debug('fetched confession', {

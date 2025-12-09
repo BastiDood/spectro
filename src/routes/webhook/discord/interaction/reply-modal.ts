@@ -65,8 +65,9 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
     });
 
     if (typeof channel === 'undefined') {
-      logger.error('unknown channel for reply modal');
-      throw new UnknownChannelReplyModalError();
+      const error = new UnknownChannelReplyModalError();
+      logger.error('unknown channel for reply modal', error);
+      throw error;
     }
 
     const { disabledAt, isApprovalRequired } = channel;

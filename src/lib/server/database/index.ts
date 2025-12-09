@@ -103,21 +103,25 @@ export async function disableConfessionChannel(db: Interface, channelId: bigint,
     .set({ disabledAt })
     .where(eq(schema.channel.id, channelId));
   switch (rowCount) {
-    case null:
-      logger.error('missing row count in disableConfessionChannel', void 0, {
+    case null: {
+      const error = new MissingRowCountDatabaseError();
+      logger.error('missing row count in disableConfessionChannel', error, {
         'channel.id': channelId.toString(),
       });
-      throw new MissingRowCountDatabaseError();
+      throw error;
+    }
     case 0:
       return false;
     case 1:
       return true;
-    default:
-      logger.error('unexpected row count in disableConfessionChannel', void 0, {
+    default: {
+      const error = new UnexpectedRowCountDatabaseError(rowCount);
+      logger.error('unexpected row count in disableConfessionChannel', error, {
         'channel.id': channelId.toString(),
         'row.count': rowCount,
       });
-      throw new UnexpectedRowCountDatabaseError(rowCount);
+      throw error;
+    }
   }
 }
 
@@ -131,21 +135,25 @@ export async function resetLogChannel(db: Interface, channelId: bigint) {
     .set({ logChannelId: null })
     .where(eq(schema.channel.id, channelId));
   switch (rowCount) {
-    case null:
-      logger.error('missing row count in resetLogChannel', void 0, {
+    case null: {
+      const error = new MissingRowCountDatabaseError();
+      logger.error('missing row count in resetLogChannel', error, {
         'channel.id': channelId.toString(),
       });
-      throw new MissingRowCountDatabaseError();
+      throw error;
+    }
     case 0:
       return false;
     case 1:
       return true;
-    default:
-      logger.error('unexpected row count in resetLogChannel', void 0, {
+    default: {
+      const error = new UnexpectedRowCountDatabaseError(rowCount);
+      logger.error('unexpected row count in resetLogChannel', error, {
         'channel.id': channelId.toString(),
         'row.count': rowCount,
       });
-      throw new UnexpectedRowCountDatabaseError(rowCount);
+      throw error;
+    }
   }
 }
 

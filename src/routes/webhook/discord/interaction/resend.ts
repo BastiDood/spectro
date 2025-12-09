@@ -103,8 +103,9 @@ async function resendConfession(
       .then(assertOptional);
 
     if (typeof result === 'undefined') {
-      logger.error('confession not found for resend');
-      throw new ConfessionNotFoundResendError(confessionId);
+      const error = new ConfessionNotFoundResendError(confessionId);
+      logger.error('confession not found for resend', error);
+      throw error;
     }
 
     const { internalId, approvedAt, logChannelId, retrievedAttachment } = result;
@@ -115,19 +116,22 @@ async function resendConfession(
     });
 
     if (approvedAt === null) {
-      logger.error('confession pending approval for resend');
-      throw new PendingApprovalResendError(confessionId);
+      const error = new PendingApprovalResendError(confessionId);
+      logger.error('confession pending approval for resend', error);
+      throw error;
     }
 
     if (logChannelId === null) {
-      logger.error('missing log channel for resend');
-      throw new MissingLogChannelResendError();
+      const error = new MissingLogChannelResendError();
+      logger.error('missing log channel for resend', error);
+      throw error;
     }
 
     // Check permission if attachment exists
     if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES)) {
-      logger.error('insufficient permissions for resend with attachment');
-      throw new InsufficientPermissionsResendError();
+      const error = new InsufficientPermissionsResendError();
+      logger.error('insufficient permissions for resend with attachment', error);
+      throw error;
     }
 
     // Emit Inngest event for async processing (fans out to post-confession + log-confession)

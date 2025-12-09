@@ -52,19 +52,21 @@ export const logConfession = inngest.createFunction(
         // We refetch per step to avoid caching sensitive confessions in Inngest.
         const confession = await fetchConfessionForLog(db, BigInt(event.data.internalId));
         if (confession === null) {
-          logger.error('confession not found for log', void 0, {
+          const error = new NonRetriableError('confession not found');
+          logger.error('confession not found for log', error, {
             'confession.internal.id': event.data.internalId,
           });
-          throw new NonRetriableError('confession not found');
+          throw error;
         }
 
         // Should be impossible to reach this case because we were
         // presumably approved prior to dispatching this Inngest event.
         if (confession.approvedAt === null) {
-          logger.error('confession not yet approved for log', void 0, {
+          const error = new NonRetriableError('confession not yet approved');
+          logger.error('confession not yet approved for log', error, {
             'confession.internal.id': event.data.internalId,
           });
-          throw new NonRetriableError('confession not yet approved');
+          throw error;
         }
 
         if (confession.channel.logChannelId === null) {

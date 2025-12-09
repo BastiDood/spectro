@@ -71,10 +71,11 @@ async function submitReply(
     });
 
     if (!hasAllPermissions(permissions, SEND_MESSAGES)) {
-      logger.error('insufficient permissions for reply submit', void 0, {
+      const error = new InsufficientPermissionsReplySubmitError();
+      logger.error('insufficient permissions for reply submit', error, {
         permissions: permissions.toString(),
       });
-      throw new InsufficientPermissionsReplySubmitError();
+      throw error;
     }
 
     const channel = await db.query.channel
@@ -107,8 +108,9 @@ async function submitReply(
       throw new DisabledChannelReplySubmitError(disabledAt);
     }
     if (logChannelId === null) {
-      logger.error('missing log channel for reply submit');
-      throw new MissingLogChannelReplySubmitError();
+      const error = new MissingLogChannelReplySubmitError();
+      logger.error('missing log channel for reply submit', error);
+      throw error;
     }
 
     // Insert reply to database
