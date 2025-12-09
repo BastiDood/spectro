@@ -2,13 +2,10 @@
 
 import adapter from '@sveltejs/adapter-node';
 
-import pkg from './package.json' with { type: 'json' };
-
 /** @type {Config} */
 export default {
   kit: {
     adapter: adapter({ precompress: true }),
-    version: { name: pkg.version },
     experimental: {
       tracing: { server: true },
       instrumentation: { server: true },

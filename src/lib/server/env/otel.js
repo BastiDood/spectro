@@ -1,8 +1,0 @@
-import { env } from '$env/dynamic/private';
-
-export const {
-  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
-  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-  OTEL_EXPORTER_OTLP_BEARER,
-  OTEL_EXPORTER_OTLP_BASIC,
-} = env;
