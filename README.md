@@ -88,13 +88,11 @@ Spectro requires some environment variables to run correctly. If the following t
 
 The following variables are optional in development, but _highly_ recommended in the production environment for [OpenTelemetry](#opentelemetry-instrumentation) integration. The standard environment variables are supported, such as (but not limited to):
 
-| **Name**                      | **Description**                                                         | **Recommended**                                      |
-| ----------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------- |
-| `OTEL_EXPORTER`               | The OpenTelemetry exporter type.                                        | `oltp`                                               |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | The base OTLP endpoint URL for exporting logs, metrics, and traces.     | `http://localhost:5080/api/default`                  |
-| `OTEL_EXPORTER_OTLP_HEADERS`  | Extra HTTP headers used for exporting telemetry (e.g., authentication). | `Authorization=YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ=` |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | The underlying exporter protocol (e.g., JSON, Protobufs, gRPC, etc.).   | `http/protobuf`                                      |
-| `OTEL_SERVICE_NAME`           | The standard service name to be used when emitting telemetry.           | `spectro`                                            |
+| **Name**                      | **Description**                                                                         | **Recommended**                                                |
+| ----------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The base OTLP endpoint URL for exporting logs, metrics, and traces.                     | `http://localhost:5080/api/default`                            |
+| `OTEL_EXPORTER_OTLP_HEADERS`  | Extra percent-encoded HTTP headers used for exporting telemetry (e.g., authentication). | `Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | The underlying exporter protocol (e.g., JSON, Protobufs, gRPC, etc.).                   | `http/protobuf`                                                |
 
 > ![NOTE]
 > The "recommended" values are only applicable to the development environment with OpenObserve running in the background. See the [`compose.yml`] for more details on the OpenObserve configuration.
