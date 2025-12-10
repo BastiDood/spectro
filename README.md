@@ -51,6 +51,11 @@ pnpm db:migrate
 docker compose down
 ```
 
+Once running, OpenObserve is accessible at `http://localhost:5080` with the default development credentials:
+
+- **Email**: `admin@example.com`
+- **Password**: `password`
+
 ## Registering Callback Endpoints
 
 The bot relies on two callback endpoints that receives webhook events from Discord:
@@ -73,7 +78,7 @@ To register the application commands in Discord, a one-time initialization scrip
 curl --request 'PUT' --header 'Content-Type: application/json' --header "Authorization: Bot $DISCORD_BOT_TOKEN" --data '@discord.json' "https://discord.com/api/v10/applications/$DISCORD_APPLICATION_ID/commands"
 ```
 
-## Running the Web Server
+## Developing Spectro
 
 Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files.
 
@@ -94,10 +99,35 @@ The following variables are optional in development, but _highly_ recommended in
 | `OTEL_EXPORTER_OTLP_HEADERS`  | Extra percent-encoded HTTP headers used for exporting telemetry (e.g., authentication). | `Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D` |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | The underlying exporter protocol (e.g., JSON, Protobufs, gRPC, etc.).                   | `http/protobuf`                                                |
 
-> ![NOTE]
+> [!NOTE]
 > The "recommended" values are only applicable to the development environment with OpenObserve running in the background. See the [`compose.yml`] for more details on the OpenObserve configuration.
 
 [`compose.yml`]: ./compose.yml
+
+### Local Telemetry with OpenObserve
+
+To enable full observability in local development:
+
+1. Start the local services (including OpenObserve):
+
+   ```bash
+   docker compose up --detach
+   ```
+
+2. Export the OTEL environment variables before running the dev server:
+
+   ```bash
+   export OTEL_EXPORTER_OTLP_ENDPOINT='http://localhost:5080/api/default'
+   export OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D'
+   export OTEL_EXPORTER_OTLP_PROTOCOL='http/protobuf'
+   pnpm dev
+   ```
+
+3. View traces and logs at `http://localhost:5080`.
+
+In production deployments, the `OTEL_*` variables may be customized to export the telemetry data to external observability providers.
+
+### Running the Web Server
 
 ```bash
 # Install the dependencies.
