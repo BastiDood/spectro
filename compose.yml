@@ -31,7 +31,7 @@ services:
       - 'http://host.docker.internal:5173/webhook/inngest' # Vite
     restart: always
   o2:
-    image: public.ecr.aws/zinclabs/openobserve:v0.30.0-rc1
+    image: public.ecr.aws/zinclabs/openobserve:v0.30.0-rc2
     environment:
       ZO_DATA_DIR: /data
       # Development-only credentials!
