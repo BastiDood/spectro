@@ -1,25 +1,46 @@
 import assert, { strictEqual } from 'node:assert/strict';
 import process from 'node:process';
 
-import pg from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
+import { drizzle as pgDrizzle } from 'drizzle-orm/node-postgres';
+import { Pool as NeonPool } from '@neondatabase/serverless';
+import { Pool as PgPool } from 'pg';
 import { eq, sql } from 'drizzle-orm';
 
 import { assertOptional } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
-import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 import { Logger } from '$lib/server/telemetry/logger';
+import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
+import { SPECTRO_DATABASE_DRIVER } from '$lib/server/env/spectro';
 
 import * as schema from './models';
-import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from './error';
+import {
+  MissingRowCountDatabaseError,
+  UnexpectedRowCountDatabaseError,
+  UnknownDatabaseDriverError,
+} from './error';
 
 const SERVICE_NAME = 'database';
 const logger = new Logger(SERVICE_NAME);
 
-const pool = new pg.Pool({ connectionString: POSTGRES_DATABASE_URL });
-process.once('sveltekit:shutdown', () => void pool.end());
+function init() {
+  switch (SPECTRO_DATABASE_DRIVER) {
+    case 'pg': {
+      const pool = new PgPool({ connectionString: POSTGRES_DATABASE_URL });
+      process.once('sveltekit:shutdown', async () => await pool.end());
+      return pgDrizzle(pool, { schema });
+    }
+    case 'neon': {
+      const pool = new NeonPool({ connectionString: POSTGRES_DATABASE_URL });
+      process.once('sveltekit:shutdown', async () => await pool.end());
+      return neonDrizzle(pool, { schema });
+    }
+    default:
+      throw new UnknownDatabaseDriverError(SPECTRO_DATABASE_DRIVER);
+  }
+}
 
-export const db = drizzle(pool, { schema });
+export const db = init();
 export type Database = typeof db;
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type Interface = Database | Transaction;

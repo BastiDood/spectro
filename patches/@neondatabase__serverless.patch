@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index 6755c36ec7d0ecc949b55a31e75c0a6597f0e3eb..305a7014f83454f3d7e6407e66c47b4659b5bf7e 100644
+--- a/package.json
++++ b/package.json
+@@ -61,7 +61,7 @@
+     "test:browser": "npm run build && playwright install --with-deps firefox chromium && vitest run --dir=tests/browser --browser --config=tests/browser/vite.config.mts"
+   },
+   "dependencies": {
+-    "@types/node": "^22.15.30",
++    "@types/node": ">=22.15.30 <26",
+     "@types/pg": "^8.8.0"
+   },
+   "devDependencies": {

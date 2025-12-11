@@ -1,12 +1,17 @@
-strictDepBuilds: true
-minimumReleaseAge: 1440 # 1 day
-
-trustPolicy: no-downgrade
-trustPolicyExclude:
-  - chokidar@4.0.3
-  - undici-types@6.21.0
+minimumReleaseAge: 1440
 
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - esbuild
   - protobufjs
+
+patchedDependencies:
+  '@neondatabase/serverless': patches/@neondatabase__serverless.patch
+
+strictDepBuilds: true
+
+trustPolicy: no-downgrade
+
+trustPolicyExclude:
+  - chokidar@4.0.3
+  - undici-types@6.21.0

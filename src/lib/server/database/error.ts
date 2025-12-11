@@ -1,3 +1,10 @@
+export class UnknownDatabaseDriverError extends Error {
+  constructor(public readonly driver: string) {
+    super(`unknown database driver "${driver}"`);
+    this.name = 'UnknownDatabaseDriverError';
+  }
+}
+
 export class DatabaseError extends Error {
   constructor(message?: string) {
     super(message);

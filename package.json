@@ -25,6 +25,7 @@
     "@iconify-icons/ic": "^1.2.13",
     "@iconify-icons/simple-icons": "^1.2.74",
     "@iconify/svelte": "^5.1.0",
+    "@neondatabase/serverless": "^1.0.2",
     "@noble/ed25519": "^3.0.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/api-logs": "^0.208.0",

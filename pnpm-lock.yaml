@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@neondatabase/serverless':
+    hash: 68ee92c73fc3dc87d4a32004fa4329b5e4fb188c136b9e144b1f0f1157b3bf2d
+    path: patches/@neondatabase__serverless.patch
+
 importers:
 
   .:
@@ -17,6 +22,9 @@ importers:
       '@iconify/svelte':
         specifier: ^5.1.0
         version: 5.1.0(svelte@5.45.8)
+      '@neondatabase/serverless':
+        specifier: ^1.0.2
+        version: 1.0.2(patch_hash=68ee92c73fc3dc87d4a32004fa4329b5e4fb188c136b9e144b1f0f1157b3bf2d)
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.0.0
@@ -40,7 +48,7 @@ importers:
         version: 2.49.2(@opentelemetry/api@1.9.0)(@sveltejs/vite-plugin-svelte@6.2.1(svelte@5.45.8)(vite@7.2.7(@types/node@25.0.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(yaml@2.7.1)))(svelte@5.45.8)(vite@7.2.7(@types/node@25.0.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(yaml@2.7.1))
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.0.2)(pg@8.16.3)
+        version: 0.45.1(@neondatabase/serverless@1.0.2(patch_hash=68ee92c73fc3dc87d4a32004fa4329b5e4fb188c136b9e144b1f0f1157b3bf2d))(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.0.2)(pg@8.16.3)
       inngest:
         specifier: ^3.47.0
         version: 3.47.0(@opentelemetry/core@2.2.0(@opentelemetry/api@1.9.0))(@sveltejs/kit@2.49.2(@opentelemetry/api@1.9.0)(@sveltejs/vite-plugin-svelte@6.2.1(svelte@5.45.8)(vite@7.2.7(@types/node@25.0.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(yaml@2.7.1)))(svelte@5.45.8)(vite@7.2.7(@types/node@25.0.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(yaml@2.7.1)))(typescript@5.9.3)(zod@4.1.13)
@@ -550,6 +558,10 @@ packages:
 
   '@js-sdsl/ordered-map@4.4.2':
     resolution: {integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==}
+
+  '@neondatabase/serverless@1.0.2':
+    resolution: {integrity: sha512-I5sbpSIAHiB+b6UttofhrN/UJXII+4tZPAq1qugzwCwLIL8EZLV7F/JyHUrEIiGgQpEXzpnjlJ+zwcEhheGvCw==}
+    engines: {node: '>=19.0.0'}
 
   '@noble/ed25519@3.0.0':
     resolution: {integrity: sha512-QyteqMNm0GLqfa5SoYbSC3+Pvykwpn95Zgth4MFVSMKBB75ELl9tX1LAVsN4c3HXOrakHsF2gL4zWDAYCcsnzg==}
@@ -3032,6 +3044,11 @@ snapshots:
 
   '@js-sdsl/ordered-map@4.4.2': {}
 
+  '@neondatabase/serverless@1.0.2(patch_hash=68ee92c73fc3dc87d4a32004fa4329b5e4fb188c136b9e144b1f0f1157b3bf2d)':
+    dependencies:
+      '@types/node': 22.19.2
+      '@types/pg': 8.16.0
+
   '@noble/ed25519@3.0.0': {}
 
   '@opentelemetry/api-logs@0.208.0':
@@ -4256,8 +4273,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.0.2)(pg@8.16.3):
+  drizzle-orm@0.45.1(@neondatabase/serverless@1.0.2(patch_hash=68ee92c73fc3dc87d4a32004fa4329b5e4fb188c136b9e144b1f0f1157b3bf2d))(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(gel@2.0.2)(pg@8.16.3):
     optionalDependencies:
+      '@neondatabase/serverless': 1.0.2(patch_hash=68ee92c73fc3dc87d4a32004fa4329b5e4fb188c136b9e144b1f0f1157b3bf2d)
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.16.0
       gel: 2.0.2
