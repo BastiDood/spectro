@@ -1,6 +1,6 @@
 .DS_Store
 .svelte-kit
-build
+.wrangler
 drizzle
 node_modules
 .env

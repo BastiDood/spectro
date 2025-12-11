@@ -1,6 +1,6 @@
-/build
 /.eslintcache
 /.svelte-kit
+/.wrangler
 
 node_modules
 .env

@@ -6,6 +6,8 @@ onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - esbuild
   - protobufjs
+  - sharp
+  - workerd
 
 patchedDependencies:
   '@neondatabase/serverless': patches/@neondatabase__serverless.patch
