@@ -9,6 +9,7 @@ import { ApprovalEventData, ConfessionSubmitEventData } from './schema';
 export const inngest = new Inngest({
   id: 'spectro',
   optimizeParallelism: true,
+  experimentalCheckpointing: true,
   appVersion: version,
   logger: new Logger('inngest'),
   eventKey: INNGEST_EVENT_KEY,
