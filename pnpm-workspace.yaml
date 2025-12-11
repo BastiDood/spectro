@@ -1,4 +1,6 @@
-minimumReleaseAge: 1440
+engineStrict: true
+
+minimumReleaseAge: 1440 # 1 Day
 
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
