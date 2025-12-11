@@ -1,6 +1,11 @@
 strictDepBuilds: true
-trustPolicy: no-downgrade
 minimumReleaseAge: 1440 # 1 day
+
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - chokidar@4.0.3
+  - undici-types@6.21.0
+
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - esbuild
