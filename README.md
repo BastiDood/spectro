@@ -82,15 +82,15 @@ curl --request 'PUT' --header 'Content-Type: application/json' --header "Authori
 
 Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files.
 
-| **Name**                 | **Description**                                                                                                     | **Default** |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `POSTGRES_DATABASE_URL`  | The URL connection string for the PostgreSQL production database.                                                   |             |
-| `DATABASE_DRIVER`        | The database driver to use. Accepts `pg` for the standard driver or `neon` for the Neon serverless driver.          | `pg`        |
-| `DISCORD_APPLICATION_ID` | The publicly known Discord application ID that will be used for the verification of incoming webhooks.              |             |
-| `DISCORD_PUBLIC_KEY`     | The public key of the Discord application that will be used for the verification of incoming webhooks.              |             |
-| `DISCORD_BOT_TOKEN`      | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows. |             |
-| `INNGEST_EVENT_KEY`      | The event key used to send events to Inngest.                                                                       |             |
-| `INNGEST_SIGNING_KEY`    | The signing key used to verify incoming webhook requests from Inngest.                                              |             |
+| **Name**                  | **Description**                                                                                                     | **Default** |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `DISCORD_APPLICATION_ID`  | The publicly known Discord application ID that will be used for the verification of incoming webhooks.              |             |
+| `DISCORD_PUBLIC_KEY`      | The public key of the Discord application that will be used for the verification of incoming webhooks.              |             |
+| `DISCORD_BOT_TOKEN`       | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows. |             |
+| `INNGEST_EVENT_KEY`       | The event key used to send events to Inngest.                                                                       |             |
+| `INNGEST_SIGNING_KEY`     | The signing key used to verify incoming webhook requests from Inngest.                                              |             |
+| `POSTGRES_DATABASE_URL`   | The URL connection string for the PostgreSQL production database.                                                   |             |
+| `SPECTRO_DATABASE_DRIVER` | The database driver to use. Accepts `pg` for the standard driver or `neon` for the Neon serverless driver.          | `pg`        |
 
 The following variables are optional in development, but _highly_ recommended in the production environment for [OpenTelemetry](#opentelemetry-instrumentation) integration. The standard environment variables are supported, such as (but not limited to):
 
