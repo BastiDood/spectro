@@ -1,17 +1,20 @@
 import assert, { strictEqual } from 'node:assert/strict';
 import process from 'node:process';
 
-import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from './error';
+import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { eq, sql } from 'drizzle-orm';
 
-import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
-
+import { assertOptional } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
+import { Logger } from '$lib/server/telemetry/logger';
 
 import * as schema from './models';
-import { eq, sql } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
+import { MissingRowCountDatabaseError, UnexpectedRowCountDatabaseError } from './error';
+
+const SERVICE_NAME = 'database';
+const logger = new Logger(SERVICE_NAME);
 
 const pool = new pg.Pool({ connectionString: POSTGRES_DATABASE_URL });
 process.once('sveltekit:shutdown', () => void pool.end());
@@ -32,7 +35,7 @@ const CONFESSION_ATTACHMENT_ID = sql.raw(schema.confession.attachmentId.name);
 
 const GUILD_LAST_CONFESSION_ID = sql.raw(schema.guild.lastConfessionId.name);
 
-function updateLastConfession(db: Interface, guildId: Snowflake) {
+function updateLastConfession(db: Interface, guildId: bigint) {
   return db
     .update(schema.guild)
     .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
@@ -46,7 +49,7 @@ export type InsertableAttachment = Pick<
 >;
 async function insertAttachmentData(db: Interface, attachment: InsertableAttachment) {
   const { rowCount } = await db.insert(schema.attachment).values({
-    id: attachment.id,
+    id: BigInt(attachment.id),
     filename: attachment.filename,
     contentType: attachment.content_type,
     url: attachment.url,
@@ -56,64 +59,69 @@ async function insertAttachmentData(db: Interface, attachment: InsertableAttachm
 }
 
 export async function insertConfession(
-  db: Interface,
+  db: Transaction,
   timestamp: Date,
-  guildId: Snowflake,
-  channelId: Snowflake,
-  authorId: Snowflake,
+  guildId: bigint,
+  channelId: bigint,
+  authorId: bigint,
   description: string,
   approvedAt: Date | null,
-  parentMessageId: Snowflake | null,
+  parentMessageId: bigint | null,
   attachment: InsertableAttachment | null,
   shouldInsertAttachment: boolean,
 ) {
-  return await db.transaction(async tx => {
-    let attachmentId: bigint | null = null;
-    if (attachment !== null) {
-      attachmentId = attachment.id;
-      if (shouldInsertAttachment) await insertAttachmentData(tx, attachment);
-    }
+  let attachmentId: bigint | null = null;
+  if (attachment !== null) {
+    attachmentId = BigInt(attachment.id);
+    if (shouldInsertAttachment) await insertAttachmentData(db, attachment);
+  }
 
-    const guild = updateLastConfession(tx, guildId);
-    const {
-      rows: [result, ...otherResults],
-    } = await tx.execute(
-      sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
-    );
+  const guild = updateLastConfession(db, guildId);
+  const {
+    rows: [result, ...otherResults],
+  } = await db.execute(
+    sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
+  );
 
-    strictEqual(otherResults.length, 0);
-    assert(typeof result !== 'undefined');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._internal_id === 'string');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._confession_id === 'string');
-    // eslint-disable-next-line no-underscore-dangle
-    return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
-  });
+  strictEqual(otherResults.length, 0);
+  assert(typeof result !== 'undefined');
+  // eslint-disable-next-line no-underscore-dangle
+  assert(typeof result._internal_id === 'string');
+  // eslint-disable-next-line no-underscore-dangle
+  assert(typeof result._confession_id === 'string');
+  // eslint-disable-next-line no-underscore-dangle
+  return { internalId: BigInt(result._internal_id), confessionId: BigInt(result._confession_id) };
 }
 
 /**
  * @throws {MissingRowCountDatabaseError}
  * @throws {UnexpectedRowCountDatabaseError}
  */
-export async function disableConfessionChannel(
-  db: Interface,
-  channelId: Snowflake,
-  disabledAt: Date,
-) {
+export async function disableConfessionChannel(db: Interface, channelId: bigint, disabledAt: Date) {
   const { rowCount } = await db
     .update(schema.channel)
     .set({ disabledAt })
     .where(eq(schema.channel.id, channelId));
   switch (rowCount) {
-    case null:
-      throw new MissingRowCountDatabaseError();
+    case null: {
+      const error = new MissingRowCountDatabaseError();
+      logger.error('missing row count in disableConfessionChannel', error, {
+        'channel.id': channelId.toString(),
+      });
+      throw error;
+    }
     case 0:
       return false;
     case 1:
       return true;
-    default:
-      throw new UnexpectedRowCountDatabaseError(rowCount);
+    default: {
+      const error = new UnexpectedRowCountDatabaseError(rowCount);
+      logger.error('unexpected row count in disableConfessionChannel', error, {
+        'channel.id': channelId.toString(),
+        'row.count': rowCount,
+      });
+      throw error;
+    }
   }
 }
 
@@ -121,19 +129,284 @@ export async function disableConfessionChannel(
  * @throws {MissingRowCountDatabaseError}
  * @throws {UnexpectedRowCountDatabaseError}
  */
-export async function resetLogChannel(db: Interface, channelId: Snowflake) {
+export async function resetLogChannel(db: Interface, channelId: bigint) {
   const { rowCount } = await db
     .update(schema.channel)
     .set({ logChannelId: null })
     .where(eq(schema.channel.id, channelId));
   switch (rowCount) {
-    case null:
-      throw new MissingRowCountDatabaseError();
+    case null: {
+      const error = new MissingRowCountDatabaseError();
+      logger.error('missing row count in resetLogChannel', error, {
+        'channel.id': channelId.toString(),
+      });
+      throw error;
+    }
     case 0:
       return false;
     case 1:
       return true;
-    default:
-      throw new UnexpectedRowCountDatabaseError(rowCount);
+    default: {
+      const error = new UnexpectedRowCountDatabaseError(rowCount);
+      logger.error('unexpected row count in resetLogChannel', error, {
+        'channel.id': channelId.toString(),
+        'row.count': rowCount,
+      });
+      throw error;
+    }
   }
+}
+
+export interface SerializedAttachment {
+  id: string;
+  filename: string;
+  contentType: string | null;
+  url: string;
+  proxyUrl: string;
+  height?: number | null;
+  width?: number | null;
+}
+
+/** Serialized confession for dispatch operations (post-confession, dispatch-approval) */
+export interface SerializedConfessionForDispatch {
+  confessionId: string;
+  channelId: string;
+  content: string;
+  createdAt: string;
+  approvedAt: string | null;
+  parentMessageId: string | null;
+  channel: {
+    label: string;
+    color: string | null;
+  };
+  attachment: SerializedAttachment | null;
+}
+
+/** Serialized confession for log operations (log-confession) */
+export interface SerializedConfessionForLog {
+  internalId: string;
+  confessionId: string;
+  channelId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  approvedAt: string | null;
+  channel: {
+    label: string;
+    logChannelId: string | null;
+    isApprovalRequired: boolean;
+  };
+  attachment: SerializedAttachment | null;
+}
+
+/** Serialized confession for resend operations (resend-confession) */
+export interface SerializedConfessionForResend {
+  confessionId: string;
+  channelId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  approvedAt: string | null;
+  parentMessageId: string | null;
+  channel: {
+    label: string;
+    color: string | null;
+    logChannelId: string | null;
+  };
+  attachment: SerializedAttachment | null;
+}
+
+// HACK: Do NOT use the Relations API (`db.query.*.findFirst()` with `with` clauses) in Drizzle.
+// The Relations API is not compatible with OpenTelemetry instrumentation, so we use plain query
+// builders with explicit `innerJoin`/`leftJoin` operations instead.
+
+/** Fetch confession for dispatch operations (post-confession, dispatch-approval) */
+export async function fetchConfessionForDispatch(db: Interface, confessionInternalId: bigint) {
+  const result = await db
+    .select({
+      confessionId: schema.confession.confessionId,
+      channelId: schema.confession.channelId,
+      content: schema.confession.content,
+      createdAt: schema.confession.createdAt,
+      approvedAt: schema.confession.approvedAt,
+      parentMessageId: schema.confession.parentMessageId,
+      channelLabel: schema.channel.label,
+      channelColor: schema.channel.color,
+      attachmentId: schema.attachment.id,
+      attachmentFilename: schema.attachment.filename,
+      attachmentContentType: schema.attachment.contentType,
+      attachmentUrl: schema.attachment.url,
+      attachmentProxyUrl: schema.attachment.proxyUrl,
+    })
+    .from(schema.confession)
+    .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+    .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+    .where(eq(schema.confession.internalId, confessionInternalId))
+    .limit(1)
+    .then(assertOptional);
+
+  if (typeof result === 'undefined') {
+    logger.warn('confession not found for dispatch', {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    return null;
+  }
+
+  let attachment: SerializedAttachment | null = null;
+  if (result.attachmentId !== null) {
+    assert(result.attachmentFilename !== null);
+    assert(result.attachmentUrl !== null);
+    assert(result.attachmentProxyUrl !== null);
+    attachment = {
+      id: result.attachmentId.toString(),
+      filename: result.attachmentFilename,
+      contentType: result.attachmentContentType,
+      url: result.attachmentUrl,
+      proxyUrl: result.attachmentProxyUrl,
+    };
+  }
+
+  return {
+    confessionId: result.confessionId.toString(),
+    channelId: result.channelId.toString(),
+    content: result.content,
+    createdAt: result.createdAt.toISOString(),
+    approvedAt: result.approvedAt?.toISOString() ?? null,
+    parentMessageId: result.parentMessageId?.toString() ?? null,
+    channel: {
+      label: result.channelLabel,
+      color: result.channelColor,
+    },
+    attachment,
+  } satisfies SerializedConfessionForDispatch;
+}
+
+/** Fetch confession for log operations (log-confession) */
+export async function fetchConfessionForLog(db: Interface, confessionInternalId: bigint) {
+  const result = await db
+    .select({
+      internalId: schema.confession.internalId,
+      confessionId: schema.confession.confessionId,
+      channelId: schema.confession.channelId,
+      authorId: schema.confession.authorId,
+      content: schema.confession.content,
+      createdAt: schema.confession.createdAt,
+      approvedAt: schema.confession.approvedAt,
+      channelLabel: schema.channel.label,
+      channelLogChannelId: schema.channel.logChannelId,
+      channelIsApprovalRequired: schema.channel.isApprovalRequired,
+      attachmentId: schema.attachment.id,
+      attachmentFilename: schema.attachment.filename,
+      attachmentContentType: schema.attachment.contentType,
+      attachmentUrl: schema.attachment.url,
+      attachmentProxyUrl: schema.attachment.proxyUrl,
+    })
+    .from(schema.confession)
+    .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+    .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+    .where(eq(schema.confession.internalId, confessionInternalId))
+    .limit(1)
+    .then(assertOptional);
+
+  if (typeof result === 'undefined') {
+    logger.warn('confession not found for log', {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    return null;
+  }
+
+  let attachment: SerializedAttachment | null = null;
+  if (result.attachmentId !== null) {
+    assert(result.attachmentFilename !== null);
+    assert(result.attachmentUrl !== null);
+    assert(result.attachmentProxyUrl !== null);
+    attachment = {
+      id: result.attachmentId.toString(),
+      filename: result.attachmentFilename,
+      contentType: result.attachmentContentType,
+      url: result.attachmentUrl,
+      proxyUrl: result.attachmentProxyUrl,
+    };
+  }
+
+  return {
+    internalId: result.internalId.toString(),
+    confessionId: result.confessionId.toString(),
+    channelId: result.channelId.toString(),
+    authorId: result.authorId.toString(),
+    content: result.content,
+    createdAt: result.createdAt.toISOString(),
+    approvedAt: result.approvedAt?.toISOString() ?? null,
+    channel: {
+      label: result.channelLabel,
+      logChannelId: result.channelLogChannelId?.toString() ?? null,
+      isApprovalRequired: result.channelIsApprovalRequired,
+    },
+    attachment,
+  } satisfies SerializedConfessionForLog;
+}
+
+/** Fetch confession for resend operations (resend-confession) */
+export async function fetchConfessionForResend(db: Interface, confessionInternalId: bigint) {
+  const result = await db
+    .select({
+      confessionId: schema.confession.confessionId,
+      channelId: schema.confession.channelId,
+      authorId: schema.confession.authorId,
+      content: schema.confession.content,
+      createdAt: schema.confession.createdAt,
+      approvedAt: schema.confession.approvedAt,
+      parentMessageId: schema.confession.parentMessageId,
+      channelLabel: schema.channel.label,
+      channelColor: schema.channel.color,
+      channelLogChannelId: schema.channel.logChannelId,
+      attachmentId: schema.attachment.id,
+      attachmentFilename: schema.attachment.filename,
+      attachmentContentType: schema.attachment.contentType,
+      attachmentUrl: schema.attachment.url,
+      attachmentProxyUrl: schema.attachment.proxyUrl,
+    })
+    .from(schema.confession)
+    .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+    .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+    .where(eq(schema.confession.internalId, confessionInternalId))
+    .limit(1)
+    .then(assertOptional);
+
+  if (typeof result === 'undefined') {
+    logger.warn('confession not found for resend', {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    return null;
+  }
+
+  let attachment: SerializedAttachment | null = null;
+  if (result.attachmentId !== null) {
+    assert(result.attachmentFilename !== null);
+    assert(result.attachmentUrl !== null);
+    assert(result.attachmentProxyUrl !== null);
+    attachment = {
+      id: result.attachmentId.toString(),
+      filename: result.attachmentFilename,
+      contentType: result.attachmentContentType,
+      url: result.attachmentUrl,
+      proxyUrl: result.attachmentProxyUrl,
+    };
+  }
+
+  return {
+    confessionId: result.confessionId.toString(),
+    channelId: result.channelId.toString(),
+    authorId: result.authorId.toString(),
+    content: result.content,
+    createdAt: result.createdAt.toISOString(),
+    approvedAt: result.approvedAt?.toISOString() ?? null,
+    parentMessageId: result.parentMessageId?.toString() ?? null,
+    channel: {
+      label: result.channelLabel,
+      color: result.channelColor,
+      logChannelId: result.channelLogChannelId?.toString() ?? null,
+    },
+    attachment,
+  } satisfies SerializedConfessionForResend;
 }

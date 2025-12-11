@@ -1,8 +1,4 @@
-import { type InferOutput, pipe, string, transform } from 'valibot';
+import { type InferOutput, string } from 'valibot';
 
-export const Timestamp = pipe(
-  string(),
-  transform(date => new Date(date)),
-);
-
+export const Timestamp = string();
 export type Timestamp = InferOutput<typeof Timestamp>;

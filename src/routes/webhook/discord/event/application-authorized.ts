@@ -1,17 +1,20 @@
-import type { Logger } from 'pino';
-
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { db } from '$lib/server/database';
 import { guild } from '$lib/server/database/models';
+import { Logger } from '$lib/server/telemetry/logger';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
-export async function handleApplicationAuthorized(
-  logger: Logger,
-  createdAt: Date,
-  guildId: Snowflake,
-) {
-  const { rowCount } = await db
-    .insert(guild)
-    .values({ id: guildId, createdAt })
-    .onConflictDoNothing({ target: guild.id });
-  logger.info({ rowCount }, 'application authorized');
+const SERVICE_NAME = 'webhook.event.application-authorized';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
+
+export async function handleApplicationAuthorized(createdAt: Date, guildId: Snowflake) {
+  return await tracer.asyncSpan('handle-application-authorized', async span => {
+    span.setAttribute('guild.id', guildId);
+    const { rowCount } = await db
+      .insert(guild)
+      .values({ id: BigInt(guildId), createdAt })
+      .onConflictDoNothing({ target: guild.id });
+    logger.info('guild authorized application', { 'row.count': rowCount });
+  });
 }

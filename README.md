@@ -23,9 +23,15 @@ pnpm env:dev pnpm db:migrate
 pnpm env:prod pnpm discord:register
 ```
 
-## Managing the Database
+## Managing Local Services
 
-Spectro requires a PostgreSQL database for data persistence. For convenience, we use Docker Compose to set up a local installation. The following environment variables are required for this to work.
+Spectro uses Docker Compose to run local development services:
+
+- **PostgreSQL** (`db`) — The database layer for data persistence (port `5432`).
+- **Inngest** (`inngest`) — A local Inngest dev server for background job processing (port `8288`).
+- **OpenObserve** (`o2`) — A web UI for visualizing OpenTelemetry traces and logs (port `5080`).
+
+The following environment variables are required for the database to work.
 
 | **Name**                | **Description**                                                    |
 | ----------------------- | ------------------------------------------------------------------ |
@@ -33,18 +39,22 @@ Spectro requires a PostgreSQL database for data persistence. For convenience, we
 | `POSTGRES_PASSWORD`     | The password with which to initialize the default `postgres` user. |
 
 ```bash
-# Download PostgreSQL with Docker (Compose).
-# Run and initialize an empty database.
+# Start all local development services.
 # Requires `POSTGRES_PASSWORD`.
-docker compose --profile=dev up --detach
+docker compose up --detach
 
 # Run the database migrations.
 # Requires `POSTGRES_DATABASE_URL` already in scope.
 pnpm db:migrate
 
-# Shut down the PostgreSQL server.
-docker compose --profile=dev down
+# Shut down all local development services.
+docker compose down
 ```
+
+Once running, OpenObserve is accessible at `http://localhost:5080` with the default development credentials:
+
+- **Email**: `admin@example.com`
+- **Password**: `password`
 
 ## Registering Callback Endpoints
 
@@ -68,7 +78,7 @@ To register the application commands in Discord, a one-time initialization scrip
 curl --request 'PUT' --header 'Content-Type: application/json' --header "Authorization: Bot $DISCORD_BOT_TOKEN" --data '@discord.json' "https://discord.com/api/v10/applications/$DISCORD_APPLICATION_ID/commands"
 ```
 
-## Running the Web Server
+## Developing Spectro
 
 Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files.
 
@@ -78,13 +88,46 @@ Spectro requires some environment variables to run correctly. If the following t
 | `DISCORD_APPLICATION_ID` | The publicly known Discord application ID that will be used for the verification of incoming webhooks.              |
 | `DISCORD_PUBLIC_KEY`     | The public key of the Discord application that will be used for the verification of incoming webhooks.              |
 | `DISCORD_BOT_TOKEN`      | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows. |
+| `INNGEST_EVENT_KEY`      | The event key used to send events to Inngest.                                                                       |
+| `INNGEST_SIGNING_KEY`    | The signing key used to verify incoming webhook requests from Inngest.                                              |
 
-The following variables are optional in development, but _highly_ recommended in the production environment.
+The following variables are optional in development, but _highly_ recommended in the production environment for [OpenTelemetry](#opentelemetry-instrumentation) integration. The standard environment variables are supported, such as (but not limited to):
 
-| **Name**        | **Description**                                              |
-| --------------- | ------------------------------------------------------------ |
-| `AXIOM_DATASET` | An Axiom dataset to which structured logs will be delivered. |
-| `AXIOM_TOKEN`   | The Axiom token used to authenticate with the ingest.        |
+| **Name**                      | **Description**                                                                         | **Recommended**                                                |
+| ----------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The base OTLP endpoint URL for exporting logs, metrics, and traces.                     | `http://localhost:5080/api/default`                            |
+| `OTEL_EXPORTER_OTLP_HEADERS`  | Extra percent-encoded HTTP headers used for exporting telemetry (e.g., authentication). | `Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | The underlying exporter protocol (e.g., JSON, Protobufs, gRPC, etc.).                   | `http/protobuf`                                                |
+
+> [!NOTE]
+> The "recommended" values are only applicable to the development environment with OpenObserve running in the background. See the [`compose.yml`] for more details on the OpenObserve configuration.
+
+[`compose.yml`]: ./compose.yml
+
+### Local Telemetry with OpenObserve
+
+To enable full observability in local development:
+
+1. Start the local services (including OpenObserve):
+
+   ```bash
+   docker compose up --detach
+   ```
+
+2. Export the OTEL environment variables before running the dev server:
+
+   ```bash
+   export OTEL_EXPORTER_OTLP_ENDPOINT='http://localhost:5080/api/default'
+   export OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D'
+   export OTEL_EXPORTER_OTLP_PROTOCOL='http/protobuf'
+   pnpm dev
+   ```
+
+3. View traces and logs at `http://localhost:5080`.
+
+In production deployments, the `OTEL_*` variables may be customized to export the telemetry data to external observability providers.
+
+### Running the Web Server
 
 ```bash
 # Install the dependencies.
@@ -120,6 +163,16 @@ pnpm lint:svelte # svelte-check
 # Check All Lints in Parallel
 pnpm lint
 ```
+
+## OpenTelemetry Instrumentation
+
+Spectro supports [OpenTelemetry](https://opentelemetry.io/) for distributed tracing and structured logging. The instrumentation is configured in [`src/instrumentation.server.ts`](./src/instrumentation.server.ts), which SvelteKit automatically loads on server startup.
+
+- **Auto-instrumented**: HTTP requests and PostgreSQL queries are automatically traced.
+- **Fallback behavior**: When OTLP endpoints are not configured, telemetry falls back to console exporters.
+- **Graceful shutdown**: The SDK properly flushes pending telemetry data on server shutdown.
+
+For local development, [OpenObserve](https://openobserve.ai/) is included in the Docker Compose setup (port `5080`) as a web UI for visualizing traces and logs.
 
 ## Legal
 

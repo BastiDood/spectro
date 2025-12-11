@@ -1,9 +1,10 @@
 import assert, { fail, strictEqual } from 'node:assert/strict';
 
-import type { Logger } from 'pino';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 import { channel } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 
@@ -13,8 +14,11 @@ import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/mo
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
+const SERVICE_NAME = 'webhook.interaction.setup';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
+
 async function enableConfessions(
-  logger: Logger,
   logChannelId: Snowflake,
   guildId: Snowflake,
   channelId: Snowflake,
@@ -22,42 +26,53 @@ async function enableConfessions(
   color: number | undefined,
   isApprovalRequired: boolean | undefined,
 ) {
-  const set: PgUpdateSetSource<typeof channel> = {
-    logChannelId: sql`excluded.${sql.raw(channel.logChannelId.name)}`,
-    disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}`,
-  };
+  return await tracer.asyncSpan('enable-confessions', async span => {
+    span.setAttributes({
+      'log.channel.id': logChannelId,
+      'guild.id': guildId,
+      'channel.id': channelId,
+    });
+    if (typeof label !== 'undefined') span.setAttribute('label', label);
+    if (typeof color !== 'undefined') span.setAttribute('color', color);
+    if (typeof isApprovalRequired !== 'undefined')
+      span.setAttribute('approval.required', isApprovalRequired);
 
-  if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
-  if (typeof color !== 'undefined') set.color = sql`excluded.${sql.raw(channel.color.name)}`;
-  if (typeof isApprovalRequired !== 'undefined')
-    set.isApprovalRequired = sql`excluded.${sql.raw(channel.isApprovalRequired.name)}`;
+    const set: PgUpdateSetSource<typeof channel> = {
+      logChannelId: sql`excluded.${sql.raw(channel.logChannelId.name)}`,
+      disabledAt: sql`excluded.${sql.raw(channel.disabledAt.name)}`,
+    };
 
-  const [result, ...otherResults] = await db
-    .insert(channel)
-    .values({
-      id: channelId,
-      guildId,
-      logChannelId,
-      label,
-      isApprovalRequired,
-      color: color?.toString(2).padStart(24, '0'),
-      disabledAt: null,
-    })
-    .onConflictDoUpdate({ target: [channel.guildId, channel.id], set })
-    .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
-  strictEqual(otherResults.length, 0);
-  assert(typeof result !== 'undefined');
+    if (typeof label !== 'undefined') set.label = sql`excluded.${sql.raw(channel.label.name)}`;
+    if (typeof color !== 'undefined') set.color = sql`excluded.${sql.raw(channel.color.name)}`;
+    if (typeof isApprovalRequired !== 'undefined')
+      set.isApprovalRequired = sql`excluded.${sql.raw(channel.isApprovalRequired.name)}`;
 
-  // TODO: Send a test message to the log channel.
-  // TODO: Send a test message to the confession channel.
+    const [result, ...otherResults] = await db
+      .insert(channel)
+      .values({
+        id: BigInt(channelId),
+        guildId: BigInt(guildId),
+        logChannelId: BigInt(logChannelId),
+        label,
+        isApprovalRequired,
+        color: color?.toString(2).padStart(24, '0'),
+        disabledAt: null,
+      })
+      .onConflictDoUpdate({ target: [channel.guildId, channel.id], set })
+      .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
+    strictEqual(otherResults.length, 0);
+    assert(typeof result !== 'undefined');
 
-  logger.info('confessions enabled');
-  return result;
+    // TODO: Send a test message to the log channel.
+    // TODO: Send a test message to the confession channel.
+
+    logger.info('confessions enabled', { 'channel.id': channelId });
+    return result;
+  });
 }
 
 const HEX_COLOR = /^[0-9a-f]{6}$/iu;
 export async function handleSetup(
-  logger: Logger,
   resolvedChannels: NonNullable<Resolved['channels']>,
   guildId: Snowflake,
   channelId: Snowflake,
@@ -101,10 +116,9 @@ export async function handleSetup(
     }
 
   assert(typeof channel !== 'undefined');
-  strictEqual(resolvedChannels[channel.toString()]?.type, ChannelType.GuildText);
+  strictEqual(resolvedChannels[channel]?.type, ChannelType.GuildText);
 
   const result = await enableConfessions(
-    logger,
     channel,
     guildId,
     channelId,

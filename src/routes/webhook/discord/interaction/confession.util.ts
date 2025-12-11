@@ -1,22 +1,16 @@
-import type { Logger } from 'pino';
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import {
-  type InsertableAttachment,
-  db,
-  insertConfession,
-  resetLogChannel,
-} from '$lib/server/database';
-import {
-  dispatchConfessionViaHttp,
-  logApprovedConfessionViaHttp,
-  logPendingConfessionViaHttp,
-} from '$lib/server/api/discord';
+import { type InsertableAttachment, db, insertConfession } from '$lib/server/database';
+import { inngest } from '$lib/server/inngest/client';
 
-import { doDeferredResponse, hasAllPermissions } from './util';
-import { UnexpectedDiscordErrorCode } from './errors';
+import { hasAllPermissions } from './util';
+
+const SERVICE_NAME = 'webhook.interaction.confession';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
 
 // Shared error classes
 export abstract class ConfessError extends Error {
@@ -73,8 +67,8 @@ export class MissingLogConfessError extends ConfessError {
  * @throws {MissingLogConfessError}
  */
 export async function submitConfession(
-  logger: Logger,
   timestamp: Date,
+  interactionToken: string,
   permission: bigint,
   confessionChannelId: Snowflake,
   authorId: Snowflake,
@@ -82,158 +76,108 @@ export async function submitConfession(
   attachment: InsertableAttachment | null,
   shouldInsertAttachment: boolean,
 ) {
-  if (!hasAllPermissions(permission, SEND_MESSAGES))
-    throw new InsufficientSendMessagesConfessionError();
+  return await tracer.asyncSpan('submit-confession', async span => {
+    span.setAttributes({ 'channel.id': confessionChannelId, 'author.id': authorId });
 
-  if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
-    throw new InsufficientPermissionsConfessionError();
+    if (attachment !== null)
+      span.setAttributes({
+        'attachment.id': attachment.id,
+        'attachment.url': attachment.url,
+        'attachment.proxy_url': attachment.proxy_url,
+        'attachment.content_type': attachment.content_type,
+        'attachment.filename': attachment.filename,
+      });
 
-  const channel = await db.query.channel.findFirst({
-    columns: {
-      logChannelId: true,
-      guildId: true,
-      disabledAt: true,
-      isApprovalRequired: true,
-      label: true,
-      color: true,
-    },
-    where({ id }, { eq }) {
-      return eq(id, confessionChannelId);
-    },
-  });
+    if (!hasAllPermissions(permission, SEND_MESSAGES)) {
+      const error = new InsufficientSendMessagesConfessionError();
+      logger.error('insufficient send messages permission', error, {
+        permissions: permission.toString(),
+      });
+      throw error;
+    }
 
-  if (typeof channel === 'undefined') throw new UnknownChannelConfessError();
-  const { logChannelId, guildId, disabledAt, color, label, isApprovalRequired } = channel;
-  const hex = color === null ? void 0 : Number.parseInt(color, 2);
+    if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES)) {
+      const error = new InsufficientPermissionsConfessionError();
+      logger.error('insufficient attach files permission', error, {
+        permissions: permission.toString(),
+      });
+      throw error;
+    }
 
-  logger.info({ channel }, 'channel for confession submission found');
-
-  if (disabledAt !== null && disabledAt <= timestamp)
-    throw new DisabledChannelConfessError(disabledAt);
-  if (logChannelId === null) throw new MissingLogConfessError();
-
-  if (isApprovalRequired) {
-    const { internalId, confessionId } = await insertConfession(
-      db,
-      timestamp,
-      guildId,
-      confessionChannelId,
-      authorId,
-      description,
-      null,
-      null,
-      attachment,
-      shouldInsertAttachment,
-    );
-
-    logger.info({ internalId, confessionId }, 'confession pending approval submitted');
-
-    // Promise is ignored so that it runs in the background
-    void doDeferredResponse(logger, async () => {
-      const discordErrorCode = await logPendingConfessionViaHttp(
-        logger,
-        timestamp,
-        logChannelId,
-        internalId,
-        confessionId,
-        authorId,
-        label,
-        description,
-        attachment,
-      );
-
-      if (typeof discordErrorCode === 'number')
-        switch (discordErrorCode) {
-          case DiscordErrorCode.UnknownChannel:
-            if (await resetLogChannel(db, logChannelId))
-              logger.error('log channel reset due to unknown channel');
-            else logger.warn('log channel previously reset due to unknown channel');
-            return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro has detected that the log channel had been deleted.`;
-          case DiscordErrorCode.MissingAccess:
-            logger.error('insufficient channel permissions for the log channel');
-            return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the moderators that Spectro couldn't log the confession due to insufficient log channel permissions.`;
-          default:
-            logger.fatal(
-              { discordErrorCode },
-              'unexpected error code when logging resent confession',
-            );
-            return `${label} #${confessionId} has been submitted, but its publication is pending approval. Also kindly inform the developers and the moderators that Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord.`;
-        }
-
-      logger.info('confession pending approval has been logged');
-      return `${label} #${confessionId} has been submitted, but its publication is pending approval.`;
+    const channel = await db.query.channel.findFirst({
+      columns: {
+        logChannelId: true,
+        guildId: true,
+        disabledAt: true,
+        isApprovalRequired: true,
+        label: true,
+      },
+      where({ id }, { eq }) {
+        return eq(id, BigInt(confessionChannelId));
+      },
     });
 
-    logger.info('confession pending approval has been submitted');
-    return `${label} #${confessionId} has been submitted.`;
-  }
+    if (typeof channel === 'undefined') {
+      const error = new UnknownChannelConfessError();
+      logger.error('unknown confession channel', error);
+      throw error;
+    }
 
-  const { internalId, confessionId } = await insertConfession(
-    db,
-    timestamp,
-    guildId,
-    confessionChannelId,
-    authorId,
-    description,
-    timestamp,
-    null,
-    attachment,
-    shouldInsertAttachment,
-  );
+    const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
-  logger.info({ internalId, confessionId }, 'confession submitted');
+    logger.debug('channel found', {
+      'guild.id': channel.guildId.toString(),
+      label: channel.label,
+      'approval.required': channel.isApprovalRequired,
+    });
 
-  // Promise is ignored so that it runs in the background
-  void doDeferredResponse(logger, async () => {
-    const message = await dispatchConfessionViaHttp(
-      logger,
-      timestamp,
-      confessionChannelId,
-      confessionId,
-      label,
-      hex,
-      description,
-      null,
-      attachment,
+    if (disabledAt !== null && disabledAt <= timestamp) {
+      logger.warn('confession channel disabled', {
+        'disabled.at': disabledAt.toISOString(),
+      });
+      throw new DisabledChannelConfessError(disabledAt);
+    }
+
+    if (logChannelId === null) {
+      const error = new MissingLogConfessError();
+      logger.error('missing log channel for confession', error);
+      throw error;
+    }
+
+    // Insert confession to database
+    const { internalId, confessionId } = await db.transaction(
+      async db =>
+        await insertConfession(
+          db,
+          timestamp,
+          guildId,
+          BigInt(confessionChannelId),
+          BigInt(authorId),
+          description,
+          isApprovalRequired ? null : timestamp, // approvedAt
+          null, // parentMessageId
+          attachment,
+          shouldInsertAttachment,
+        ),
     );
 
-    if (typeof message === 'number')
-      switch (message) {
-        case DiscordErrorCode.MissingAccess:
-          return 'Spectro does not have the permission to send messages in this channel.';
-        default:
-          throw new UnexpectedDiscordErrorCode(message);
-      }
+    logger.debug('confession inserted', {
+      'internal.id': internalId.toString(),
+      'confession.id': confessionId.toString(),
+    });
 
-    const discordErrorCode = await logApprovedConfessionViaHttp(
-      logger,
-      timestamp,
-      logChannelId,
-      confessionId,
-      authorId,
-      label,
-      description,
-      attachment,
-    );
+    // Emit Inngest event for async processing (fan-out to post-confession and log-confession)
+    const { ids } = await inngest.send({
+      name: 'discord/confession.submit',
+      data: {
+        interactionToken,
+        internalId: internalId.toString(),
+      },
+    });
 
-    if (typeof discordErrorCode === 'number')
-      switch (discordErrorCode) {
-        case DiscordErrorCode.UnknownChannel:
-          if (await resetLogChannel(db, confessionChannelId))
-            logger.error('log channel reset due to unknown channel');
-          else logger.warn('log channel previously reset due to unknown channel');
-          return `${label} #${confessionId} has been published, but Spectro couldn't log the confession because the log channel had been deleted. Kindly notify the moderators about the configuration issue.`;
-        case DiscordErrorCode.MissingAccess:
-          logger.warn('insufficient channel permissions to confession log channel');
-          return `${label} #${confessionId} has been published, but Spectro couldn't log the confession due to insufficient channel permissions. Kindly notify the moderators about the configuration issue.`;
-        default:
-          logger.fatal({ discordErrorCode }, 'unexpected error code when logging replies');
-          return `${label} #${confessionId} has been published, but Spectro couldn't log the confession due to an unexpected error (${discordErrorCode}) from Discord. Kindly notify the developers and the moderators about this issue.`;
-      }
-
-    logger.info('auto-approved confession has been published');
-    return `${label} #${confessionId} has been confirmed.`;
+    logger.info(isApprovalRequired ? 'confession pending approval' : 'confession submitted', {
+      'inngest.events.id': ids,
+      'confession.id': confessionId.toString(),
+    });
   });
-
-  return `${label} #${confessionId} has been published.`;
 }

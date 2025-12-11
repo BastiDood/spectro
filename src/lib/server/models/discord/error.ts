@@ -3,9 +3,10 @@ import { type InferOutput, check, number, object, pipe, safeInteger, string } fr
 export const enum DiscordErrorCode {
   UnknownChannel = 10003,
   MissingAccess = 50001,
+  MissingPermissions = 50013,
 }
 
-export const DiscordError = object({
+export const DiscordErrorResponse = object({
   code: pipe(
     number(),
     safeInteger(),
@@ -14,4 +15,14 @@ export const DiscordError = object({
   message: string(),
 });
 
-export type DiscordError = InferOutput<typeof DiscordError>;
+export type DiscordErrorResponse = InferOutput<typeof DiscordErrorResponse>;
+
+export class DiscordError extends Error {
+  constructor(
+    public readonly code: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'DiscordError';
+  }
+}

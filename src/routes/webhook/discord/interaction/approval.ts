@@ -1,10 +1,10 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import type { Logger } from 'pino';
 import { eq } from 'drizzle-orm';
 
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
-import { Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
+import { type Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -15,10 +15,14 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { attachment, channel, confession } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
-import { dispatchConfessionViaHttp } from '$lib/server/api/discord';
+import { inngest } from '$lib/server/inngest/client';
 
 import { MalformedCustomIdFormat } from './errors';
 import { hasAllPermissions } from './util';
+
+const SERVICE_NAME = 'webhook.interaction.approval';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
 
 abstract class ApprovalError extends Error {
   constructor(message?: string) {
@@ -55,114 +59,146 @@ class AlreadyApprovedApprovalError extends ApprovalError {
  * @throws {AlreadyApprovedApprovalError}
  */
 async function submitVerdict(
-  logger: Logger,
   timestamp: Date,
+  interactionToken: string,
   isApproved: boolean,
   internalId: bigint,
   moderatorId: Snowflake,
   permissions: bigint,
-): Promise<Embed | string> {
-  if (!hasAllPermissions(permissions, MANAGE_MESSAGES))
-    throw new InsufficientPermissionsApprovalError();
+) {
+  return await tracer.asyncSpan('submit-verdict', async span => {
+    span.setAttributes({
+      'confession.id': internalId.toString(),
+      'moderator.id': moderatorId,
+      'verdict.approved': isApproved,
+    });
 
-  return await db.transaction(async tx => {
-    const [details, ...rest] = await tx
-      .select({
-        disabledAt: channel.disabledAt,
-        label: channel.label,
-        color: channel.color,
-        parentMessageId: confession.parentMessageId,
-        confessionChannelId: confession.channelId,
-        confessionId: confession.confessionId,
-        authorId: confession.authorId,
-        createdAt: confession.createdAt,
-        approvedAt: confession.approvedAt,
-        content: confession.content,
-        attachmentId: confession.attachmentId,
-      })
-      .from(confession)
-      .innerJoin(channel, eq(confession.channelId, channel.id))
-      .where(eq(confession.internalId, internalId))
-      .limit(1)
-      .for('update');
-    strictEqual(rest.length, 0);
-    assert(typeof details !== 'undefined');
-    const {
-      approvedAt,
-      createdAt,
-      disabledAt,
-      authorId,
-      confessionChannelId,
-      confessionId,
-      parentMessageId,
-      color,
-      label,
-      content,
-      attachmentId,
-    } = details;
-    const hex = color === null ? void 0 : Number.parseInt(color, 2);
-
-    // TODO: Refactor to Relations API once the `bigint` bug is fixed.
-    let embedAttachment: EmbedAttachment | null = null;
-    if (attachmentId !== null) {
-      const [retrieved, ...others] = await tx
-        .select({
-          filename: attachment.filename,
-          contentType: attachment.contentType,
-          url: attachment.url,
-        })
-        .from(attachment)
-        .where(eq(attachment.id, attachmentId));
-      strictEqual(others.length, 0);
-      assert(typeof retrieved !== 'undefined');
-      embedAttachment = {
-        filename: retrieved.filename,
-        url: retrieved.url,
-        content_type: retrieved.contentType ?? void 0,
-      };
+    if (!hasAllPermissions(permissions, MANAGE_MESSAGES)) {
+      const error = new InsufficientPermissionsApprovalError();
+      logger.error('insufficient permissions for approval', error, {
+        permissions: permissions.toString(),
+      });
+      throw error;
     }
 
-    logger.info({ details }, 'fetched confession details for approval');
+    return await db.transaction(async tx => {
+      const [details, ...rest] = await tx
+        .select({
+          disabledAt: channel.disabledAt,
+          label: channel.label,
+          authorId: confession.authorId,
+          approvedAt: confession.approvedAt,
+          content: confession.content,
+          confessionId: confession.confessionId,
+          attachmentId: confession.attachmentId,
+        })
+        .from(confession)
+        .innerJoin(channel, eq(confession.channelId, channel.id))
+        .where(eq(confession.internalId, internalId))
+        .limit(1)
+        .for('update');
+      strictEqual(rest.length, 0);
+      assert(typeof details !== 'undefined');
+      const { approvedAt, disabledAt, authorId, confessionId, label, content, attachmentId } =
+        details;
 
-    if (disabledAt !== null && disabledAt <= timestamp)
-      throw new DisabledChannelConfessError(disabledAt);
+      // TODO: Refactor to Relations API once the `bigint` bug is fixed.
+      let embedAttachment: EmbedAttachment | null = null;
+      if (attachmentId !== null) {
+        const [retrieved, ...others] = await tx
+          .select({
+            filename: attachment.filename,
+            contentType: attachment.contentType,
+            url: attachment.url,
+          })
+          .from(attachment)
+          .where(eq(attachment.id, attachmentId));
+        strictEqual(others.length, 0);
+        assert(typeof retrieved !== 'undefined');
+        embedAttachment = {
+          filename: retrieved.filename,
+          url: retrieved.url,
+          content_type: retrieved.contentType ?? void 0,
+        };
+      }
 
-    if (approvedAt !== null) throw new AlreadyApprovedApprovalError(approvedAt);
+      logger.debug('confession details fetched', {
+        'confession.id': details.confessionId.toString(),
+        label: details.label,
+      });
 
-    if (isApproved) {
-      const { rowCount } = await tx
-        .update(confession)
-        .set({ approvedAt: timestamp })
-        .where(eq(confession.internalId, internalId));
-      strictEqual(rowCount, 1);
+      if (disabledAt !== null && disabledAt <= timestamp) {
+        logger.warn('channel disabled for approval', {
+          'disabled.at': disabledAt.toISOString(),
+        });
+        throw new DisabledChannelConfessError(disabledAt);
+      }
 
-      const discordErrorCode = await dispatchConfessionViaHttp(
-        logger,
-        createdAt,
-        confessionChannelId,
-        confessionId,
-        label,
-        hex,
-        content,
-        parentMessageId,
-        embedAttachment,
-      );
+      if (approvedAt !== null) {
+        const error = new AlreadyApprovedApprovalError(approvedAt);
+        logger.error('confession already approved', error, {
+          'approved.at': approvedAt.toISOString(),
+        });
+        throw error;
+      }
 
-      if (typeof discordErrorCode === 'number')
-        switch (discordErrorCode) {
-          case DiscordErrorCode.UnknownChannel:
-            logger.error('confession channel no longer exists');
-            return `${label} #${confessionId} has been approved internally, but the confession channel no longer exists.`;
-          case DiscordErrorCode.MissingAccess:
-            logger.warn('insufficient channel permissions for the confession channel');
-            return `${label} #${confessionId} has been approved internally, but Spectro does not have the permission to send messages to the confession channel. The confession can be resent once this has been resolved.`;
-          default:
-            logger.fatal(
-              { discordErrorCode },
-              'unexpected error code when publishing to the confession channel',
-            );
-            return `${label} #${confessionId} has been approved internally, but Spectro encountered an unexpected error (${discordErrorCode}) from Discord while publishing to the confession channel. Kindly inform the developers and the moderators about this issue.`;
+      if (isApproved) {
+        const { rowCount } = await tx
+          .update(confession)
+          .set({ approvedAt: timestamp })
+          .where(eq(confession.internalId, internalId));
+        strictEqual(rowCount, 1);
+
+        // Emit Inngest event for async dispatch (will send follow-up on failure)
+        const { ids } = await inngest.send({
+          name: 'discord/confession.approve',
+          data: {
+            interactionToken,
+            internalId: internalId.toString(),
+          },
+        });
+        logger.debug('inngest event emitted', { 'inngest.events.id': ids });
+
+        const fields = [
+          {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+          },
+          {
+            name: 'Approved by',
+            value: `<@${moderatorId}>`,
+            inline: true,
+          },
+        ];
+
+        // eslint-disable-next-line @typescript-eslint/init-declarations
+        let image: EmbedImage | undefined;
+        if (embedAttachment !== null) {
+          fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+          if (embedAttachment.content_type?.startsWith('image/'))
+            image = {
+              url: embedAttachment.url,
+              height: embedAttachment.height ?? void 0,
+              width: embedAttachment.width ?? void 0,
+            };
         }
+
+        logger.info('confession approved', { 'confession.id': confessionId.toString() });
+        return {
+          type: EmbedType.Rich,
+          title: `${label} #${confessionId}`,
+          color: Color.Success,
+          timestamp: timestamp.toISOString(),
+          description: content,
+          footer: {
+            text: 'Spectro Logs',
+            icon_url: APP_ICON_URL,
+          },
+          fields,
+          image,
+        };
+      }
 
       const fields = [
         {
@@ -171,7 +207,7 @@ async function submitVerdict(
           inline: true,
         },
         {
-          name: 'Approved by',
+          name: 'Deleted by',
           value: `<@${moderatorId}>`,
           inline: true,
         },
@@ -183,17 +219,19 @@ async function submitVerdict(
         fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
         if (embedAttachment.content_type?.startsWith('image/'))
           image = {
-            url: new URL(embedAttachment.url),
+            url: embedAttachment.url,
             height: embedAttachment.height ?? void 0,
             width: embedAttachment.width ?? void 0,
           };
       }
 
+      await tx.delete(confession).where(eq(confession.internalId, internalId));
+      logger.info('confession rejected', { 'confession.id': confessionId.toString() });
       return {
         type: EmbedType.Rich,
         title: `${label} #${confessionId}`,
-        color: Color.Success,
-        timestamp,
+        color: Color.Failure,
+        timestamp: timestamp.toISOString(),
         description: content,
         footer: {
           text: 'Spectro Logs',
@@ -202,54 +240,13 @@ async function submitVerdict(
         fields,
         image,
       };
-    }
-
-    const fields = [
-      {
-        name: 'Authored by',
-        value: `||<@${authorId}>||`,
-        inline: true,
-      },
-      {
-        name: 'Deleted by',
-        value: `<@${moderatorId}>`,
-        inline: true,
-      },
-    ];
-
-    // eslint-disable-next-line @typescript-eslint/init-declarations
-    let image: EmbedImage | undefined;
-    if (embedAttachment !== null) {
-      fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
-      if (embedAttachment.content_type?.startsWith('image/'))
-        image = {
-          url: new URL(embedAttachment.url),
-          height: embedAttachment.height ?? void 0,
-          width: embedAttachment.width ?? void 0,
-        };
-    }
-
-    await tx.delete(confession).where(eq(confession.internalId, internalId));
-    logger.warn('deleted confession due to rejection');
-    return {
-      type: EmbedType.Rich,
-      title: `${label} #${confessionId}`,
-      color: Color.Failure,
-      timestamp,
-      description: content,
-      footer: {
-        text: 'Spectro Logs',
-        icon_url: APP_ICON_URL,
-      },
-      fields,
-      image,
-    };
+    });
   });
 }
 
 export async function handleApproval(
-  logger: Logger,
   timestamp: Date,
+  interactionToken: string,
   customId: string,
   userId: Snowflake,
   permissions: bigint,
@@ -269,31 +266,30 @@ export async function handleApproval(
     case 'delete':
       isApproved = false;
       break;
-    default:
-      throw new MalformedCustomIdFormat(key);
+    default: {
+      const error = new MalformedCustomIdFormat(key);
+      logger.error('malformed custom id format', error, {
+        'custom.id': customId,
+        key,
+      });
+      throw error;
+    }
   }
 
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let embed: Embed;
   try {
-    const payload = await submitVerdict(
-      logger,
+    embed = await submitVerdict(
       timestamp,
+      interactionToken,
       isApproved,
       internalId,
       userId,
       permissions,
     );
-    return typeof payload === 'string'
-      ? {
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: { flags: MessageFlags.Ephemeral, content: payload },
-        }
-      : {
-          type: InteractionResponseType.UpdateMessage,
-          data: { components: [], embeds: [payload] },
-        };
   } catch (err) {
     if (err instanceof ApprovalError) {
-      logger.error(err, err.message);
+      logger.error(err.message, err);
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: { flags: MessageFlags.Ephemeral, content: err.message },
@@ -301,4 +297,9 @@ export async function handleApproval(
     }
     throw err;
   }
+
+  return {
+    type: InteractionResponseType.UpdateMessage,
+    data: { components: [], embeds: [embed] },
+  };
 }

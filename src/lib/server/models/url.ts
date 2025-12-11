@@ -1,8 +1,4 @@
-import { type InferOutput, pipe, string, transform } from 'valibot';
+import { type InferOutput, string } from 'valibot';
 
-export const Url = pipe(
-  string(),
-  transform(url => new URL(url)),
-);
-
+export const Url = string();
 export type Url = InferOutput<typeof Url>;

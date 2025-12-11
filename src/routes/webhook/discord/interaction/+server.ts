@@ -1,11 +1,12 @@
 import assert, { fail, strictEqual } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
-import type { Logger } from 'pino';
 import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
 import { DeserializedInteraction } from '$lib/server/models/discord/interaction';
@@ -33,8 +34,11 @@ import { handleResend } from './resend';
 import { handleSetup } from './setup';
 import { hasAllPermissions } from './util';
 
+const SERVICE_NAME = 'webhook.interaction';
+const logger = new Logger(SERVICE_NAME);
+const tracer = new Tracer(SERVICE_NAME);
+
 async function handleInteraction(
-  logger: Logger, // TODO: Fine-grained database-level performance logs.
   timestamp: Date,
   interaction: DeserializedInteraction,
 ): Promise<InteractionResponse> {
@@ -52,8 +56,8 @@ async function handleInteraction(
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
               return await handleConfess(
-                logger,
                 timestamp,
+                interaction.token,
                 interaction.member.permissions,
                 interaction.channel_id,
                 interaction.member.user.id,
@@ -63,7 +67,7 @@ async function handleInteraction(
             case 'help':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
-                data: handleHelp(logger, interaction.data.options ?? []),
+                data: handleHelp(interaction.data.options ?? []),
               };
             case 'setup':
               assert(typeof interaction.data.resolved?.channels !== 'undefined');
@@ -76,7 +80,6 @@ async function handleInteraction(
                 data: {
                   flags: MessageFlags.Ephemeral,
                   content: await handleSetup(
-                    logger,
                     interaction.data.resolved.channels,
                     interaction.guild_id,
                     interaction.channel_id,
@@ -92,7 +95,7 @@ async function handleInteraction(
                 type: InteractionResponseType.ChannelMessageWithSource,
                 data: {
                   flags: MessageFlags.Ephemeral,
-                  content: await handleLockdown(logger, timestamp, interaction.channel_id),
+                  content: await handleLockdown(timestamp, interaction.channel_id),
                 },
               };
             case 'resend':
@@ -100,24 +103,17 @@ async function handleInteraction(
               assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
-              return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                  flags: MessageFlags.Ephemeral,
-                  content: await handleResend(
-                    logger,
-                    timestamp,
-                    interaction.member.permissions,
-                    interaction.channel_id,
-                    interaction.member.user.id,
-                    interaction.data.options ?? [],
-                  ),
-                },
-              };
+              return await handleResend(
+                interaction.token,
+                interaction.member.permissions,
+                interaction.channel_id,
+                interaction.member.user.id,
+                interaction.data.options ?? [],
+              );
             case 'info':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
-                data: handleInfo(logger, interaction.data.options ?? []),
+                data: handleInfo(interaction.data.options ?? []),
               };
             default:
               fail(`unexpected application command chat input name ${interaction.data.name}`);
@@ -131,7 +127,6 @@ async function handleInteraction(
               assert(typeof interaction.member?.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
               return await handleReplyModal(
-                logger,
                 timestamp,
                 interaction.channel_id,
                 interaction.data.target_id,
@@ -154,8 +149,8 @@ async function handleInteraction(
       assert(typeof interaction.member.permissions !== 'undefined');
       strictEqual(interaction.data.component_type, MessageComponentType.Button);
       return await handleApproval(
-        logger,
         timestamp,
+        interaction.token,
         interaction.data.custom_id,
         interaction.member.user.id,
         interaction.member.permissions,
@@ -166,38 +161,26 @@ async function handleInteraction(
           assert(typeof interaction.channel_id !== 'undefined');
           assert(typeof interaction.member?.user !== 'undefined');
           assert(typeof interaction.member.permissions !== 'undefined');
-          return {
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-              flags: MessageFlags.Ephemeral,
-              content: await handleReplySubmit(
-                logger,
-                timestamp,
-                interaction.channel_id,
-                interaction.member.user.id,
-                interaction.member.permissions,
-                interaction.data.components,
-              ),
-            },
-          };
+          return await handleReplySubmit(
+            timestamp,
+            interaction.token,
+            interaction.channel_id,
+            interaction.member.user.id,
+            interaction.member.permissions,
+            interaction.data.components,
+          );
         case 'confess':
           assert(typeof interaction.channel_id !== 'undefined');
           assert(typeof interaction.member?.user !== 'undefined');
           assert(typeof interaction.member.permissions !== 'undefined');
-          return {
-            type: InteractionResponseType.ChannelMessageWithSource,
-            data: {
-              flags: MessageFlags.Ephemeral,
-              content: await handleConfessSubmit(
-                logger,
-                timestamp,
-                interaction.channel_id,
-                interaction.member.user.id,
-                interaction.member.permissions,
-                interaction.data.components,
-              ),
-            },
-          };
+          return await handleConfessSubmit(
+            timestamp,
+            interaction.token,
+            interaction.channel_id,
+            interaction.member.user.id,
+            interaction.member.permissions,
+            interaction.data.components,
+          );
         default:
           fail(`unexpected modal submit ${interaction.data.custom_id}`);
           break;
@@ -206,14 +189,13 @@ async function handleInteraction(
   }
 }
 
-export async function POST({ locals: { logger }, request }) {
+export async function POST({ request }) {
   const ed25519 = request.headers.get('X-Signature-Ed25519');
   if (ed25519 === null) error(400);
 
   const timestamp = request.headers.get('X-Signature-Timestamp');
   if (timestamp === null) error(400);
 
-  // Used for validating the update time in interactions
   const datetime = new Date(Number.parseInt(timestamp, 10) * 1000);
 
   const contentType = request.headers.get('Content-Type');
@@ -224,14 +206,17 @@ export async function POST({ locals: { logger }, request }) {
   const signature = Buffer.from(ed25519, 'hex');
 
   if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-    assert(typeof logger !== 'undefined');
     const interaction = parse(DeserializedInteraction, JSON.parse(text));
-    logger.info({ interaction }, 'interaction received');
 
-    const start = performance.now();
-    const response = await handleInteraction(logger, datetime, interaction);
-    const interactionTimeMillis = performance.now() - start;
-    logger.info({ interactionTimeMillis }, 'interaction processed');
+    const response = await tracer.asyncSpan('handle-interaction', async span => {
+      span.setAttributes({
+        'interaction.type': interaction.type,
+        'interaction.id': interaction.id.toString(),
+        'interaction.application.id': interaction.application_id.toString(),
+      });
+      return await handleInteraction(datetime, interaction);
+    });
+    logger.debug('interaction processed');
 
     return json(response);
   }

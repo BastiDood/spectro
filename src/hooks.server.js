@@ -1,17 +1,8 @@
-import { handleFatalError, logger } from '$lib/server/logger';
+import { Logger } from '$lib/server/telemetry/logger';
 
-export async function handle({ event, resolve }) {
-  // All logged statements must reference the request ID for easy tracking.
-  event.locals.logger = logger.child({ requestId: crypto.randomUUID() });
-  event.locals.logger.info({ method: event.request.method, url: event.url }, 'requested received');
+const logger = new Logger('hooks');
 
-  const start = performance.now();
-  const response = await resolve(event);
-  const requestTimeMillis = performance.now() - start;
-  event.locals.logger.info({ requestTimeMillis });
-  return response;
-}
-
-export function handleError({ error, event }) {
-  handleFatalError(event.locals.logger, error);
+export function handleError({ error }) {
+  if (error instanceof Error) logger.fatal('unhandled error', error);
+  else logger.fatal('unhandled error');
 }

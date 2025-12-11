@@ -147,8 +147,8 @@
     {@render command('lockdown')} command. All previous channel settings will be preserved.
   </p>
   <p>
-    To re-enable confessions, the {@render command('setup')} command can be invoked again. Note that
-    the log
+    To re-enable confessions, the {@render command('setup')} command can be invoked again. Note that the
+    log
     <strong>channel</strong> is a required argument. The rest of the optional arguments (e.g.,
     <strong>label</strong>, <strong>color</strong>, and <strong>approval</strong>) will be restored
     from the previous invocation of the {@render command('setup')} command.
