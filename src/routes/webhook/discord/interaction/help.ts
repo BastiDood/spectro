@@ -22,8 +22,8 @@ export function handleHelp([
     strictEqual(otherArgs.length, 0);
 
     const isPublic = parsePublic(arg);
-    span.setAttribute('is.public', isPublic);
-    logger.info('help page summoned', { 'is.public': isPublic });
+    span.setAttribute('public', isPublic);
+    logger.info('help page summoned');
 
     return {
       flags: isPublic ? void 0 : MessageFlags.Ephemeral,
