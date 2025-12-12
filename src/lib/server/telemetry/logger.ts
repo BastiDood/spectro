@@ -1,39 +1,25 @@
-import { AssertionError } from 'node:assert/strict';
-
-import { context, type Exception, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 import {
   type AnyValueMap,
   type Logger as OTelLogger,
   logs,
   SeverityNumber,
 } from '@opentelemetry/api-logs';
-import { getDotPath, isValiError } from 'valibot';
+import { context, type Exception, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 
 /**
  * Traverses the full chain of error causes until a certain depth.
  * Sets the span status to `ERROR` at the end of the scope.
  */
 function recordExceptionChain(span: Span, exception: Exception, depth = 10) {
+  let error = exception;
   for (let i = 0; i < depth; ++i) {
-    span.recordException(exception);
-
-    if (isValiError(exception)) {
-      const paths = exception.issues.map(issue => getDotPath(issue)).filter(path => path !== null);
-      span.setAttribute('error.valibot.paths', paths);
-    } else if (exception instanceof AssertionError) {
-      span.setAttributes({
-        'error.assertion.actual': String(exception.actual),
-        'error.assertion.expected': String(exception.expected),
-      });
-    }
-
+    span.recordException(error);
     if (
-      exception instanceof Error &&
-      typeof exception.cause !== 'undefined' &&
-      exception.cause instanceof Error
+      error instanceof Error &&
+      typeof error.cause !== 'undefined' &&
+      error.cause instanceof Error
     )
-      // eslint-disable-next-line no-param-reassign
-      exception = exception.cause;
+      error = error.cause;
     else break; // stop the error chain
   }
 }
