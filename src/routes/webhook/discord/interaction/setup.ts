@@ -1,4 +1,4 @@
-import assert, { fail, strictEqual } from 'node:assert/strict';
+import assert, { strictEqual } from 'node:assert/strict';
 
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -13,6 +13,8 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
+
+import { UnexpectedSetupArgumentError, UnexpectedSetupOptionTypeError } from './error';
 
 const SERVICE_NAME = 'webhook.interaction.setup';
 const logger = new Logger(SERVICE_NAME);
@@ -102,8 +104,7 @@ export async function handleSetup(
             else return `\`${option.value}\` is not a valid hex-encoded RGB value.`;
             break;
           default:
-            fail(`unexpected setup argument ${option.name}`);
-            break;
+            UnexpectedSetupArgumentError.throwNew(option.name);
         }
         break;
       case InteractionApplicationCommandChatInputOptionType.Boolean:
@@ -111,8 +112,7 @@ export async function handleSetup(
         isApprovalRequired = option.value;
         break;
       default:
-        fail(`unexpected option type ${option.type} encountered`);
-        break;
+        UnexpectedSetupOptionTypeError.throwNew(option.type);
     }
 
   assert(typeof channel !== 'undefined');

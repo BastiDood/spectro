@@ -25,6 +25,14 @@ export class InsufficientPermissionsConfessionError extends ConfessError {
     super('You do not have the permission to attach files to messages in this channel.');
     this.name = 'InsufficientPermissionsConfessionError';
   }
+
+  static throwNew(logger: Logger, permissions: bigint): never {
+    const error = new InsufficientPermissionsConfessionError();
+    logger.error('insufficient attach files permission', error, {
+      'error.permissions': permissions.toString(),
+    });
+    throw error;
+  }
 }
 
 export class InsufficientSendMessagesConfessionError extends ConfessError {
@@ -32,12 +40,26 @@ export class InsufficientSendMessagesConfessionError extends ConfessError {
     super('Your **"Send Messages"** permission has since been revoked.');
     this.name = 'InsufficientSendMessagesConfessionError';
   }
+
+  static throwNew(logger: Logger, permissions: bigint): never {
+    const error = new InsufficientSendMessagesConfessionError();
+    logger.error('insufficient send messages permission', error, {
+      'error.permissions': permissions.toString(),
+    });
+    throw error;
+  }
 }
 
 export class UnknownChannelConfessError extends ConfessError {
   constructor() {
     super('This channel has not been set up for confessions yet.');
     this.name = 'UnknownChannelConfessError';
+  }
+
+  static throwNew(logger: Logger): never {
+    const error = new UnknownChannelConfessError();
+    logger.error('unknown confession channel', error);
+    throw error;
   }
 }
 
@@ -47,6 +69,14 @@ export class DisabledChannelConfessError extends ConfessError {
     super(`This channel has temporarily disabled confessions since <t:${timestamp}:R>.`);
     this.name = 'DisabledChannelConfessError';
   }
+
+  static throwNew(logger: Logger, disabledAt: Date): never {
+    const error = new DisabledChannelConfessError(disabledAt);
+    logger.error('confession channel disabled', error, {
+      'error.disabled.at': disabledAt.toISOString(),
+    });
+    throw error;
+  }
 }
 
 export class MissingLogConfessError extends ConfessError {
@@ -55,6 +85,12 @@ export class MissingLogConfessError extends ConfessError {
       'Spectro cannot submit confessions until the moderators have configured a confession log.',
     );
     this.name = 'MissingLogConfessError';
+  }
+
+  static throwNew(logger: Logger): never {
+    const error = new MissingLogConfessError();
+    logger.error('missing log channel for confession', error);
+    throw error;
   }
 }
 
@@ -88,21 +124,11 @@ export async function submitConfession(
         'attachment.filename': attachment.filename,
       });
 
-    if (!hasAllPermissions(permission, SEND_MESSAGES)) {
-      const error = new InsufficientSendMessagesConfessionError();
-      logger.error('insufficient send messages permission', error, {
-        permissions: permission.toString(),
-      });
-      throw error;
-    }
+    if (!hasAllPermissions(permission, SEND_MESSAGES))
+      InsufficientSendMessagesConfessionError.throwNew(logger, permission);
 
-    if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES)) {
-      const error = new InsufficientPermissionsConfessionError();
-      logger.error('insufficient attach files permission', error, {
-        permissions: permission.toString(),
-      });
-      throw error;
-    }
+    if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
+      InsufficientPermissionsConfessionError.throwNew(logger, permission);
 
     const channel = await db.query.channel.findFirst({
       columns: {
@@ -117,11 +143,7 @@ export async function submitConfession(
       },
     });
 
-    if (typeof channel === 'undefined') {
-      const error = new UnknownChannelConfessError();
-      logger.error('unknown confession channel', error);
-      throw error;
-    }
+    if (typeof channel === 'undefined') UnknownChannelConfessError.throwNew(logger);
 
     const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
@@ -131,18 +153,10 @@ export async function submitConfession(
       'approval.required': channel.isApprovalRequired,
     });
 
-    if (disabledAt !== null && disabledAt <= timestamp) {
-      logger.warn('confession channel disabled', {
-        'disabled.at': disabledAt.toISOString(),
-      });
-      throw new DisabledChannelConfessError(disabledAt);
-    }
+    if (disabledAt !== null && disabledAt <= timestamp)
+      DisabledChannelConfessError.throwNew(logger, disabledAt);
 
-    if (logChannelId === null) {
-      const error = new MissingLogConfessError();
-      logger.error('missing log channel for confession', error);
-      throw error;
-    }
+    if (logChannelId === null) MissingLogConfessError.throwNew(logger);
 
     // Insert confession to database
     const { internalId, confessionId } = await db.transaction(

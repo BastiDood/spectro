@@ -1,9 +1,9 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
 import { db, insertConfession } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
+import { Logger } from '$lib/server/telemetry/logger';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { assertDefined } from '$lib/assert';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
@@ -11,8 +11,8 @@ import { InteractionResponseType } from '$lib/server/models/discord/interaction-
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { MessageComponents } from '$lib/server/models/discord/message/component';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { hasAllPermissions } from './util';
 
@@ -32,6 +32,14 @@ class InsufficientPermissionsReplySubmitError extends ReplySubmitError {
     super('Your **"Send Messages"** permission has since been revoked.');
     this.name = 'InsufficientPermissionsReplySubmitError';
   }
+
+  static throwNew(logger: Logger, permissions: bigint): never {
+    const error = new InsufficientPermissionsReplySubmitError();
+    logger.error('insufficient permissions for reply submit', error, {
+      'error.permissions': permissions.toString(),
+    });
+    throw error;
+  }
 }
 
 class DisabledChannelReplySubmitError extends ReplySubmitError {
@@ -40,12 +48,26 @@ class DisabledChannelReplySubmitError extends ReplySubmitError {
     super(`This channel has temporarily disabled confessions since <t:${timestamp}:R>.`);
     this.name = 'DisabledChannelReplySubmitError';
   }
+
+  static throwNew(logger: Logger, disabledAt: Date): never {
+    const error = new DisabledChannelReplySubmitError(disabledAt);
+    logger.error('channel disabled for reply submit', error, {
+      'error.disabled.at': disabledAt.toISOString(),
+    });
+    throw error;
+  }
 }
 
 class MissingLogChannelReplySubmitError extends ReplySubmitError {
   constructor() {
     super('Spectro cannot submit replies until the moderators have configured a confession log.');
     this.name = 'MissingLogChannelReplySubmitError';
+  }
+
+  static throwNew(logger: Logger): never {
+    const error = new MissingLogChannelReplySubmitError();
+    logger.error('missing log channel for reply submit', error);
+    throw error;
   }
 }
 
@@ -70,13 +92,8 @@ async function submitReply(
       'parent.message.id': parentMessageId,
     });
 
-    if (!hasAllPermissions(permissions, SEND_MESSAGES)) {
-      const error = new InsufficientPermissionsReplySubmitError();
-      logger.error('insufficient permissions for reply submit', error, {
-        permissions: permissions.toString(),
-      });
-      throw error;
-    }
+    if (!hasAllPermissions(permissions, SEND_MESSAGES))
+      InsufficientPermissionsReplySubmitError.throwNew(logger, permissions);
 
     const channel = await db.query.channel
       .findFirst({
@@ -101,17 +118,10 @@ async function submitReply(
       'approval.required': channel.isApprovalRequired,
     });
 
-    if (disabledAt !== null && disabledAt <= timestamp) {
-      logger.warn('channel disabled for reply submit', {
-        'disabled.at': disabledAt.toISOString(),
-      });
-      throw new DisabledChannelReplySubmitError(disabledAt);
-    }
-    if (logChannelId === null) {
-      const error = new MissingLogChannelReplySubmitError();
-      logger.error('missing log channel for reply submit', error);
-      throw error;
-    }
+    if (disabledAt !== null && disabledAt <= timestamp)
+      DisabledChannelReplySubmitError.throwNew(logger, disabledAt);
+
+    if (logChannelId === null) MissingLogChannelReplySubmitError.throwNew(logger);
 
     // Insert reply to database
     const { internalId, confessionId } = await db.transaction(

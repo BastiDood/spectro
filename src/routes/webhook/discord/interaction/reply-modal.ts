@@ -26,6 +26,12 @@ class UnknownChannelReplyModalError extends ReplyModalError {
     super('This channel has not been set up for confessions yet.');
     this.name = 'UnknownChannelReplyModalError';
   }
+
+  static throwNew(logger: Logger): never {
+    const error = new UnknownChannelReplyModalError();
+    logger.error('unknown channel for reply modal', error);
+    throw error;
+  }
 }
 
 class DisabledChannelReplyModalError extends ReplyModalError {
@@ -36,12 +42,26 @@ class DisabledChannelReplyModalError extends ReplyModalError {
     );
     this.name = 'DisabledChannelReplyModalError';
   }
+
+  static throwNew(logger: Logger, disabledAt: Date): never {
+    const error = new DisabledChannelReplyModalError(disabledAt);
+    logger.error('channel disabled for reply modal', error, {
+      'error.disabled.at': disabledAt.toISOString(),
+    });
+    throw error;
+  }
 }
 
 class ApprovalRequiredReplyModalError extends ReplyModalError {
   constructor() {
     super('You cannot (yet) reply to a confession in a channel that requires moderator approval.');
     this.name = 'ApprovalRequiredReplyModalError';
+  }
+
+  static throwNew(logger: Logger): never {
+    const error = new ApprovalRequiredReplyModalError();
+    logger.error('approval required for reply modal', error);
+    throw error;
   }
 }
 
@@ -64,11 +84,7 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
       },
     });
 
-    if (typeof channel === 'undefined') {
-      const error = new UnknownChannelReplyModalError();
-      logger.error('unknown channel for reply modal', error);
-      throw error;
-    }
+    if (typeof channel === 'undefined') UnknownChannelReplyModalError.throwNew(logger);
 
     const { disabledAt, isApprovalRequired } = channel;
 
@@ -77,16 +93,9 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
       'approval.required': channel.isApprovalRequired,
     });
 
-    if (disabledAt !== null && disabledAt <= timestamp) {
-      logger.warn('channel disabled for reply modal', {
-        'disabled.at': disabledAt.toISOString(),
-      });
-      throw new DisabledChannelReplyModalError(disabledAt);
-    }
-    if (isApprovalRequired) {
-      logger.warn('approval required for reply modal');
-      throw new ApprovalRequiredReplyModalError();
-    }
+    if (disabledAt !== null && disabledAt <= timestamp)
+      DisabledChannelReplyModalError.throwNew(logger, disabledAt);
+    if (isApprovalRequired) ApprovalRequiredReplyModalError.throwNew(logger);
 
     logger.debug('reply modal prompted');
     return {

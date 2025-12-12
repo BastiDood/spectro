@@ -36,15 +36,24 @@ async function handleWebhook(timestamp: Date, webhook: Webhook) {
 
 export async function POST({ request }) {
   const ed25519 = request.headers.get('X-Signature-Ed25519');
-  if (ed25519 === null) error(400);
+  if (ed25519 === null) {
+    logger.error('missing Ed25519 signature header');
+    error(400);
+  }
 
   const timestamp = request.headers.get('X-Signature-Timestamp');
-  if (timestamp === null) error(400);
+  if (timestamp === null) {
+    logger.error('missing timestamp header');
+    error(400);
+  }
 
   const datetime = new Date(Number.parseInt(timestamp, 10) * 1000);
 
   const contentType = request.headers.get('Content-Type');
-  if (contentType === null || contentType !== 'application/json') error(400);
+  if (contentType === null || contentType !== 'application/json') {
+    logger.error('invalid content type header', void 0, { 'error.content.type': contentType });
+    error(400);
+  }
 
   const text = await request.text();
   const message = Buffer.from(timestamp + text);
@@ -65,5 +74,6 @@ export async function POST({ request }) {
     return new Response(null, { status: 204 });
   }
 
+  logger.error('invalid signature');
   error(401);
 }

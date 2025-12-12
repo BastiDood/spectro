@@ -17,8 +17,8 @@ import { attachment, channel, confession } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 
-import { MalformedCustomIdFormat } from './errors';
 import { hasAllPermissions } from './util';
+import { MalformedCustomIdFormat } from './error';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
 const logger = new Logger(SERVICE_NAME);
@@ -36,6 +36,14 @@ class InsufficientPermissionsApprovalError extends ApprovalError {
     super('You need the **"Manage Messages"** permission to approve/reject confessions.');
     this.name = 'InsufficientPermissionsApprovalError';
   }
+
+  static throwNew(logger: Logger, permissions: bigint): never {
+    const error = new InsufficientPermissionsApprovalError();
+    logger.error('insufficient permissions for approval', error, {
+      'error.permissions': permissions.toString(),
+    });
+    throw error;
+  }
 }
 
 class DisabledChannelConfessError extends ApprovalError {
@@ -44,12 +52,29 @@ class DisabledChannelConfessError extends ApprovalError {
     super(`The confession channel has been temporarily disabled since <t:${timestamp}:R>.`);
     this.name = 'DisabledChannelConfessError';
   }
+
+  static throwNew(logger: Logger, disabledAt: Date): never {
+    const error = new DisabledChannelConfessError(disabledAt);
+    logger.error('channel disabled for approval', error, {
+      'error.disabled.at': disabledAt.toISOString(),
+    });
+    throw error;
+  }
 }
 
 class AlreadyApprovedApprovalError extends ApprovalError {
-  constructor(public timestamp: Date) {
-    super(`This confession has already been approved since since <t:${timestamp}:R>.`);
+  constructor(public approvedAt: Date) {
+    const timestamp = Math.floor(approvedAt.valueOf() / 1000);
+    super(`This confession has already been approved since <t:${timestamp}:R>.`);
     this.name = 'AlreadyApprovedApprovalError';
+  }
+
+  static throwNew(logger: Logger, approvedAt: Date): never {
+    const error = new AlreadyApprovedApprovalError(approvedAt);
+    logger.error('confession already approved', error, {
+      'error.approved.at': approvedAt.toISOString(),
+    });
+    throw error;
   }
 }
 
@@ -68,18 +93,15 @@ async function submitVerdict(
 ) {
   return await tracer.asyncSpan('submit-verdict', async span => {
     span.setAttributes({
-      'confession.id': internalId.toString(),
-      'moderator.id': moderatorId,
+      timestamp: timestamp.toISOString(),
       'verdict.approved': isApproved,
+      'confession.internal.id': internalId.toString(),
+      'moderator.id': moderatorId,
+      permissions: permissions.toString(),
     });
 
-    if (!hasAllPermissions(permissions, MANAGE_MESSAGES)) {
-      const error = new InsufficientPermissionsApprovalError();
-      logger.error('insufficient permissions for approval', error, {
-        permissions: permissions.toString(),
-      });
-      throw error;
-    }
+    if (!hasAllPermissions(permissions, MANAGE_MESSAGES))
+      InsufficientPermissionsApprovalError.throwNew(logger, permissions);
 
     return await db.transaction(async tx => {
       const [details, ...rest] = await tx
@@ -127,20 +149,10 @@ async function submitVerdict(
         label: details.label,
       });
 
-      if (disabledAt !== null && disabledAt <= timestamp) {
-        logger.warn('channel disabled for approval', {
-          'disabled.at': disabledAt.toISOString(),
-        });
-        throw new DisabledChannelConfessError(disabledAt);
-      }
+      if (disabledAt !== null && disabledAt <= timestamp)
+        DisabledChannelConfessError.throwNew(logger, disabledAt);
 
-      if (approvedAt !== null) {
-        const error = new AlreadyApprovedApprovalError(approvedAt);
-        logger.error('confession already approved', error, {
-          'approved.at': approvedAt.toISOString(),
-        });
-        throw error;
-      }
+      if (approvedAt !== null) AlreadyApprovedApprovalError.throwNew(logger, approvedAt);
 
       if (isApproved) {
         const { rowCount } = await tx
@@ -266,14 +278,8 @@ export async function handleApproval(
     case 'delete':
       isApproved = false;
       break;
-    default: {
-      const error = new MalformedCustomIdFormat(key);
-      logger.error('malformed custom id format', error, {
-        'custom.id': customId,
-        key,
-      });
-      throw error;
-    }
+    default:
+      MalformedCustomIdFormat.throwNew(key);
   }
 
   // eslint-disable-next-line @typescript-eslint/init-declarations

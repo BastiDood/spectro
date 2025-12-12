@@ -1,4 +1,4 @@
-import assert, { fail, strictEqual } from 'node:assert/strict';
+import assert, { strictEqual } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
 import { error, json } from '@sveltejs/kit';
@@ -25,6 +25,12 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { handleApproval } from './approval';
 import { handleConfess } from './confess';
 import { handleConfessSubmit } from './confess-submit';
+import {
+  UnexpectedApplicationCommandChatInputNameError,
+  UnexpectedApplicationCommandMessageNameError,
+  UnexpectedApplicationCommandTypeError,
+  UnexpectedModalSubmitError,
+} from './error';
 import { handleHelp } from './help';
 import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';
@@ -116,8 +122,7 @@ async function handleInteraction(
                 data: handleInfo(interaction.data.options ?? []),
               };
             default:
-              fail(`unexpected application command chat input name ${interaction.data.name}`);
-              break;
+              UnexpectedApplicationCommandChatInputNameError.throwNew(interaction.data.name);
           }
           break;
         case InteractionApplicationCommandType.Message:
@@ -132,15 +137,11 @@ async function handleInteraction(
                 interaction.data.target_id,
               );
             default:
-              fail(
-                `unexpected interaction application command message name ${interaction.data.name}`,
-              );
-              break;
+              UnexpectedApplicationCommandMessageNameError.throwNew(interaction.data.name);
           }
           break;
         default:
-          fail(`unexpected interaction application command type ${interaction.data.type}`);
-          break;
+          UnexpectedApplicationCommandTypeError.throwNew(interaction.data.type);
       }
       break;
     case InteractionType.MessageComponent:
@@ -182,8 +183,7 @@ async function handleInteraction(
             interaction.data.components,
           );
         default:
-          fail(`unexpected modal submit ${interaction.data.custom_id}`);
-          break;
+          UnexpectedModalSubmitError.throwNew(interaction.data.custom_id);
       }
       break;
   }
@@ -191,15 +191,24 @@ async function handleInteraction(
 
 export async function POST({ request }) {
   const ed25519 = request.headers.get('X-Signature-Ed25519');
-  if (ed25519 === null) error(400);
+  if (ed25519 === null) {
+    logger.error('missing Ed25519 signature header');
+    error(400);
+  }
 
   const timestamp = request.headers.get('X-Signature-Timestamp');
-  if (timestamp === null) error(400);
+  if (timestamp === null) {
+    logger.error('missing timestamp header');
+    error(400);
+  }
 
   const datetime = new Date(Number.parseInt(timestamp, 10) * 1000);
 
   const contentType = request.headers.get('Content-Type');
-  if (contentType === null || contentType !== 'application/json') error(400);
+  if (contentType === null || contentType !== 'application/json') {
+    logger.error('invalid content type header');
+    error(400);
+  }
 
   const text = await request.text();
   const message = Buffer.from(timestamp + text);
@@ -221,5 +230,6 @@ export async function POST({ request }) {
     return json(response);
   }
 
+  logger.error('invalid signature');
   error(401);
 }
