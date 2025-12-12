@@ -1,9 +1,19 @@
+import process from 'node:process';
+
+import { NodeSDK } from '@opentelemetry/sdk-node';
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
-import { registerOTel } from '@vercel/otel';
 
 // OpenTelemetry SDK is configured via the standard environment variables at runtime.
-registerOTel({
+const sdk = new NodeSDK({
   serviceName: 'spectro',
   autoDetectResources: false,
   instrumentations: [new PgInstrumentation()],
+});
+
+sdk.start();
+
+process.once('sveltekit:shutdown', async reason => {
+  // eslint-disable-next-line no-console
+  console.warn('graceful shutdown...', reason);
+  await sdk.shutdown();
 });
