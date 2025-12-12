@@ -1,11 +1,12 @@
-.DS_Store
-.svelte-kit
-.wrangler
-drizzle
-node_modules
 .env
 .env.*
 !.env.example
+
+.svelte-kit
+.vercel
+
+drizzle
+node_modules
 
 # Ignore files for PNPM, NPM and YARN
 pnpm-lock.yaml
