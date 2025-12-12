@@ -10,7 +10,7 @@ import {
 import { createMessage, sendFollowupMessage } from '$lib/server/api/discord';
 import { db, fetchConfessionForLog, resetLogChannel } from '$lib/server/database';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
-import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error';
+import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
 import type { Message } from '$lib/server/models/discord/message';
 import { Logger } from '$lib/server/telemetry/logger';

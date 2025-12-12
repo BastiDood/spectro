@@ -9,7 +9,7 @@ import type {
   SerializedConfessionForLog,
   SerializedConfessionForResend,
 } from '$lib/server/database';
-import { DiscordErrorCode } from '$lib/server/models/discord/error';
+import { DiscordErrorCode } from '$lib/server/models/discord/errors';
 import {
   type Embed,
   type EmbedField,

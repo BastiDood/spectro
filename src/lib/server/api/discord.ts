@@ -3,7 +3,7 @@ import { parse } from 'valibot';
 import { DISCORD_APPLICATION_ID, DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/error';
+import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';

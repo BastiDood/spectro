@@ -30,7 +30,7 @@ import {
   UnexpectedApplicationCommandMessageNameError,
   UnexpectedApplicationCommandTypeError,
   UnexpectedModalSubmitError,
-} from './error';
+} from './errors';
 import { handleHelp } from './help';
 import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';

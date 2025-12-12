@@ -18,7 +18,7 @@ import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 
 import { hasAllPermissions } from './util';
-import { MalformedCustomIdFormat } from './error';
+import { MalformedCustomIdFormat } from './errors';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
 const logger = new Logger(SERVICE_NAME);

@@ -14,7 +14,7 @@ import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/mo
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
-import { UnexpectedSetupArgumentError, UnexpectedSetupOptionTypeError } from './error';
+import { UnexpectedSetupArgumentError, UnexpectedSetupOptionTypeError } from './errors';
 
 const SERVICE_NAME = 'webhook.interaction.setup';
 const logger = new Logger(SERVICE_NAME);

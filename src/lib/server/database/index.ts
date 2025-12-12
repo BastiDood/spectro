@@ -18,7 +18,7 @@ import {
   MissingRowCountDatabaseError,
   UnexpectedRowCountDatabaseError,
   UnknownDatabaseDriverError,
-} from './error';
+} from './errors';
 
 const SERVICE_NAME = 'database';
 const logger = new Logger(SERVICE_NAME);
