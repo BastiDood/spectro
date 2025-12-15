@@ -92,7 +92,7 @@ export async function handleConfess(
             },
           ],
         },
-      } satisfies InteractionResponseModal;
+      };
     }
 
     try {

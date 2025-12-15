@@ -170,7 +170,7 @@ export const logConfession = inngest.createFunction(
           });
           break;
         default:
-          result satisfies never;
+          throw new Error('unreachable');
       }
     });
   },
