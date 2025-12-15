@@ -1,20 +1,17 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
+import { db, type InsertableAttachment } from '$lib/server/database';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { MessageComponents } from '$lib/server/models/discord/message/component';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { db, type InsertableAttachment } from '$lib/server/database';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
-// Import from shared library
 import { submitConfession, ConfessError } from './confession.util';
 
 const SERVICE_NAME = 'webhook.interaction.confess-submit';
-const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
 export async function handleConfessSubmit(
@@ -89,13 +86,11 @@ export async function handleConfessSubmit(
         false,
       );
     } catch (err) {
-      if (err instanceof ConfessError) {
-        logger.error(err.message, err);
+      if (err instanceof ConfessError)
         return {
           type: InteractionResponseType.ChannelMessageWithSource,
           data: { flags: MessageFlags.Ephemeral, content: err.message },
         };
-      }
       throw err;
     }
 

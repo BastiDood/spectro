@@ -9,7 +9,6 @@ import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/mo
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
-import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageComponentTextInputStyle } from '$lib/server/models/discord/message/component/text-input';
@@ -107,13 +106,11 @@ export async function handleConfess(
         true,
       );
     } catch (err) {
-      if (err instanceof ConfessError) {
-        logger.error(err.message, err);
+      if (err instanceof ConfessError)
         return {
           type: InteractionResponseType.ChannelMessageWithSource,
           data: { flags: MessageFlags.Ephemeral, content: err.message },
         };
-      }
       throw err;
     }
 
