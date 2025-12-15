@@ -18,14 +18,26 @@ const SERVICE_NAME = 'inngest.post-confession';
 const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
+const enum Result {
+  Success = 'success',
+  Pending = 'pending',
+  Failure = 'failure',
+}
+
 interface Success {
-  ok: true;
+  type: Result.Success;
+  confessionId: string;
+  channelLabel: string;
+}
+
+interface Pending {
+  type: Result.Pending;
   confessionId: string;
   channelLabel: string;
 }
 
 interface Failure {
-  ok: false;
+  type: Result.Failure;
   message: string;
 }
 
@@ -51,14 +63,13 @@ export const postConfession = inngest.createFunction(
             throw error;
           }
 
-          // Should be impossible to reach this case because we were
-          // presumably approved prior to dispatching this Inngest event.
           if (confession.approvedAt === null) {
-            const error = new NonRetriableError('confession not yet approved');
-            logger.error('confession not yet approved for post', error, {
-              'confession.internal.id': event.data.internalId,
-            });
-            throw error;
+            logger.warn('confession pending approval, skipping post');
+            return {
+              type: Result.Pending,
+              confessionId: confession.confessionId,
+              channelLabel: confession.channel.label,
+            } as Pending;
           }
 
           logger.debug('fetched confession', {
@@ -84,7 +95,7 @@ export const postConfession = inngest.createFunction(
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
                   return {
-                    ok: false,
+                    type: Result.Failure,
                     message: getConfessionErrorMessage(err.code, {
                       label: confession.channel.label,
                       confessionId: confession.confessionId,
@@ -105,7 +116,7 @@ export const postConfession = inngest.createFunction(
           });
 
           return {
-            ok: true,
+            type: Result.Success,
             confessionId: confession.confessionId,
             channelLabel: confession.channel.label,
           } as Success;
@@ -115,11 +126,20 @@ export const postConfession = inngest.createFunction(
       await step.run({ id: 'send-acknowledgement', name: 'Send Acknowledgement' }, async () => {
         // eslint-disable-next-line @typescript-eslint/init-declarations
         let acknowledgement: string;
-        if (result.ok) {
-          const verb = typeof event.data.moderatorId === 'undefined' ? 'published' : 'resent';
-          acknowledgement = `${result.channelLabel} #${result.confessionId} has been ${verb}.`;
-        } else {
-          acknowledgement = result.message;
+        switch (result.type) {
+          case Result.Success: {
+            const verb = typeof event.data.moderatorId === 'undefined' ? 'published' : 'resent';
+            acknowledgement = `${result.channelLabel} #${result.confessionId} has been ${verb}.`;
+            break;
+          }
+          case Result.Pending:
+            acknowledgement = `Your confession (${result.channelLabel} #${result.confessionId}) has been submitted and is pending moderator approval.`;
+            break;
+          case Result.Failure:
+            acknowledgement = result.message;
+            break;
+          default:
+            throw new Error('unreachable');
         }
         const message = await sendFollowupMessage(event.data.interactionToken, acknowledgement);
         logger.info('acknowledgement sent', {

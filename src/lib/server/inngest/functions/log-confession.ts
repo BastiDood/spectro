@@ -59,16 +59,6 @@ export const logConfession = inngest.createFunction(
           throw error;
         }
 
-        // Should be impossible to reach this case because we were
-        // presumably approved prior to dispatching this Inngest event.
-        if (confession.approvedAt === null) {
-          const error = new NonRetriableError('confession not yet approved');
-          logger.error('confession not yet approved for log', error, {
-            'confession.internal.id': event.data.internalId,
-          });
-          throw error;
-        }
-
         if (confession.channel.logChannelId === null) {
           logger.warn('no log channel configured');
           return {
