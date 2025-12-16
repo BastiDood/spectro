@@ -143,6 +143,7 @@ export const logConfession = inngest.createFunction(
             async () =>
               await tracer.asyncSpan('send-missing-channel-step', async () => {
                 const message = await sendFollowupMessage(
+                  event.data.applicationId,
                   event.data.interactionToken,
                   `Spectro has received your confession, but the moderators have not yet configured a channel for logging confessions. Kindly remind the server moderators to set up the logging channel and ask them resend your confession: ${result.channelLabel} #${result.confessionId}.`,
                 );
@@ -160,6 +161,7 @@ export const logConfession = inngest.createFunction(
             async () =>
               await tracer.asyncSpan('send-failure-step', async () => {
                 const message = await sendFollowupMessage(
+                  event.data.applicationId,
                   event.data.interactionToken,
                   result.message,
                 );

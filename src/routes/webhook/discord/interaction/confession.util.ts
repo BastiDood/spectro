@@ -104,6 +104,7 @@ export class MissingLogConfessError extends ConfessError {
  */
 export async function submitConfession(
   timestamp: Date,
+  applicationId: Snowflake,
   interactionToken: string,
   permission: bigint,
   confessionChannelId: Snowflake,
@@ -184,6 +185,7 @@ export async function submitConfession(
     const { ids } = await inngest.send({
       name: 'discord/confession.submit',
       data: {
+        applicationId,
         interactionToken,
         internalId: internalId.toString(),
       },

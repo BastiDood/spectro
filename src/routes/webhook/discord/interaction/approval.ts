@@ -85,6 +85,7 @@ class AlreadyApprovedApprovalError extends ApprovalError {
  */
 async function submitVerdict(
   timestamp: Date,
+  applicationId: Snowflake,
   interactionToken: string,
   isApproved: boolean,
   internalId: bigint,
@@ -165,6 +166,7 @@ async function submitVerdict(
         const { ids } = await inngest.send({
           name: 'discord/confession.approve',
           data: {
+            applicationId,
             interactionToken,
             internalId: internalId.toString(),
           },
@@ -258,6 +260,7 @@ async function submitVerdict(
 
 export async function handleApproval(
   timestamp: Date,
+  applicationId: Snowflake,
   interactionToken: string,
   customId: string,
   userId: Snowflake,
@@ -287,6 +290,7 @@ export async function handleApproval(
   try {
     embed = await submitVerdict(
       timestamp,
+      applicationId,
       interactionToken,
       isApproved,
       internalId,

@@ -2,6 +2,7 @@ import { type InferOutput, object, optional, string } from 'valibot';
 
 /** For confession submissions and resends (triggers post-confession + log-confession fan-out) */
 export const ConfessionSubmitEventData = object({
+  applicationId: string(),
   interactionToken: string(),
   internalId: string(),
   /** Present for resend, absent for fresh submit */
@@ -11,6 +12,7 @@ export type ConfessionSubmitEventData = InferOutput<typeof ConfessionSubmitEvent
 
 /** For approved confessions via publish button */
 export const ApprovalEventData = object({
+  applicationId: string(),
   interactionToken: string(),
   internalId: string(),
 });

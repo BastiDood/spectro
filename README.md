@@ -84,7 +84,6 @@ Spectro requires some environment variables to run correctly. If the following t
 
 | **Name**                  | **Description**                                                                                                     | **Default** |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `DISCORD_APPLICATION_ID`  | The publicly known Discord application ID that will be used for the verification of incoming webhooks.              |             |
 | `DISCORD_PUBLIC_KEY`      | The public key of the Discord application that will be used for the verification of incoming webhooks.              |             |
 | `DISCORD_BOT_TOKEN`       | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows. |             |
 | `INNGEST_EVENT_KEY`       | The event key used to send events to Inngest.                                                                       |             |

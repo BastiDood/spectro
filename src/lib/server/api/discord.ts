@@ -1,6 +1,6 @@
 import { parse } from 'valibot';
 
-import { DISCORD_APPLICATION_ID, DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
+import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
@@ -92,10 +92,10 @@ export async function deferResponse(
 }
 
 export async function sendFollowupMessage(
+  applicationId: string,
   interactionToken: string,
   content: string,
   ephemeral = true,
-  applicationId = DISCORD_APPLICATION_ID,
   botToken = DISCORD_BOT_TOKEN,
 ) {
   return await tracer.asyncSpan('send-followup-message', async () => {
@@ -133,9 +133,9 @@ export async function sendFollowupMessage(
 }
 
 export async function editOriginalResponse(
+  applicationId: string,
   interactionToken: string,
   content: string,
-  applicationId = DISCORD_APPLICATION_ID,
   botToken = DISCORD_BOT_TOKEN,
 ) {
   return await tracer.asyncSpan('edit-original-response', async () => {

@@ -78,6 +78,7 @@ class MissingLogChannelReplySubmitError extends ReplySubmitError {
  */
 async function submitReply(
   timestamp: Date,
+  applicationId: Snowflake,
   interactionToken: string,
   permissions: bigint,
   confessionChannelId: Snowflake,
@@ -149,6 +150,7 @@ async function submitReply(
     const { ids } = await inngest.send({
       name: 'discord/confession.submit',
       data: {
+        applicationId,
         interactionToken,
         internalId: internalId.toString(),
       },
@@ -163,6 +165,7 @@ async function submitReply(
 
 export async function handleReplySubmit(
   timestamp: Date,
+  applicationId: Snowflake,
   interactionToken: string,
   channelId: Snowflake,
   authorId: Snowflake,
@@ -183,6 +186,7 @@ export async function handleReplySubmit(
   try {
     await submitReply(
       timestamp,
+      applicationId,
       interactionToken,
       permissions,
       channelId,

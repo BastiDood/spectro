@@ -145,7 +145,11 @@ export const postConfession = inngest.createFunction(
               default:
                 throw new Error('unreachable');
             }
-            const message = await sendFollowupMessage(event.data.interactionToken, acknowledgement);
+            const message = await sendFollowupMessage(
+              event.data.applicationId,
+              event.data.interactionToken,
+              acknowledgement,
+            );
             logger.info('acknowledgement sent', {
               'discord.message.id': message.id,
               'discord.message.channel.id': message.channel_id,

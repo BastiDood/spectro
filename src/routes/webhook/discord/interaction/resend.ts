@@ -67,6 +67,7 @@ class MissingLogChannelResendError extends ResendError {
  * @throws {MissingLogChannelResendError}
  */
 async function resendConfession(
+  applicationId: Snowflake,
   interactionToken: string,
   permission: bigint,
   confessionChannelId: Snowflake,
@@ -138,6 +139,7 @@ async function resendConfession(
     const { ids } = await inngest.send({
       name: 'discord/confession.submit',
       data: {
+        applicationId,
         interactionToken,
         internalId: internalId.toString(),
         moderatorId: moderatorId.toString(),
@@ -152,6 +154,7 @@ async function resendConfession(
 }
 
 export async function handleResend(
+  applicationId: Snowflake,
   interactionToken: string,
   permission: bigint,
   channelId: Snowflake,
@@ -164,7 +167,14 @@ export async function handleResend(
 
   const confessionId = BigInt(option.value);
   try {
-    await resendConfession(interactionToken, permission, channelId, confessionId, moderatorId);
+    await resendConfession(
+      applicationId,
+      interactionToken,
+      permission,
+      channelId,
+      confessionId,
+      moderatorId,
+    );
   } catch (err) {
     if (err instanceof ResendError) {
       logger.error(err.message, err);

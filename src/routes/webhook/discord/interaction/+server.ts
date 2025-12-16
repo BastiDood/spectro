@@ -63,6 +63,7 @@ async function handleInteraction(
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
               return await handleConfess(
                 timestamp,
+                interaction.application_id,
                 interaction.token,
                 interaction.member.permissions,
                 interaction.channel_id,
@@ -110,6 +111,7 @@ async function handleInteraction(
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
               return await handleResend(
+                interaction.application_id,
                 interaction.token,
                 interaction.member.permissions,
                 interaction.channel_id,
@@ -151,6 +153,7 @@ async function handleInteraction(
       strictEqual(interaction.data.component_type, MessageComponentType.Button);
       return await handleApproval(
         timestamp,
+        interaction.application_id,
         interaction.token,
         interaction.data.custom_id,
         interaction.member.user.id,
@@ -164,6 +167,7 @@ async function handleInteraction(
           assert(typeof interaction.member.permissions !== 'undefined');
           return await handleReplySubmit(
             timestamp,
+            interaction.application_id,
             interaction.token,
             interaction.channel_id,
             interaction.member.user.id,
@@ -176,6 +180,7 @@ async function handleInteraction(
           assert(typeof interaction.member.permissions !== 'undefined');
           return await handleConfessSubmit(
             timestamp,
+            interaction.application_id,
             interaction.token,
             interaction.channel_id,
             interaction.member.user.id,

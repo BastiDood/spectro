@@ -98,7 +98,11 @@ export const dispatchApproval = inngest.createFunction(
         { id: 'send-failure', name: 'Send Failure Message' },
         async () =>
           await tracer.asyncSpan('send-failure-step', async () => {
-            const message = await sendFollowupMessage(event.data.interactionToken, error);
+            const message = await sendFollowupMessage(
+              event.data.applicationId,
+              event.data.interactionToken,
+              error,
+            );
             logger.info('failure message sent', {
               'discord.message.id': message.id,
               'discord.channel.id': message.channel_id,
