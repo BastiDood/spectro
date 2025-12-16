@@ -5,9 +5,8 @@ import {
   createConfessionPayload,
   getConfessionErrorMessage,
 } from '$lib/server/confession';
-import { createMessage, editOriginalResponse } from '$lib/server/api/discord';
+import { DiscordClient } from '$lib/server/api/discord';
 import { db, fetchConfessionForDispatch } from '$lib/server/database';
-import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
 import type { Message } from '$lib/server/models/discord/message';
@@ -58,10 +57,9 @@ export const dispatchApproval = inngest.createFunction(
             // eslint-disable-next-line @typescript-eslint/init-declarations
             let message: Message;
             try {
-              message = await createMessage(
+              message = await DiscordClient.ENV.createMessage(
                 confession.channelId,
                 createConfessionPayload(confession),
-                DISCORD_BOT_TOKEN,
               );
             } catch (err) {
               if (err instanceof DiscordError)
@@ -98,7 +96,7 @@ export const dispatchApproval = inngest.createFunction(
         { id: 'send-failure', name: 'Send Failure Message' },
         async () =>
           await tracer.asyncSpan('send-failure-step', async () => {
-            const message = await editOriginalResponse(
+            const message = await DiscordClient.ENV.editOriginalResponse(
               event.data.applicationId,
               event.data.interactionToken,
               error,

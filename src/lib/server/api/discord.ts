@@ -12,103 +12,106 @@ const SERVICE_NAME = 'api.discord';
 const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
-const DISCORD_API_BASE_URL = 'https://discord.com/api/v10';
+export class DiscordClient {
+  static readonly #API_BASE_URL = 'https://discord.com/api/v10';
+  static readonly ENV = new DiscordClient(DISCORD_BOT_TOKEN);
 
-export async function createMessage(channelId: Snowflake, data: CreateMessage, botToken: string) {
-  return await tracer.asyncSpan('create-message', async span => {
-    span.setAttribute('channel.id', channelId);
+  readonly #botToken: string;
 
-    const response = await fetch(`${DISCORD_API_BASE_URL}/channels/${channelId}/messages`, {
-      body: JSON.stringify(data),
-      method: 'POST',
-      headers: {
-        Authorization: `Bot ${botToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+  constructor(botToken: string) {
+    this.#botToken = `Bot ${botToken}`;
+  }
 
-    const json = await response.json();
+  async createMessage(channelId: Snowflake, data: CreateMessage) {
+    return await tracer.asyncSpan('create-message', async span => {
+      span.setAttribute('channel.id', channelId);
 
-    if (response.status === 200) {
-      const parsed = parse(Message, json);
-      logger.debug('message created', { 'message.id': parsed.id });
-      return parsed;
-    }
-
-    const { code, message } = parse(DiscordErrorResponse, json);
-    const error = new DiscordError(code, message);
-    logger.error('discord api error in createMessage', error, {
-      'discord.error.code': code,
-      'discord.error.message': message,
-      'discord.channel.id': channelId,
-    });
-    throw error;
-  });
-}
-
-export async function editOriginalResponse(
-  applicationId: string,
-  interactionToken: string,
-  content: string,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  return await tracer.asyncSpan('edit-original-response', async () => {
-    const response = await fetch(
-      `${DISCORD_API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
-      {
-        body: JSON.stringify({ content }),
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bot ${botToken}`,
+      const response = await fetch(
+        `${DiscordClient.#API_BASE_URL}/channels/${channelId}/messages`,
+        {
+          body: JSON.stringify(data),
+          method: 'POST',
+          headers: {
+            Authorization: this.#botToken,
+            'Content-Type': 'application/json',
+          },
         },
-      },
-    );
+      );
 
-    if (response.ok) {
       const json = await response.json();
-      const parsed = parse(Message, json);
-      logger.debug('original response edited', { 'message.id': parsed.id });
-      return parsed;
-    }
 
-    const json = await response.json();
-    const { code, message } = parse(DiscordErrorResponse, json);
-    const error = new DiscordError(code, message);
-    logger.error('discord api error in editOriginalResponse', error, {
-      'discord.error.code': code,
-      'discord.error.message': message,
+      if (response.status === 200) {
+        const parsed = parse(Message, json);
+        logger.debug('message created', { 'message.id': parsed.id });
+        return parsed;
+      }
+
+      const { code, message } = parse(DiscordErrorResponse, json);
+      const error = new DiscordError(code, message);
+      logger.error('discord api error in createMessage', error, {
+        'discord.error.code': code,
+        'discord.error.message': message,
+        'discord.channel.id': channelId,
+      });
+      throw error;
     });
-    throw error;
-  });
-}
+  }
 
-export async function deleteOriginalResponse(
-  applicationId: string,
-  interactionToken: string,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  return await tracer.asyncSpan('delete-original-response', async () => {
-    const response = await fetch(
-      `${DISCORD_API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
-      {
-        method: 'DELETE',
-        headers: { Authorization: `Bot ${botToken}` },
-      },
-    );
+  async editOriginalResponse(applicationId: string, interactionToken: string, content: string) {
+    return await tracer.asyncSpan('edit-original-response', async () => {
+      const response = await fetch(
+        `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+        {
+          body: JSON.stringify({ content }),
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: this.#botToken,
+          },
+        },
+      );
 
-    if (response.ok) {
-      logger.debug('original response deleted');
-      return;
-    }
+      if (response.ok) {
+        const json = await response.json();
+        const parsed = parse(Message, json);
+        logger.debug('original response edited', { 'message.id': parsed.id });
+        return parsed;
+      }
 
-    const json = await response.json();
-    const { code, message } = parse(DiscordErrorResponse, json);
-    const error = new DiscordError(code, message);
-    logger.error('discord api error in deleteOriginalResponse', error, {
-      'discord.error.code': code,
-      'discord.error.message': message,
+      const json = await response.json();
+      const { code, message } = parse(DiscordErrorResponse, json);
+      const error = new DiscordError(code, message);
+      logger.error('discord api error in editOriginalResponse', error, {
+        'discord.error.code': code,
+        'discord.error.message': message,
+      });
+      throw error;
     });
-    throw error;
-  });
+  }
+
+  async deleteOriginalResponse(applicationId: string, interactionToken: string) {
+    return await tracer.asyncSpan('delete-original-response', async () => {
+      const response = await fetch(
+        `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: this.#botToken },
+        },
+      );
+
+      if (response.ok) {
+        logger.debug('original response deleted');
+        return;
+      }
+
+      const json = await response.json();
+      const { code, message } = parse(DiscordErrorResponse, json);
+      const error = new DiscordError(code, message);
+      logger.error('discord api error in deleteOriginalResponse', error, {
+        'discord.error.code': code,
+        'discord.error.message': message,
+      });
+      throw error;
+    });
+  }
 }
