@@ -82,3 +82,33 @@ export async function editOriginalResponse(
     throw error;
   });
 }
+
+export async function deleteOriginalResponse(
+  applicationId: string,
+  interactionToken: string,
+  botToken = DISCORD_BOT_TOKEN,
+) {
+  return await tracer.asyncSpan('delete-original-response', async () => {
+    const response = await fetch(
+      `${DISCORD_API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bot ${botToken}` },
+      },
+    );
+
+    if (response.ok) {
+      logger.debug('original response deleted');
+      return;
+    }
+
+    const json = await response.json();
+    const { code, message } = parse(DiscordErrorResponse, json);
+    const error = new DiscordError(code, message);
+    logger.error('discord api error in deleteOriginalResponse', error, {
+      'discord.error.code': code,
+      'discord.error.message': message,
+    });
+    throw error;
+  });
+}
