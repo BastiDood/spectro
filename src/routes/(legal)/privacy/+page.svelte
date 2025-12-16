@@ -6,7 +6,7 @@
 
 <div class="not-prose alert alert-info">
   <Icon icon={BaselineInfo} width={24} />
-  <span>Last updated on <time datetime="2025-02-08">February 8, 2025</time>.</span>
+  <span>Last updated on <time datetime="2025-12-16">December 16, 2025</time>.</span>
 </div>
 
 <br />
@@ -124,7 +124,45 @@
 </ul>
 
 <h2>Third Parties</h2>
-<p>The Bot does not share any data with third parties.</p>
+<p>
+  The Bot relies on the following third-party service providers to operate. Each provider has their
+  own privacy policy governing how they handle data.
+</p>
+
+<h3>Hosting and Database</h3>
+<ul>
+  <li>
+    <a rel="external" target="_blank" href="https://vercel.com/legal/privacy-policy">Vercel</a>
+    — hosts the application and serves all web requests.
+  </li>
+  <li>
+    <a rel="external" target="_blank" href="https://neon.com/privacy-policy">Neon</a>
+    — provides the serverless PostgreSQL database where all confession data is stored.
+  </li>
+</ul>
+
+<h3>Orchestration and Observability</h3>
+<ul>
+  <li>
+    <a rel="external" target="_blank" href="https://www.inngest.com/privacy">Inngest</a>
+    — manages background job orchestration for processing confessions asynchronously.
+  </li>
+  <li>
+    <a rel="external" target="_blank" href="https://pydantic.dev/legal/privacy-policy">Logfire</a>
+    — provides application observability, logging, and performance monitoring.
+  </li>
+</ul>
+
+<h3>Data Isolation</h3>
+<p>
+  User-generated confession content is <strong>strictly isolated</strong> between the application
+  (hosted on Vercel) and the database (hosted on Neon). External services used for orchestration
+  (Inngest) and observability (Logfire) only receive internal identifiers and operational metadata
+  (e.g., timestamps, channel IDs) for correlation and monitoring purposes.
+  <strong
+    >No confession text or user-submitted content is ever transmitted to these services.</strong
+  >
+</p>
 
 <h2>Data Deletion</h2>
 <p>
