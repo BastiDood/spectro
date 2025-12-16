@@ -4,9 +4,7 @@ import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
-import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { Logger } from '$lib/server/telemetry/logger';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
@@ -48,65 +46,18 @@ export async function createMessage(channelId: Snowflake, data: CreateMessage, b
   });
 }
 
-export interface ExternalChannelReference {
-  channelId: string;
-  messageId: string;
-}
-
-export async function deferResponse(
-  interactionId: Snowflake,
-  interactionToken: string,
-  botToken = DISCORD_BOT_TOKEN,
-) {
-  return await tracer.asyncSpan('create-interaction-response', async () => {
-    const response = await fetch(
-      `${DISCORD_API_BASE_URL}/interactions/${interactionId}/${interactionToken}/callback`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          type: InteractionResponseType.DeferredChannelMessageWithSource,
-          data: { flags: MessageFlags.Ephemeral },
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bot ${botToken}`,
-        },
-      },
-    );
-
-    if (response.status === 204) {
-      logger.debug('interaction response created');
-      return null;
-    }
-
-    const json = await response.json();
-    const { code, message } = parse(DiscordErrorResponse, json);
-    const error = new DiscordError(code, message);
-    logger.error('discord api error in deferResponse', error, {
-      'discord.error.code': code,
-      'discord.error.message': message,
-      'discord.interaction.id': interactionId,
-    });
-    throw error;
-  });
-}
-
-export async function sendFollowupMessage(
+export async function editOriginalResponse(
   applicationId: string,
   interactionToken: string,
   content: string,
-  ephemeral = true,
   botToken = DISCORD_BOT_TOKEN,
 ) {
-  return await tracer.asyncSpan('send-followup-message', async () => {
+  return await tracer.asyncSpan('edit-original-response', async () => {
     const response = await fetch(
-      `${DISCORD_API_BASE_URL}/webhooks/${applicationId}/${interactionToken}`,
+      `${DISCORD_API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
       {
-        body: JSON.stringify({
-          content,
-          flags: ephemeral ? MessageFlags.Ephemeral : 0,
-        }),
-        method: 'POST',
+        body: JSON.stringify({ content }),
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bot ${botToken}`,
@@ -117,14 +68,14 @@ export async function sendFollowupMessage(
     if (response.ok) {
       const json = await response.json();
       const parsed = parse(Message, json);
-      logger.debug('follow-up message sent', { 'message.id': parsed.id });
+      logger.debug('original response edited', { 'message.id': parsed.id });
       return parsed;
     }
 
     const json = await response.json();
     const { code, message } = parse(DiscordErrorResponse, json);
     const error = new DiscordError(code, message);
-    logger.error('discord api error in sendFollowupMessage', error, {
+    logger.error('discord api error in editOriginalResponse', error, {
       'discord.error.code': code,
       'discord.error.message': message,
     });

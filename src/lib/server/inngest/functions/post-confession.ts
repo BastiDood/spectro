@@ -5,7 +5,7 @@ import {
   createConfessionPayload,
   getConfessionErrorMessage,
 } from '$lib/server/confession';
-import { createMessage, sendFollowupMessage } from '$lib/server/api/discord';
+import { createMessage, editOriginalResponse } from '$lib/server/api/discord';
 import { db, fetchConfessionForDispatch } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
@@ -145,7 +145,7 @@ export const postConfession = inngest.createFunction(
               default:
                 throw new Error('unreachable');
             }
-            const message = await sendFollowupMessage(
+            const message = await editOriginalResponse(
               event.data.applicationId,
               event.data.interactionToken,
               acknowledgement,
