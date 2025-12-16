@@ -4,12 +4,7 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 
 // OpenTelemetry SDK is configured via the standard environment variables at runtime.
-const sdk = new NodeSDK({
-  serviceName: 'spectro',
-  autoDetectResources: false,
-  instrumentations: [new PgInstrumentation()],
-});
-
+const sdk = new NodeSDK({ serviceName: 'spectro', instrumentations: [new PgInstrumentation()] });
 sdk.start();
 
 process.once('sveltekit:shutdown', async reason => {
