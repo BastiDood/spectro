@@ -22,6 +22,8 @@ export const enum MessageFlags {
   Ephemeral = 1 << 6,
   /** This message will not trigger push and desktop notifications. */
   SuppressNotifications = 1 << 12,
+  /** This message uses the new Components V2 system with top-level components. */
+  IsComponentsV2 = 1 << 15,
 }
 
 export const MessageBase = object({

@@ -19,17 +19,15 @@ export function handleConfess(channelId: Snowflake, authorId: Snowflake): Intera
         title: 'Submit Confession',
         components: [
           {
-            type: MessageComponentType.ActionRow,
-            components: [
-              {
-                custom_id: 'content',
-                type: MessageComponentType.TextInput,
-                style: MessageComponentTextInputStyle.Long,
-                required: true,
-                label: 'Confession',
-                placeholder: 'Your message...',
-              },
-            ],
+            type: MessageComponentType.Label,
+            label: 'Confession',
+            component: {
+              custom_id: 'content',
+              type: MessageComponentType.TextInput,
+              style: MessageComponentTextInputStyle.Long,
+              required: true,
+              placeholder: 'Your message...',
+            },
           },
         ],
       },

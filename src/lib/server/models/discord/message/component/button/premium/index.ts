@@ -1,10 +1,11 @@
 import { type InferOutput, literal, object, string } from 'valibot';
 
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import {
   MessageComponentButtonBase,
   MessageComponentButtonStyle,
 } from '$lib/server/models/discord/message/component/button/base';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import type { Emoji } from '$lib/server/models/discord/emoji';
 
 export const MessageComponentButtonPremium = object({
   ...MessageComponentButtonBase.entries,
@@ -15,13 +16,14 @@ export const MessageComponentButtonPremium = object({
 
 export type MessageComponentButtonPremium = InferOutput<typeof MessageComponentButtonPremium>;
 
-// HACK: Deserializing requires `component_type` instead of `type`. Wtf Discord?
-export const DeserializedMessageComponentButtonPremium = object({
-  ...MessageComponentButtonBase.entries,
-  component_type: literal(MessageComponentType.Button),
-  sku_id: string(),
-});
-
-export type DeserializedMessageComponentButtonPremium = InferOutput<
-  typeof DeserializedMessageComponentButtonPremium
->;
+/**
+ * Outbound interface for creating a premium button (used for SKU purchases).
+ */
+export interface CreateButtonPremium {
+  type: MessageComponentType.Button;
+  style: MessageComponentButtonStyle.Premium;
+  sku_id: string;
+  label?: string;
+  disabled?: boolean;
+  emoji?: Emoji;
+}

@@ -1,34 +1,15 @@
-import { type InferOutput, variant } from 'valibot';
+import { type InferOutput, literal, object, string } from 'valibot';
 
-import {
-  DeserializedInteractionDataMessageComponentButtonLink,
-  InteractionDataMessageComponentButtonLink,
-} from './link';
-import {
-  DeserializedInteractionDataMessageComponentButtonNormal,
-  InteractionDataMessageComponentButtonNormal,
-} from './normal';
-import {
-  DeserializedInteractionDataMessageComponentButtonPremium,
-  InteractionDataMessageComponentButtonPremium,
-} from './premium';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 
-export const InteractionDataMessageComponentButton = variant('style', [
-  InteractionDataMessageComponentButtonLink,
-  InteractionDataMessageComponentButtonNormal,
-  InteractionDataMessageComponentButtonPremium,
-]);
+/**
+ * Inbound schema for button interaction data.
+ * All button interactions have the same structure: just component_type and custom_id.
+ * Note: Link buttons don't trigger interactions (they open URLs directly).
+ */
+export const InteractionDataButton = object({
+  component_type: literal(MessageComponentType.Button),
+  custom_id: string(),
+});
 
-export type InteractionMessageComponentButton = InferOutput<
-  typeof InteractionDataMessageComponentButton
->;
-
-export const DeserializedInteractionDataMessageComponentButton = variant('component_type', [
-  DeserializedInteractionDataMessageComponentButtonLink,
-  DeserializedInteractionDataMessageComponentButtonNormal,
-  DeserializedInteractionDataMessageComponentButtonPremium,
-]);
-
-export type DeserializedInteractionMessageComponentButton = InferOutput<
-  typeof DeserializedInteractionDataMessageComponentButton
->;
+export type InteractionDataButton = InferOutput<typeof InteractionDataButton>;

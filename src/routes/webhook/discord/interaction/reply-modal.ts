@@ -105,17 +105,15 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
         title: 'Reply to a Message',
         components: [
           {
-            type: MessageComponentType.ActionRow,
-            components: [
-              {
-                custom_id: messageId,
-                type: MessageComponentType.TextInput,
-                style: MessageComponentTextInputStyle.Long,
-                required: true,
-                label: 'Reply',
-                placeholder: 'Hello...',
-              },
-            ],
+            type: MessageComponentType.Label,
+            label: 'Reply',
+            component: {
+              custom_id: messageId,
+              type: MessageComponentType.TextInput,
+              style: MessageComponentTextInputStyle.Long,
+              required: true,
+              placeholder: 'Hello...',
+            },
           },
         ],
       },

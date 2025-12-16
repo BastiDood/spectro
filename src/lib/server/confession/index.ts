@@ -1,7 +1,11 @@
 import { fail } from 'node:assert/strict';
 
-import { APP_ICON_URL, Color } from '$lib/server/constants';
+import { Color } from '$lib/server/constants';
 
+import type {
+  ContainerChildComponent,
+  MessageComponent,
+} from '$lib/server/models/discord/message/component';
 import type { CreateMessage } from '$lib/server/models/discord/message';
 import type {
   SerializedAttachment,
@@ -10,14 +14,7 @@ import type {
   SerializedConfessionForResend,
 } from '$lib/server/database';
 import { DiscordErrorCode } from '$lib/server/models/discord/errors';
-import {
-  type Embed,
-  type EmbedField,
-  type EmbedImage,
-  EmbedType,
-} from '$lib/server/models/discord/embed';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
-import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
@@ -74,31 +71,62 @@ export function createConfessionPayload(
   confession: SerializedConfessionForDispatch | SerializedConfessionForResend,
   timestampOverride?: Date,
 ) {
-  const hex = confession.channel.color ? Number.parseInt(confession.channel.color, 2) : void 0;
+  const accentColor = confession.channel.color
+    ? Number.parseInt(confession.channel.color, 2)
+    : void 0;
   const attachment = deserializeAttachment(confession.attachment);
+  const timestamp = timestampOverride ?? new Date(confession.createdAt);
+  const unixTimestamp = Math.floor(timestamp.valueOf() / 1000);
 
-  const embed: Embed = {
-    type: EmbedType.Rich,
-    title: `${confession.channel.label} #${confession.confessionId}`,
-    description: confession.content,
-    timestamp: timestampOverride?.toISOString() ?? confession.createdAt,
-    color: hex,
-    footer: {
-      text: "Admins can access Spectro's confession logs",
-      icon_url: APP_ICON_URL,
+  // Build container children
+  const containerChildren: ContainerChildComponent[] = [
+    {
+      type: MessageComponentType.TextDisplay,
+      content: `# ${confession.channel.label} #${confession.confessionId}`,
     },
-  };
+    {
+      type: MessageComponentType.TextDisplay,
+      content: confession.content,
+    },
+  ];
 
+  // Add image as MediaGallery or attachment link as TextDisplay
   if (attachment !== null)
     if (attachment.content_type?.includes('image') === true)
-      embed.image = {
-        url: attachment.url,
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-    else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
+      containerChildren.push({
+        type: MessageComponentType.MediaGallery,
+        items: [{ media: { url: attachment.url } }],
+      });
+    else
+      containerChildren.push({
+        type: MessageComponentType.TextDisplay,
+        content: `**Attachment:** ${attachment.url}`,
+      });
 
-  const params: CreateMessage = { embeds: [embed] };
+  // Add footer with timestamp
+  containerChildren.push(
+    {
+      type: MessageComponentType.Separator,
+      divider: true,
+    },
+    {
+      type: MessageComponentType.TextDisplay,
+      content: `-# Admins can access Spectro's confession logs • <t:${unixTimestamp}:R>`,
+    },
+  );
+
+  const components: MessageComponent[] = [
+    {
+      type: MessageComponentType.Container,
+      accent_color: accentColor,
+      components: containerChildren,
+    },
+  ];
+
+  const params: CreateMessage = {
+    flags: MessageFlags.IsComponentsV2,
+    components,
+  };
 
   if (confession.parentMessageId !== null)
     params.message_reference = {
@@ -117,100 +145,109 @@ export function createLogPayload(
 ) {
   const attachment = deserializeAttachment(confession.attachment);
 
-  const fields: EmbedField[] = [
-    { name: 'Authored by', value: `||<@${confession.authorId}>||`, inline: true },
+  // Determine accent color based on mode
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let accentColor: Color;
+  switch (mode.type) {
+    case LogPayloadType.Pending:
+      accentColor = Color.Pending;
+      break;
+    case LogPayloadType.Approved:
+      accentColor = Color.Success;
+      break;
+    case LogPayloadType.Resent:
+      accentColor = Color.Replay;
+      break;
+    default:
+      fail('unreachable');
+  }
+
+  // Determine timestamp
+  const timestamp =
+    mode.type === LogPayloadType.Resent ? new Date() : new Date(confession.createdAt);
+  const unixTimestamp = Math.floor(timestamp.valueOf() / 1000);
+
+  // Build container children
+  const containerChildren: ContainerChildComponent[] = [
+    {
+      type: MessageComponentType.TextDisplay,
+      content: `# ${confession.channel.label} #${confession.confessionId}`,
+    },
+    {
+      type: MessageComponentType.TextDisplay,
+      content: confession.content,
+    },
   ];
 
+  // Add image as MediaGallery (except for resent mode)
+  if (
+    attachment !== null &&
+    mode.type !== LogPayloadType.Resent &&
+    attachment.content_type?.startsWith('image/')
+  )
+    containerChildren.push({
+      type: MessageComponentType.MediaGallery,
+      items: [{ media: { url: attachment.url } }],
+    });
+
+  // Build metadata text
+  let metadataText = `**Authored by:** ||<@${confession.authorId}>||`;
   if (mode.type === LogPayloadType.Resent)
-    fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
+    metadataText += ` \u{2022} **Resent by:** <@${mode.moderatorId}>`;
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let image: EmbedImage | undefined;
-  if (attachment !== null) {
-    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    // Resent mode does not embed images
-    if (mode.type !== LogPayloadType.Resent && attachment.content_type?.startsWith('image/'))
-      image = {
-        url: attachment.url,
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-  }
+  if (attachment !== null) metadataText += `\n**Attachment:** ${attachment.url}`;
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let color: Color;
-  switch (mode.type) {
-    case LogPayloadType.Pending:
-      color = Color.Pending;
-      break;
-    case LogPayloadType.Approved:
-      color = Color.Success;
-      break;
-    case LogPayloadType.Resent:
-      color = Color.Replay;
-      break;
-    default:
-      fail('unreachable');
-  }
-
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let timestamp: string;
-  switch (mode.type) {
-    case LogPayloadType.Resent:
-      timestamp = new Date().toISOString();
-      break;
-    case LogPayloadType.Approved:
-    case LogPayloadType.Pending:
-      timestamp = confession.createdAt;
-      break;
-    default:
-      fail('unreachable');
-  }
-
-  const params: CreateMessage = {
-    flags: MessageFlags.SuppressNotifications,
-    allowed_mentions: { parse: [AllowedMentionType.Users] },
-    embeds: [
-      {
-        type: EmbedType.Rich,
-        title: `${confession.channel.label} #${confession.confessionId}`,
-        color,
-        timestamp,
-        description: confession.content,
-        footer: { text: 'Spectro Logs', icon_url: APP_ICON_URL },
-        fields,
-        image,
-      },
-    ],
-  };
+  containerChildren.push(
+    {
+      type: MessageComponentType.Separator,
+      divider: true,
+    },
+    {
+      type: MessageComponentType.TextDisplay,
+      content: metadataText,
+    },
+    {
+      type: MessageComponentType.TextDisplay,
+      content: `-# Submitted <t:${unixTimestamp}:R>`,
+    },
+  );
 
   // Add approval buttons for pending mode
   if (mode.type === LogPayloadType.Pending) {
     const customId = mode.internalId.toString();
-    params.components = [
-      {
-        type: MessageComponentType.ActionRow,
-        components: [
-          {
-            type: MessageComponentType.Button,
-            style: MessageComponentButtonStyle.Success,
-            label: 'Publish',
-            emoji: { name: '\u{2712}\u{fe0f}' },
-            custom_id: `publish:${customId}`,
-          },
-          {
-            type: MessageComponentType.Button,
-            style: MessageComponentButtonStyle.Danger,
-            label: 'Delete',
-            emoji: { name: '\u{1f5d1}\u{fe0f}' },
-            custom_id: `delete:${customId}`,
-          },
-        ],
-      },
-    ];
+    containerChildren.push({
+      type: MessageComponentType.ActionRow,
+      components: [
+        {
+          type: MessageComponentType.Button,
+          style: MessageComponentButtonStyle.Success,
+          label: 'Publish',
+          emoji: { name: '\u{2712}\u{fe0f}' },
+          custom_id: `publish:${customId}`,
+        },
+        {
+          type: MessageComponentType.Button,
+          style: MessageComponentButtonStyle.Danger,
+          label: 'Delete',
+          emoji: { name: '\u{1f5d1}\u{fe0f}' },
+          custom_id: `delete:${customId}`,
+        },
+      ],
+    });
   }
 
-  return params;
+  const components: MessageComponent[] = [
+    {
+      type: MessageComponentType.Container,
+      accent_color: accentColor,
+      components: containerChildren,
+    },
+  ];
+
+  return {
+    flags: MessageFlags.SuppressNotifications | MessageFlags.IsComponentsV2,
+    components,
+  } satisfies CreateMessage;
 }
 
 export function getConfessionErrorMessage(code: DiscordErrorCode, ctx: ErrorMessageContext) {

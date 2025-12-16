@@ -9,7 +9,7 @@ import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
-import { DeserializedInteraction } from '$lib/server/models/discord/interaction';
+import { Interaction } from '$lib/server/models/discord/interaction';
 import {
   MANAGE_CHANNELS,
   MANAGE_MESSAGES,
@@ -46,7 +46,7 @@ const tracer = new Tracer(SERVICE_NAME);
 
 async function handleInteraction(
   timestamp: Date,
-  interaction: DeserializedInteraction,
+  interaction: Interaction,
 ): Promise<InteractionResponse> {
   // eslint-disable-next-line default-case
   switch (interaction.type) {
@@ -211,8 +211,7 @@ export async function POST({ request }) {
   const signature = Buffer.from(ed25519, 'hex');
 
   if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-    const interaction = parse(DeserializedInteraction, JSON.parse(text));
-
+    const interaction = parse(Interaction, JSON.parse(text));
     const response = await tracer.asyncSpan('handle-interaction', async span => {
       span.setAttributes({
         'interaction.type': interaction.type,

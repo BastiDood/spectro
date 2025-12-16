@@ -9,7 +9,7 @@ import { assertDefined } from '$lib/assert';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import type { MessageComponents } from '$lib/server/models/discord/message/component';
+import type { ModalComponents } from '$lib/server/models/discord/message/component/modal';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -169,16 +169,14 @@ export async function handleReplySubmit(
   channelId: Snowflake,
   authorId: Snowflake,
   permissions: bigint,
-  [row, ...otherRows]: MessageComponents,
+  [labelComponent, ...otherComponents]: ModalComponents,
 ): Promise<InteractionResponse> {
-  strictEqual(otherRows.length, 0);
-  assert(typeof row !== 'undefined');
-
-  const [component, ...otherComponents] = row.components;
   strictEqual(otherComponents.length, 0);
-  assert(typeof component !== 'undefined');
+  assert(typeof labelComponent !== 'undefined');
+  strictEqual(labelComponent.type, MessageComponentType.Label);
 
-  strictEqual(component?.type, MessageComponentType.TextInput);
+  const { component } = labelComponent;
+  strictEqual(component.type, MessageComponentType.TextInput);
   assert(typeof component.value !== 'undefined');
   const parentMessageId = component.custom_id;
 

@@ -2,41 +2,22 @@ import { type InferOutput, literal, object, variant } from 'valibot';
 
 import { InteractionBase, InteractionType } from '$lib/server/models/discord/interaction/base';
 
-import {
-  DeserializedInteractionDataMessageComponentButton,
-  InteractionDataMessageComponentButton,
-} from './button';
-import {
-  DeserializedInteractionDataMessageComponentSnowflakeSelect,
-  InteractionDataMessageComponentSnowflakeSelect,
-} from './snowflake-select';
-import {
-  DeserializedInteractionDataMessageComponentStringSelect,
-  InteractionDataMessageComponentStringSelect,
-} from './string-select';
+import { InteractionDataButton } from './button';
+import { InteractionDataSnowflakeSelect } from './snowflake-select';
+import { InteractionDataStringSelect } from './string-select';
 
+/**
+ * Inbound schema for message component interactions.
+ * Uses variant for data because snowflake selects share component_type values in a variant.
+ */
 export const InteractionMessageComponent = object({
   ...InteractionBase.entries,
   type: literal(InteractionType.MessageComponent),
-  data: variant('type', [
-    InteractionDataMessageComponentButton,
-    InteractionDataMessageComponentStringSelect,
-    InteractionDataMessageComponentSnowflakeSelect,
+  data: variant('component_type', [
+    InteractionDataButton,
+    InteractionDataStringSelect,
+    InteractionDataSnowflakeSelect,
   ]),
 });
 
 export type InteractionMessageComponent = InferOutput<typeof InteractionMessageComponent>;
-
-export const DeserializedInteractionMessageComponent = object({
-  ...InteractionBase.entries,
-  type: literal(InteractionType.MessageComponent),
-  data: variant('component_type', [
-    DeserializedInteractionDataMessageComponentButton,
-    DeserializedInteractionDataMessageComponentStringSelect,
-    DeserializedInteractionDataMessageComponentSnowflakeSelect,
-  ]),
-});
-
-export type DeserializedInteractionMessageComponent = InferOutput<
-  typeof DeserializedInteractionMessageComponent
->;
