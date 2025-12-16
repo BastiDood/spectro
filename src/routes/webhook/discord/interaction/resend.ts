@@ -187,7 +187,7 @@ export async function handleResend(
   }
 
   return {
-    type: InteractionResponseType.DeferredChannelMessageWithSource,
-    data: { flags: MessageFlags.Ephemeral },
+    type: InteractionResponseType.ChannelMessageWithSource,
+    data: { flags: MessageFlags.Ephemeral, content: 'Resending confession...' },
   };
 }

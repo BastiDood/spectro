@@ -97,8 +97,8 @@ export async function handleConfessSubmit(
     }
 
     return {
-      type: InteractionResponseType.DeferredChannelMessageWithSource,
-      data: { flags: MessageFlags.Ephemeral },
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: { flags: MessageFlags.Ephemeral, content: 'Submitting confession...' },
     };
   });
 }

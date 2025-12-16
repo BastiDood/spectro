@@ -1,11 +1,16 @@
 import { NonRetriableError } from 'inngest';
 
+import { UnreachableCodeError } from '$lib/assert';
 import {
   ConfessionChannel,
   createConfessionPayload,
   getConfessionErrorMessage,
 } from '$lib/server/confession';
-import { createMessage, editOriginalResponse } from '$lib/server/api/discord';
+import {
+  createMessage,
+  deleteOriginalResponse,
+  editOriginalResponse,
+} from '$lib/server/api/discord';
 import { db, fetchConfessionForDispatch } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
@@ -19,9 +24,9 @@ const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
 const enum Result {
-  Success = 'success',
-  Pending = 'pending',
-  Failure = 'failure',
+  Success = 'Success',
+  Pending = 'Pending',
+  Failure = 'Failure',
 }
 
 interface Success {
@@ -128,33 +133,41 @@ export const postConfession = inngest.createFunction(
         { id: 'send-acknowledgement', name: 'Send Acknowledgement' },
         async () =>
           await tracer.asyncSpan('send-acknowledgement-step', async () => {
-            // eslint-disable-next-line @typescript-eslint/init-declarations
-            let acknowledgement: string;
             switch (result.type) {
-              case Result.Success: {
-                const verb = typeof event.data.moderatorId === 'undefined' ? 'published' : 'resent';
-                acknowledgement = `${result.channelLabel} #${result.confessionId} has been ${verb}.`;
+              case Result.Success:
+                await deleteOriginalResponse(event.data.applicationId, event.data.interactionToken);
+                logger.info('original response deleted');
+                break;
+              case Result.Pending: {
+                const acknowledgement = `Your confession (${result.channelLabel} #${result.confessionId}) has been submitted and is pending moderator approval.`;
+                const message = await editOriginalResponse(
+                  event.data.applicationId,
+                  event.data.interactionToken,
+                  acknowledgement,
+                );
+                logger.info('acknowledgement sent', {
+                  'discord.message.id': message.id,
+                  'discord.message.channel.id': message.channel_id,
+                  'discord.message.timestamp': message.timestamp,
+                });
                 break;
               }
-              case Result.Pending:
-                acknowledgement = `Your confession (${result.channelLabel} #${result.confessionId}) has been submitted and is pending moderator approval.`;
+              case Result.Failure: {
+                const message = await editOriginalResponse(
+                  event.data.applicationId,
+                  event.data.interactionToken,
+                  result.message,
+                );
+                logger.info('failure acknowledgement sent', {
+                  'discord.message.id': message.id,
+                  'discord.message.channel.id': message.channel_id,
+                  'discord.message.timestamp': message.timestamp,
+                });
                 break;
-              case Result.Failure:
-                acknowledgement = result.message;
-                break;
+              }
               default:
-                throw new Error('unreachable');
+                return UnreachableCodeError.throwNew();
             }
-            const message = await editOriginalResponse(
-              event.data.applicationId,
-              event.data.interactionToken,
-              acknowledgement,
-            );
-            logger.info('acknowledgement sent', {
-              'discord.message.id': message.id,
-              'discord.message.channel.id': message.channel_id,
-              'discord.message.timestamp': message.timestamp,
-            });
           }),
       );
     }),

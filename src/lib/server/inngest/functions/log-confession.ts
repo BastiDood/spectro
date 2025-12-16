@@ -1,5 +1,6 @@
 import { NonRetriableError } from 'inngest';
 
+import { UnreachableCodeError } from '$lib/assert';
 import {
   ConfessionChannel,
   createLogPayload,
@@ -174,7 +175,7 @@ export const logConfession = inngest.createFunction(
           );
           break;
         default:
-          throw new Error('unreachable');
+          return UnreachableCodeError.throwNew();
       }
     }),
 );
