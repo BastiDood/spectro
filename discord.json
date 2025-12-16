@@ -33,21 +33,7 @@
     "description": "Send an anonymous confession.",
     "default_member_permissions": 2048,
     "integration_types": [0],
-    "contexts": [0],
-    "options": [
-      {
-        "type": 3,
-        "required": false,
-        "name": "content",
-        "description": "The content of the confession. Leave empty to open a modal for multi-line messages."
-      },
-      {
-        "type": 11,
-        "required": false,
-        "name": "attachment",
-        "description": "A file to attach to the confession."
-      }
-    ]
+    "contexts": [0]
   },
   {
     "type": 3,

@@ -111,7 +111,6 @@ export async function submitConfession(
   authorId: Snowflake,
   description: string,
   attachment: InsertableAttachment | null,
-  shouldInsertAttachment: boolean,
 ) {
   return await tracer.asyncSpan('submit-confession', async span => {
     span.setAttributes({ 'channel.id': confessionChannelId, 'author.id': authorId });
@@ -172,7 +171,6 @@ export async function submitConfession(
           isApprovalRequired ? null : timestamp, // approvedAt
           null, // parentMessageId
           attachment,
-          shouldInsertAttachment,
         ),
     );
 

@@ -137,7 +137,6 @@ async function submitReply(
           isApprovalRequired ? null : timestamp,
           BigInt(parentMessageId),
           null,
-          true,
         ),
     );
 

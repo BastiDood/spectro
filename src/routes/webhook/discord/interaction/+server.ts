@@ -61,16 +61,7 @@ async function handleInteraction(
               assert(typeof interaction.member?.user !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
-              return await handleConfess(
-                timestamp,
-                interaction.application_id,
-                interaction.token,
-                interaction.member.permissions,
-                interaction.channel_id,
-                interaction.member.user.id,
-                interaction.data.options ?? [],
-                interaction.data.resolved ?? null,
-              );
+              return handleConfess(interaction.channel_id, interaction.member.user.id);
             case 'help':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,

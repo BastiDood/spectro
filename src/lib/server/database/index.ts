@@ -89,12 +89,11 @@ export async function insertConfession(
   approvedAt: Date | null,
   parentMessageId: bigint | null,
   attachment: InsertableAttachment | null,
-  shouldInsertAttachment: boolean,
 ) {
   let attachmentId: bigint | null = null;
   if (attachment !== null) {
     attachmentId = BigInt(attachment.id);
-    if (shouldInsertAttachment) await insertAttachmentData(db, attachment);
+    await insertAttachmentData(db, attachment);
   }
 
   const guild = updateLastConfession(db, guildId);
