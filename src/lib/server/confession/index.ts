@@ -197,8 +197,7 @@ export function createLogPayload(
   let image: EmbedImage | undefined;
   if (attachment !== null) {
     fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    // Resent mode does not embed images
-    if (mode.type !== LogPayloadType.Resent && attachment.content_type?.startsWith('image/'))
+    if (attachment.content_type?.startsWith('image/'))
       image = {
         url: attachment.url,
         height: attachment.height ?? void 0,
