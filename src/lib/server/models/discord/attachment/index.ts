@@ -1,4 +1,5 @@
 import { type InferOutput, nullable, number, object, optional, pick, string } from 'valibot';
+
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 export const Attachment = object({

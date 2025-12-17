@@ -1,28 +1,19 @@
-import { type InferOutput, literal, object } from 'valibot';
-
-import {
-  MessageComponentButtonBase,
-  MessageComponentButtonStyle,
-} from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import { Url } from '$lib/server/models/url';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
+import type { Emoji } from '$lib/server/models/discord/emoji';
 
-export const MessageComponentButtonLink = object({
-  ...MessageComponentButtonBase.entries,
-  type: literal(MessageComponentType.Button),
-  style: literal(MessageComponentButtonStyle.Link),
-  url: Url,
-});
+/**
+ * Outbound interface for a link button.
+ * Note: Link buttons don't trigger interactions - they open URLs directly.
+ */
+export interface MessageComponentButtonLink {
+  type: MessageComponentType.Button;
+  style: MessageComponentButtonStyle.Link;
+  url: string;
+  label?: string;
+  disabled?: boolean;
+  emoji?: Emoji;
+}
 
-export type MessageComponentButtonLink = InferOutput<typeof MessageComponentButtonLink>;
-
-// HACK: Deserializing requires `component_type` instead of `type`. Wtf Discord?
-export const DeserializedMessageComponentButtonLink = object({
-  ...MessageComponentButtonBase.entries,
-  component_type: literal(MessageComponentType.Button),
-  url: Url,
-});
-
-export type DeserializedMessageComponentButtonLink = InferOutput<
-  typeof DeserializedMessageComponentButtonLink
->;
+/** Alias for backward compatibility. */
+export type CreateButtonLink = MessageComponentButtonLink;

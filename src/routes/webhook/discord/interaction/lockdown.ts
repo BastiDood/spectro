@@ -19,6 +19,12 @@ class ChannelNotSetupLockdownError extends LockdownError {
     super('This has not yet been set up for confessions.');
     this.name = 'ChannelNotSetupLockdownError';
   }
+
+  static throwNew(): never {
+    const error = new ChannelNotSetupLockdownError();
+    logger.error('channel not setup for lockdown', error);
+    throw error;
+  }
 }
 
 /** @throws {ChannelNotSetupLockdownError} */
@@ -31,9 +37,7 @@ async function disableConfessions(disabledAt: Date, channelId: Snowflake) {
       return;
     }
 
-    const error = new ChannelNotSetupLockdownError();
-    logger.error('channel not setup for lockdown', error);
-    throw error;
+    ChannelNotSetupLockdownError.throwNew();
   });
 }
 
@@ -41,11 +45,8 @@ export async function handleLockdown(disabledAt: Date, channelId: Snowflake) {
   try {
     await disableConfessions(disabledAt, channelId);
     return 'Confessions have been temporarily disabled for this channel.';
-  } catch (err) {
-    if (err instanceof LockdownError) {
-      logger.error(err.message, err);
-      return err.message;
-    }
-    throw err;
+  } catch (error) {
+    if (error instanceof LockdownError) return error.message;
+    throw error;
   }
 }

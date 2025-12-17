@@ -2,11 +2,9 @@ import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import { db } from '$lib/server/database';
 
+import { createConfessionModal } from '$lib/server/confession';
 import type { InteractionResponseMessage } from '$lib/server/models/discord/interaction-response/message';
-import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { MessageComponentTextInputStyle } from '$lib/server/models/discord/message/component/text-input';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
@@ -27,7 +25,7 @@ class UnknownChannelReplyModalError extends ReplyModalError {
     this.name = 'UnknownChannelReplyModalError';
   }
 
-  static throwNew(logger: Logger): never {
+  static throwNew(): never {
     const error = new UnknownChannelReplyModalError();
     logger.error('unknown channel for reply modal', error);
     throw error;
@@ -43,7 +41,7 @@ class DisabledChannelReplyModalError extends ReplyModalError {
     this.name = 'DisabledChannelReplyModalError';
   }
 
-  static throwNew(logger: Logger, disabledAt: Date): never {
+  static throwNew(disabledAt: Date): never {
     const error = new DisabledChannelReplyModalError(disabledAt);
     logger.error('channel disabled for reply modal', error, {
       'error.disabled.at': disabledAt.toISOString(),
@@ -58,7 +56,7 @@ class ApprovalRequiredReplyModalError extends ReplyModalError {
     this.name = 'ApprovalRequiredReplyModalError';
   }
 
-  static throwNew(logger: Logger): never {
+  static throwNew(): never {
     const error = new ApprovalRequiredReplyModalError();
     logger.error('approval required for reply modal', error);
     throw error;
@@ -84,7 +82,7 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
       },
     });
 
-    if (typeof channel === 'undefined') UnknownChannelReplyModalError.throwNew(logger);
+    if (typeof channel === 'undefined') UnknownChannelReplyModalError.throwNew();
 
     const { disabledAt, isApprovalRequired } = channel;
 
@@ -94,32 +92,11 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
     });
 
     if (disabledAt !== null && disabledAt <= timestamp)
-      DisabledChannelReplyModalError.throwNew(logger, disabledAt);
-    if (isApprovalRequired) ApprovalRequiredReplyModalError.throwNew(logger);
+      DisabledChannelReplyModalError.throwNew(disabledAt);
+    if (isApprovalRequired) ApprovalRequiredReplyModalError.throwNew();
 
     logger.debug('reply modal prompted');
-    return {
-      type: InteractionResponseType.Modal,
-      data: {
-        custom_id: 'reply',
-        title: 'Reply to a Message',
-        components: [
-          {
-            type: MessageComponentType.ActionRow,
-            components: [
-              {
-                custom_id: messageId,
-                type: MessageComponentType.TextInput,
-                style: MessageComponentTextInputStyle.Long,
-                required: true,
-                label: 'Reply',
-                placeholder: 'Hello...',
-              },
-            ],
-          },
-        ],
-      },
-    } satisfies InteractionResponseModal;
+    return createConfessionModal(messageId);
   });
 }
 
@@ -130,14 +107,12 @@ export async function handleReplyModal(
 ) {
   try {
     return await renderReplyModal(timestamp, channelId, messageId);
-  } catch (err) {
-    if (err instanceof ReplyModalError) {
-      logger.error(err.message, err);
+  } catch (error) {
+    if (error instanceof ReplyModalError)
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
-        data: { flags: MessageFlags.Ephemeral, content: err.message },
+        data: { flags: MessageFlags.Ephemeral, content: error.message },
       } satisfies InteractionResponseMessage;
-    }
-    throw err;
+    throw error;
   }
 }

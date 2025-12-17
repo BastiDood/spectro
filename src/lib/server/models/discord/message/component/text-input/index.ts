@@ -1,17 +1,5 @@
-import {
-  type InferOutput,
-  boolean,
-  literal,
-  maxValue,
-  minValue,
-  number,
-  object,
-  optional,
-  picklist,
-  pipe,
-  safeInteger,
-  string,
-} from 'valibot';
+import { type InferOutput, literal, object, optional, string } from 'valibot';
+
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 
 export const enum MessageComponentTextInputStyle {
@@ -19,18 +7,30 @@ export const enum MessageComponentTextInputStyle {
   Long = 2,
 }
 
+/**
+ * Inbound schema for TextInput - only fields Discord returns on modal submit.
+ * Discord strips: style, label, min_length, max_length, required, placeholder.
+ */
 export const MessageComponentTextInput = object({
   type: literal(MessageComponentType.TextInput),
   custom_id: string(),
-  style: optional(
-    picklist([MessageComponentTextInputStyle.Short, MessageComponentTextInputStyle.Long]),
-  ),
-  label: optional(string()),
-  min_length: optional(pipe(number(), safeInteger(), minValue(0), maxValue(4000))),
-  max_length: optional(pipe(number(), safeInteger(), minValue(1), maxValue(4000))),
-  required: optional(boolean()),
   value: optional(string()),
-  placeholder: optional(string()),
 });
 
 export type MessageComponentTextInput = InferOutput<typeof MessageComponentTextInput>;
+
+/**
+ * Outbound interface for creating a TextInput in modals.
+ * All configuration fields are available when sending.
+ */
+export interface CreateMessageComponentTextInput {
+  type: MessageComponentType.TextInput;
+  custom_id: string;
+  style?: MessageComponentTextInputStyle;
+  label?: string;
+  min_length?: number;
+  max_length?: number;
+  required?: boolean;
+  value?: string;
+  placeholder?: string;
+}

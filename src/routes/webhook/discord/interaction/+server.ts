@@ -9,7 +9,7 @@ import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 
-import { DeserializedInteraction } from '$lib/server/models/discord/interaction';
+import { Interaction } from '$lib/server/models/discord/interaction';
 import {
   MANAGE_CHANNELS,
   MANAGE_MESSAGES,
@@ -23,8 +23,8 @@ import { MessageComponentType } from '$lib/server/models/discord/message/compone
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
 import { handleApproval } from './approval';
-import { handleConfess } from './confess';
-import { handleConfessSubmit } from './confess-submit';
+import { handleConfess } from './confess-modal';
+import { handleModalSubmit } from './modal-submit';
 import {
   UnexpectedApplicationCommandChatInputNameError,
   UnexpectedApplicationCommandMessageNameError,
@@ -35,7 +35,6 @@ import { handleHelp } from './help';
 import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';
 import { handleReplyModal } from './reply-modal';
-import { handleReplySubmit } from './reply-submit';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
 import { hasAllPermissions } from './util';
@@ -46,7 +45,7 @@ const tracer = new Tracer(SERVICE_NAME);
 
 async function handleInteraction(
   timestamp: Date,
-  interaction: DeserializedInteraction,
+  interaction: Interaction,
 ): Promise<InteractionResponse> {
   // eslint-disable-next-line default-case
   switch (interaction.type) {
@@ -61,16 +60,7 @@ async function handleInteraction(
               assert(typeof interaction.member?.user !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
-              return await handleConfess(
-                timestamp,
-                interaction.application_id,
-                interaction.token,
-                interaction.member.permissions,
-                interaction.channel_id,
-                interaction.member.user.id,
-                interaction.data.options ?? [],
-                interaction.data.resolved ?? null,
-              );
+              return handleConfess(interaction.channel_id, interaction.member.user.id);
             case 'help':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
@@ -161,24 +151,11 @@ async function handleInteraction(
       );
     case InteractionType.ModalSubmit:
       switch (interaction.data.custom_id) {
-        case 'reply':
-          assert(typeof interaction.channel_id !== 'undefined');
-          assert(typeof interaction.member?.user !== 'undefined');
-          assert(typeof interaction.member.permissions !== 'undefined');
-          return await handleReplySubmit(
-            timestamp,
-            interaction.application_id,
-            interaction.token,
-            interaction.channel_id,
-            interaction.member.user.id,
-            interaction.member.permissions,
-            interaction.data.components,
-          );
         case 'confess':
           assert(typeof interaction.channel_id !== 'undefined');
           assert(typeof interaction.member?.user !== 'undefined');
           assert(typeof interaction.member.permissions !== 'undefined');
-          return await handleConfessSubmit(
+          return await handleModalSubmit(
             timestamp,
             interaction.application_id,
             interaction.token,
@@ -186,6 +163,7 @@ async function handleInteraction(
             interaction.member.user.id,
             interaction.member.permissions,
             interaction.data.components,
+            interaction.data.resolved,
           );
         default:
           UnexpectedModalSubmitError.throwNew(interaction.data.custom_id);
@@ -220,8 +198,7 @@ export async function POST({ request }) {
   const signature = Buffer.from(ed25519, 'hex');
 
   if (await verifyAsync(signature, message, DISCORD_PUBLIC_KEY)) {
-    const interaction = parse(DeserializedInteraction, JSON.parse(text));
-
+    const interaction = parse(Interaction, JSON.parse(text));
     const response = await tracer.asyncSpan('handle-interaction', async span => {
       span.setAttributes({
         'interaction.type': interaction.type,

@@ -1,10 +1,9 @@
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
 import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
 import { type InsertableAttachment, db, insertConfession } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
+import { Logger } from '$lib/server/telemetry/logger';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { hasAllPermissions } from './util';
 
@@ -26,7 +25,7 @@ export class InsufficientPermissionsConfessionError extends ConfessError {
     this.name = 'InsufficientPermissionsConfessionError';
   }
 
-  static throwNew(logger: Logger, permissions: bigint): never {
+  static throwNew(permissions: bigint): never {
     const error = new InsufficientPermissionsConfessionError();
     logger.error('insufficient attach files permission', error, {
       'error.permissions': permissions.toString(),
@@ -41,7 +40,7 @@ export class InsufficientSendMessagesConfessionError extends ConfessError {
     this.name = 'InsufficientSendMessagesConfessionError';
   }
 
-  static throwNew(logger: Logger, permissions: bigint): never {
+  static throwNew(permissions: bigint): never {
     const error = new InsufficientSendMessagesConfessionError();
     logger.error('insufficient send messages permission', error, {
       'error.permissions': permissions.toString(),
@@ -56,7 +55,7 @@ export class UnknownChannelConfessError extends ConfessError {
     this.name = 'UnknownChannelConfessError';
   }
 
-  static throwNew(logger: Logger): never {
+  static throwNew(): never {
     const error = new UnknownChannelConfessError();
     logger.error('unknown confession channel', error);
     throw error;
@@ -70,7 +69,7 @@ export class DisabledChannelConfessError extends ConfessError {
     this.name = 'DisabledChannelConfessError';
   }
 
-  static throwNew(logger: Logger, disabledAt: Date): never {
+  static throwNew(disabledAt: Date): never {
     const error = new DisabledChannelConfessError(disabledAt);
     logger.error('confession channel disabled', error, {
       'error.disabled.at': disabledAt.toISOString(),
@@ -87,7 +86,7 @@ export class MissingLogConfessError extends ConfessError {
     this.name = 'MissingLogConfessError';
   }
 
-  static throwNew(logger: Logger): never {
+  static throwNew(): never {
     const error = new MissingLogConfessError();
     logger.error('missing log channel for confession', error);
     throw error;
@@ -111,7 +110,7 @@ export async function submitConfession(
   authorId: Snowflake,
   description: string,
   attachment: InsertableAttachment | null,
-  shouldInsertAttachment: boolean,
+  parentMessageId: Snowflake | null,
 ) {
   return await tracer.asyncSpan('submit-confession', async span => {
     span.setAttributes({ 'channel.id': confessionChannelId, 'author.id': authorId });
@@ -126,10 +125,10 @@ export async function submitConfession(
       });
 
     if (!hasAllPermissions(permission, SEND_MESSAGES))
-      InsufficientSendMessagesConfessionError.throwNew(logger, permission);
+      InsufficientSendMessagesConfessionError.throwNew(permission);
 
     if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
-      InsufficientPermissionsConfessionError.throwNew(logger, permission);
+      InsufficientPermissionsConfessionError.throwNew(permission);
 
     const channel = await db.query.channel.findFirst({
       columns: {
@@ -144,7 +143,7 @@ export async function submitConfession(
       },
     });
 
-    if (typeof channel === 'undefined') UnknownChannelConfessError.throwNew(logger);
+    if (typeof channel === 'undefined') UnknownChannelConfessError.throwNew();
 
     const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
@@ -155,9 +154,9 @@ export async function submitConfession(
     });
 
     if (disabledAt !== null && disabledAt <= timestamp)
-      DisabledChannelConfessError.throwNew(logger, disabledAt);
+      DisabledChannelConfessError.throwNew(disabledAt);
 
-    if (logChannelId === null) MissingLogConfessError.throwNew(logger);
+    if (logChannelId === null) MissingLogConfessError.throwNew();
 
     // Insert confession to database
     const { internalId, confessionId } = await db.transaction(
@@ -170,9 +169,8 @@ export async function submitConfession(
           BigInt(authorId),
           description,
           isApprovalRequired ? null : timestamp, // approvedAt
-          null, // parentMessageId
+          parentMessageId === null ? null : BigInt(parentMessageId),
           attachment,
-          shouldInsertAttachment,
         ),
     );
 

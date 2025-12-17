@@ -1,13 +1,13 @@
 import { type InferOutput, variant } from 'valibot';
 
-import {
-  DeserializedInteractionMessageComponent,
-  InteractionMessageComponent,
-} from './message-component';
 import { InteractionApplicationCommand } from './application-command';
+import { InteractionMessageComponent } from './message-component';
 import { InteractionModalSubmit } from './modal-submit';
 import { InteractionPing } from './ping';
 
+/**
+ * Inbound schema for all Discord interactions.
+ */
 export const Interaction = variant('type', [
   InteractionPing,
   InteractionApplicationCommand,
@@ -16,12 +16,3 @@ export const Interaction = variant('type', [
 ]);
 
 export type Interaction = InferOutput<typeof Interaction>;
-
-export const DeserializedInteraction = variant('type', [
-  InteractionPing,
-  InteractionApplicationCommand,
-  DeserializedInteractionMessageComponent,
-  InteractionModalSubmit,
-]);
-
-export type DeserializedInteraction = InferOutput<typeof DeserializedInteraction>;

@@ -88,15 +88,15 @@ export const postConfession = inngest.createFunction(
                 confession.channelId,
                 createConfessionPayload(confession),
               );
-            } catch (err) {
-              if (err instanceof DiscordError)
-                switch (err.code) {
+            } catch (error) {
+              if (error instanceof DiscordError)
+                switch (error.code) {
                   case DiscordErrorCode.UnknownChannel:
                   case DiscordErrorCode.MissingAccess:
                   case DiscordErrorCode.MissingPermissions:
                     return {
                       type: Result.Failure,
-                      message: getConfessionErrorMessage(err.code, {
+                      message: getConfessionErrorMessage(error.code, {
                         label: confession.channel.label,
                         confessionId: confession.confessionId,
                         channel: ConfessionChannel.Confession,
@@ -106,7 +106,7 @@ export const postConfession = inngest.createFunction(
                   default:
                     break; // might be a transient error?
                 }
-              throw err;
+              throw error;
             }
 
             logger.info('confession published', {
@@ -163,7 +163,7 @@ export const postConfession = inngest.createFunction(
                 break;
               }
               default:
-                return UnreachableCodeError.throwNew();
+                UnreachableCodeError.throwNew();
             }
           }),
       );

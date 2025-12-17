@@ -1,4 +1,4 @@
-import { type InferOutput, literal, object, union } from 'valibot';
+import { type InferOutput, object, picklist } from 'valibot';
 
 import {
   InteractionApplicationCommandChatInputOptionBase,
@@ -7,11 +7,11 @@ import {
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 export const InteractionApplicationCommandChatInputOptionSnowflake = object({
-  type: union([
-    literal(InteractionApplicationCommandChatInputOptionType.User),
-    literal(InteractionApplicationCommandChatInputOptionType.Channel),
-    literal(InteractionApplicationCommandChatInputOptionType.Role),
-    literal(InteractionApplicationCommandChatInputOptionType.Mentionable),
+  type: picklist([
+    InteractionApplicationCommandChatInputOptionType.User,
+    InteractionApplicationCommandChatInputOptionType.Channel,
+    InteractionApplicationCommandChatInputOptionType.Role,
+    InteractionApplicationCommandChatInputOptionType.Mentionable,
   ]),
   value: Snowflake,
   ...InteractionApplicationCommandChatInputOptionBase.entries,

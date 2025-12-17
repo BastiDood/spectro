@@ -61,13 +61,13 @@ export const dispatchApproval = inngest.createFunction(
                 confession.channelId,
                 createConfessionPayload(confession),
               );
-            } catch (err) {
-              if (err instanceof DiscordError)
-                switch (err.code) {
+            } catch (error) {
+              if (error instanceof DiscordError)
+                switch (error.code) {
                   case DiscordErrorCode.UnknownChannel:
                   case DiscordErrorCode.MissingAccess:
                   case DiscordErrorCode.MissingPermissions:
-                    return getConfessionErrorMessage(err.code, {
+                    return getConfessionErrorMessage(error.code, {
                       label: confession.channel.label,
                       confessionId: confession.confessionId,
                       channel: ConfessionChannel.Confession,
@@ -76,7 +76,7 @@ export const dispatchApproval = inngest.createFunction(
                   default:
                     break;
                 }
-              throw err;
+              throw error;
             }
 
             logger.info('approved confession dispatched', {

@@ -1,18 +1,19 @@
-import { type InferOutput, array, literal, object, variant } from 'valibot';
-
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import type { MessageComponentButton } from '$lib/server/models/discord/message/component/button';
 
-import { MessageComponentButton } from '$lib/server/models/discord/message/component/button';
-import { MessageComponentTextInput } from '$lib/server/models/discord/message/component/text-input';
+/**
+ * Outbound interface for an action row containing buttons.
+ * Used in messages with interactive button components.
+ */
+export interface MessageComponentActionRowButtons {
+  /** Component type identifier. */
+  type: MessageComponentType.ActionRow;
+  /** 1-5 button components. */
+  components: MessageComponentButton[];
+}
 
-const MessageComponentInnerComponent = variant('type', [
-  MessageComponentButton,
-  MessageComponentTextInput,
-]);
-
-export const MessageComponentActionRow = object({
-  type: literal(MessageComponentType.ActionRow),
-  components: array(MessageComponentInnerComponent),
-});
-
-export type MessageComponentActionRow = InferOutput<typeof MessageComponentActionRow>;
+/**
+ * Outbound type for action rows in messages.
+ * Note: For modals, use the Label component instead of ActionRow with TextInput.
+ */
+export type MessageComponentActionRow = MessageComponentActionRowButtons;

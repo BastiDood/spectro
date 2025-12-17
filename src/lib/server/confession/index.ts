@@ -1,14 +1,8 @@
 import { fail } from 'node:assert/strict';
 
+import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { APP_ICON_URL, Color } from '$lib/server/constants';
-
 import type { CreateMessage } from '$lib/server/models/discord/message';
-import type {
-  SerializedAttachment,
-  SerializedConfessionForDispatch,
-  SerializedConfessionForLog,
-  SerializedConfessionForResend,
-} from '$lib/server/database';
 import { DiscordErrorCode } from '$lib/server/models/discord/errors';
 import {
   type Embed,
@@ -16,11 +10,84 @@ import {
   type EmbedImage,
   EmbedType,
 } from '$lib/server/models/discord/embed';
-import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
-import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
+import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
+import { MessageComponentTextInputStyle } from '$lib/server/models/discord/message/component/text-input';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
+import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
+import type {
+  SerializedAttachment,
+  SerializedConfessionForDispatch,
+  SerializedConfessionForLog,
+  SerializedConfessionForResend,
+} from '$lib/server/database';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
+
+export function createConfessionModal(parentMessageId: Snowflake | null): InteractionResponseModal {
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let title: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let label: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let description: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let customId: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let placeholder: string;
+
+  if (parentMessageId === null) {
+    title = 'Submit Confession';
+    label = 'Confession';
+    description = 'Your confession will be posted anonymously to the channel.';
+    customId = 'content';
+    placeholder = 'What would you like to confess?';
+  } else {
+    title = 'Reply to a Message';
+    label = 'Reply';
+    description = 'Your reply will be posted anonymously in response to the selected message.';
+    customId = parentMessageId;
+    placeholder = 'What would you like to say?';
+  }
+
+  return {
+    type: InteractionResponseType.Modal,
+    data: {
+      custom_id: 'confess',
+      title,
+      components: [
+        {
+          type: MessageComponentType.Label,
+          label,
+          description,
+          component: {
+            custom_id: customId,
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Long,
+            required: true,
+            placeholder,
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Attachment',
+          description: 'Optional. Attach an image or file to your confession.',
+          component: {
+            custom_id: 'attachment',
+            type: MessageComponentType.FileUpload,
+            required: false,
+          },
+        },
+        {
+          type: MessageComponentType.TextDisplay,
+          content:
+            '-# For moderation purposes, server administrators can view the authors of all confessions.',
+        },
+      ],
+    },
+  };
+}
 
 export const enum LogPayloadType {
   Pending = 'pending',
@@ -74,8 +141,11 @@ export function createConfessionPayload(
   confession: SerializedConfessionForDispatch | SerializedConfessionForResend,
   timestampOverride?: Date,
 ) {
-  const hex = confession.channel.color ? Number.parseInt(confession.channel.color, 2) : void 0;
   const attachment = deserializeAttachment(confession.attachment);
+
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let hex: number | undefined;
+  if (confession.channel.color !== null) hex = Number.parseInt(confession.channel.color, 2);
 
   const embed: Embed = {
     type: EmbedType.Rich,
@@ -99,7 +169,6 @@ export function createConfessionPayload(
     else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
 
   const params: CreateMessage = { embeds: [embed] };
-
   if (confession.parentMessageId !== null)
     params.message_reference = {
       type: MessageReferenceType.Default,
@@ -128,8 +197,7 @@ export function createLogPayload(
   let image: EmbedImage | undefined;
   if (attachment !== null) {
     fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    // Resent mode does not embed images
-    if (mode.type !== LogPayloadType.Resent && attachment.content_type?.startsWith('image/'))
+    if (attachment.content_type?.startsWith('image/'))
       image = {
         url: attachment.url,
         height: attachment.height ?? void 0,
@@ -195,14 +263,14 @@ export function createLogPayload(
             type: MessageComponentType.Button,
             style: MessageComponentButtonStyle.Success,
             label: 'Publish',
-            emoji: { name: '\u{2712}\u{fe0f}' },
+            emoji: { name: '✒️' },
             custom_id: `publish:${customId}`,
           },
           {
             type: MessageComponentType.Button,
             style: MessageComponentButtonStyle.Danger,
             label: 'Delete',
-            emoji: { name: '\u{1f5d1}\u{fe0f}' },
+            emoji: { name: '🗑️' },
             custom_id: `delete:${customId}`,
           },
         ],

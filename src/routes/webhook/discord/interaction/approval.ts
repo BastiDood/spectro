@@ -37,7 +37,7 @@ class InsufficientPermissionsApprovalError extends ApprovalError {
     this.name = 'InsufficientPermissionsApprovalError';
   }
 
-  static throwNew(logger: Logger, permissions: bigint): never {
+  static throwNew(permissions: bigint): never {
     const error = new InsufficientPermissionsApprovalError();
     logger.error('insufficient permissions for approval', error, {
       'error.permissions': permissions.toString(),
@@ -53,7 +53,7 @@ class DisabledChannelConfessError extends ApprovalError {
     this.name = 'DisabledChannelConfessError';
   }
 
-  static throwNew(logger: Logger, disabledAt: Date): never {
+  static throwNew(disabledAt: Date): never {
     const error = new DisabledChannelConfessError(disabledAt);
     logger.error('channel disabled for approval', error, {
       'error.disabled.at': disabledAt.toISOString(),
@@ -69,7 +69,7 @@ class AlreadyApprovedApprovalError extends ApprovalError {
     this.name = 'AlreadyApprovedApprovalError';
   }
 
-  static throwNew(logger: Logger, approvedAt: Date): never {
+  static throwNew(approvedAt: Date): never {
     const error = new AlreadyApprovedApprovalError(approvedAt);
     logger.error('confession already approved', error, {
       'error.approved.at': approvedAt.toISOString(),
@@ -102,7 +102,7 @@ async function submitVerdict(
     });
 
     if (!hasAllPermissions(permissions, MANAGE_MESSAGES))
-      InsufficientPermissionsApprovalError.throwNew(logger, permissions);
+      InsufficientPermissionsApprovalError.throwNew(permissions);
 
     return await db.transaction(async tx => {
       const [details, ...rest] = await tx
@@ -151,9 +151,9 @@ async function submitVerdict(
       });
 
       if (disabledAt !== null && disabledAt <= timestamp)
-        DisabledChannelConfessError.throwNew(logger, disabledAt);
+        DisabledChannelConfessError.throwNew(disabledAt);
 
-      if (approvedAt !== null) AlreadyApprovedApprovalError.throwNew(logger, approvedAt);
+      if (approvedAt !== null) AlreadyApprovedApprovalError.throwNew(approvedAt);
 
       if (isApproved) {
         const { rowCount } = await tx
@@ -297,15 +297,13 @@ export async function handleApproval(
       userId,
       permissions,
     );
-  } catch (err) {
-    if (err instanceof ApprovalError) {
-      logger.error(err.message, err);
+  } catch (error) {
+    if (error instanceof ApprovalError)
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
-        data: { flags: MessageFlags.Ephemeral, content: err.message },
+        data: { flags: MessageFlags.Ephemeral, content: error.message },
       };
-    }
-    throw err;
+    throw error;
   }
 
   return {

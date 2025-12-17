@@ -1,4 +1,4 @@
-import { type InferOutput, array, literal, object, union, variant } from 'valibot';
+import { type InferOutput, array, object, picklist, variant } from 'valibot';
 
 import {
   InteractionApplicationCommandChatInputOptionBase,
@@ -13,9 +13,9 @@ import { InteractionApplicationCommandChatInputOptionString } from '$lib/server/
 
 export const InteractionApplicationCommandChatInputOptionSubCommand = object({
   ...InteractionApplicationCommandChatInputOptionBase.entries,
-  type: union([
-    literal(InteractionApplicationCommandChatInputOptionType.SubCommand),
-    literal(InteractionApplicationCommandChatInputOptionType.SubCommandGroup),
+  type: picklist([
+    InteractionApplicationCommandChatInputOptionType.SubCommand,
+    InteractionApplicationCommandChatInputOptionType.SubCommandGroup,
   ]),
   options: array(
     variant('type', [
