@@ -1,23 +1,89 @@
 import { fail } from 'node:assert/strict';
 
 import { Color } from '$lib/server/constants';
-
 import type {
   ContainerChildComponent,
   MessageComponent,
 } from '$lib/server/models/discord/message/component';
 import type { CreateMessage } from '$lib/server/models/discord/message';
+import { DiscordErrorCode } from '$lib/server/models/discord/errors';
+import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
+import { MessageComponentTextInputStyle } from '$lib/server/models/discord/message/component/text-input';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
+import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type {
   SerializedAttachment,
   SerializedConfessionForDispatch,
   SerializedConfessionForLog,
   SerializedConfessionForResend,
 } from '$lib/server/database';
-import { DiscordErrorCode } from '$lib/server/models/discord/errors';
-import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
+
+export function createConfessionModal(parentMessageId: Snowflake | null): InteractionResponseModal {
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let title: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let label: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let description: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let customId: string;
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let placeholder: string;
+
+  if (parentMessageId === null) {
+    title = 'Submit Confession';
+    label = 'Confession';
+    description = 'Your confession will be posted anonymously to the channel.';
+    customId = 'content';
+    placeholder = 'What would you like to confess?';
+  } else {
+    title = 'Reply to a Message';
+    label = 'Reply';
+    description = 'Your reply will be posted anonymously in response to the selected message.';
+    customId = parentMessageId;
+    placeholder = 'What would you like to say?';
+  }
+
+  return {
+    type: InteractionResponseType.Modal,
+    data: {
+      custom_id: 'confess',
+      title,
+      components: [
+        {
+          type: MessageComponentType.Label,
+          label,
+          description,
+          component: {
+            custom_id: customId,
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Long,
+            required: true,
+            placeholder,
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Attachment',
+          description: 'Optional. Attach an image or file to your confession.',
+          component: {
+            custom_id: 'attachment',
+            type: MessageComponentType.FileUpload,
+          },
+        },
+        {
+          type: MessageComponentType.TextDisplay,
+          content:
+            '-# For moderation purposes, server administrators can view the authors of all confessions.',
+        },
+      ],
+    },
+  };
+}
 
 export const enum LogPayloadType {
   Pending = 'pending',

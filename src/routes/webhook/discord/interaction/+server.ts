@@ -23,8 +23,8 @@ import { MessageComponentType } from '$lib/server/models/discord/message/compone
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
 import { handleApproval } from './approval';
-import { handleConfess } from './confess';
-import { handleConfessSubmit } from './confess-submit';
+import { handleConfess } from './confess-modal';
+import { handleModalSubmit } from './modal-submit';
 import {
   UnexpectedApplicationCommandChatInputNameError,
   UnexpectedApplicationCommandMessageNameError,
@@ -35,7 +35,6 @@ import { handleHelp } from './help';
 import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';
 import { handleReplyModal } from './reply-modal';
-import { handleReplySubmit } from './reply-submit';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
 import { hasAllPermissions } from './util';
@@ -152,24 +151,11 @@ async function handleInteraction(
       );
     case InteractionType.ModalSubmit:
       switch (interaction.data.custom_id) {
-        case 'reply':
-          assert(typeof interaction.channel_id !== 'undefined');
-          assert(typeof interaction.member?.user !== 'undefined');
-          assert(typeof interaction.member.permissions !== 'undefined');
-          return await handleReplySubmit(
-            timestamp,
-            interaction.application_id,
-            interaction.token,
-            interaction.channel_id,
-            interaction.member.user.id,
-            interaction.member.permissions,
-            interaction.data.components,
-          );
         case 'confess':
           assert(typeof interaction.channel_id !== 'undefined');
           assert(typeof interaction.member?.user !== 'undefined');
           assert(typeof interaction.member.permissions !== 'undefined');
-          return await handleConfessSubmit(
+          return await handleModalSubmit(
             timestamp,
             interaction.application_id,
             interaction.token,
@@ -177,6 +163,7 @@ async function handleInteraction(
             interaction.member.user.id,
             interaction.member.permissions,
             interaction.data.components,
+            interaction.data.resolved,
           );
         default:
           UnexpectedModalSubmitError.throwNew(interaction.data.custom_id);

@@ -2,11 +2,9 @@ import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import { db } from '$lib/server/database';
 
+import { createConfessionModal } from '$lib/server/confession';
 import type { InteractionResponseMessage } from '$lib/server/models/discord/interaction-response/message';
-import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { MessageComponentTextInputStyle } from '$lib/server/models/discord/message/component/text-input';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
@@ -98,26 +96,7 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
     if (isApprovalRequired) ApprovalRequiredReplyModalError.throwNew(logger);
 
     logger.debug('reply modal prompted');
-    return {
-      type: InteractionResponseType.Modal,
-      data: {
-        custom_id: 'reply',
-        title: 'Reply to a Message',
-        components: [
-          {
-            type: MessageComponentType.Label,
-            label: 'Reply',
-            component: {
-              custom_id: messageId,
-              type: MessageComponentType.TextInput,
-              style: MessageComponentTextInputStyle.Long,
-              required: true,
-              placeholder: 'Hello...',
-            },
-          },
-        ],
-      },
-    } satisfies InteractionResponseModal;
+    return createConfessionModal(messageId);
   });
 }
 

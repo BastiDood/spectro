@@ -1,10 +1,9 @@
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
 import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
 import { type InsertableAttachment, db, insertConfession } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
+import { Logger } from '$lib/server/telemetry/logger';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { hasAllPermissions } from './util';
 
@@ -111,6 +110,7 @@ export async function submitConfession(
   authorId: Snowflake,
   description: string,
   attachment: InsertableAttachment | null,
+  parentMessageId: Snowflake | null,
 ) {
   return await tracer.asyncSpan('submit-confession', async span => {
     span.setAttributes({ 'channel.id': confessionChannelId, 'author.id': authorId });
@@ -169,7 +169,7 @@ export async function submitConfession(
           BigInt(authorId),
           description,
           isApprovalRequired ? null : timestamp, // approvedAt
-          null, // parentMessageId
+          parentMessageId === null ? null : BigInt(parentMessageId),
           attachment,
         ),
     );
