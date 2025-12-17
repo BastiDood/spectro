@@ -87,9 +87,7 @@ async function resendConfession(
         logChannelId: channel.logChannelId,
         label: channel.label,
         approvedAt: confession.approvedAt,
-        retrievedAttachment: {
-          attachmentUrl: attachment.url,
-        },
+        retrievedAttachment: { attachmentUrl: attachment.url },
       })
       .from(confession)
       .innerJoin(channel, eq(confession.channelId, channel.id))
@@ -176,18 +174,17 @@ export async function handleResend(
       moderatorId,
     );
   } catch (err) {
-    if (err instanceof ResendError) {
-      logger.error(err.message, err);
+    if (err instanceof ResendError)
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: { flags: MessageFlags.Ephemeral, content: err.message },
       };
-    }
+
     throw err;
   }
 
   return {
-    type: InteractionResponseType.ChannelMessageWithSource,
-    data: { flags: MessageFlags.Ephemeral, content: 'Resending confession...' },
+    type: InteractionResponseType.DeferredChannelMessageWithSource,
+    data: { flags: MessageFlags.Ephemeral },
   };
 }

@@ -143,6 +143,7 @@ export function createConfessionPayload(
 ) {
   const attachment = deserializeAttachment(confession.attachment);
 
+  // eslint-disable-next-line @typescript-eslint/init-declarations
   let hex: number | undefined;
   if (confession.channel.color !== null) hex = Number.parseInt(confession.channel.color, 2);
 

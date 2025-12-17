@@ -106,8 +106,8 @@ export async function handleModalSubmit(
     }
 
     return {
-      type: InteractionResponseType.ChannelMessageWithSource,
-      data: { flags: MessageFlags.Ephemeral, content: 'Submitting confession...' },
+      type: InteractionResponseType.DeferredChannelMessageWithSource,
+      data: { flags: MessageFlags.Ephemeral },
     };
   });
 }
