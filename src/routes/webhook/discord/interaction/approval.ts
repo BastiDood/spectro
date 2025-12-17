@@ -1,6 +1,7 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
 import { eq } from 'drizzle-orm';
+import { waitUntil } from '@vercel/functions';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -163,15 +164,18 @@ async function submitVerdict(
         strictEqual(rowCount, 1);
 
         // Emit Inngest event for async dispatch (will send follow-up on failure)
-        const { ids } = await inngest.send({
-          name: 'discord/confession.approve',
-          data: {
-            applicationId,
-            interactionToken,
-            internalId: internalId.toString(),
-          },
-        });
-        logger.debug('inngest event emitted', { 'inngest.events.id': ids });
+        waitUntil(
+          inngest
+            .send({
+              name: 'discord/confession.approve',
+              data: {
+                applicationId,
+                interactionToken,
+                internalId: internalId.toString(),
+              },
+            })
+            .then(({ ids }) => logger.debug('inngest event emitted', { 'inngest.events.id': ids })),
+        );
 
         const fields = [
           {

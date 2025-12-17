@@ -1,3 +1,5 @@
+import { waitUntil } from '@vercel/functions';
+
 import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import { type InsertableAttachment, db, insertConfession } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
@@ -180,18 +182,22 @@ export async function submitConfession(
     });
 
     // Emit Inngest event for async processing (fan-out to post-confession and log-confession)
-    const { ids } = await inngest.send({
-      name: 'discord/confession.submit',
-      data: {
-        applicationId,
-        interactionToken,
-        internalId: internalId.toString(),
-      },
-    });
-
-    logger.info(isApprovalRequired ? 'confession pending approval' : 'confession submitted', {
-      'inngest.events.id': ids,
-      'confession.id': confessionId.toString(),
-    });
+    waitUntil(
+      inngest
+        .send({
+          name: 'discord/confession.submit',
+          data: {
+            applicationId,
+            interactionToken,
+            internalId: internalId.toString(),
+          },
+        })
+        .then(({ ids }) =>
+          logger.info(isApprovalRequired ? 'confession pending approval' : 'confession submitted', {
+            'inngest.events.id': ids,
+            'confession.id': confessionId.toString(),
+          }),
+        ),
+    );
   });
 }

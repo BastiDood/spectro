@@ -1,6 +1,7 @@
 import { strictEqual } from 'node:assert/strict';
 
 import { and, eq } from 'drizzle-orm';
+import { waitUntil } from '@vercel/functions';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -134,20 +135,24 @@ async function resendConfession(
     }
 
     // Emit Inngest event for async processing (fans out to post-confession + log-confession)
-    const { ids } = await inngest.send({
-      name: 'discord/confession.submit',
-      data: {
-        applicationId,
-        interactionToken,
-        internalId: internalId.toString(),
-        moderatorId: moderatorId.toString(),
-      },
-    });
-
-    logger.info('confession resend submitted', {
-      'inngest.events.id': ids,
-      'confession.id': confessionId.toString(),
-    });
+    waitUntil(
+      inngest
+        .send({
+          name: 'discord/confession.submit',
+          data: {
+            applicationId,
+            interactionToken,
+            internalId: internalId.toString(),
+            moderatorId: moderatorId.toString(),
+          },
+        })
+        .then(({ ids }) =>
+          logger.info('confession resend submitted', {
+            'inngest.events.id': ids,
+            'confession.id': confessionId.toString(),
+          }),
+        ),
+    );
   });
 }
 
