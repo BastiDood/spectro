@@ -1,21 +1,16 @@
-import { type InferOutput, boolean, literal, number, object, optional } from 'valibot';
-
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import { UnfurledMediaItem } from '$lib/server/models/discord/message/component/unfurled-media';
+import type { UnfurledMediaItem } from '$lib/server/models/discord/message/component/unfurled-media';
 
 /**
+ * Outbound interface for a file component.
  * A content component that displays an attached file.
  * Only available in messages with the IS_COMPONENTS_V2 flag.
  */
-export const MessageComponentFile = object({
+export interface MessageComponentFile {
   /** Component type identifier. */
-  type: literal(MessageComponentType.File),
-  /** Optional identifier for the component. */
-  id: optional(number()),
+  type: MessageComponentType.File;
   /** The file to display. */
-  file: UnfurledMediaItem,
+  file: UnfurledMediaItem;
   /** Whether the file should be blurred out as a spoiler. */
-  spoiler: optional(boolean()),
-});
-
-export type MessageComponentFile = InferOutput<typeof MessageComponentFile>;
+  spoiler?: boolean;
+}

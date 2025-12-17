@@ -1,30 +1,11 @@
-import { type InferOutput, literal, object, picklist, string } from 'valibot';
-
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import {
-  MessageComponentButtonBase,
-  MessageComponentButtonStyle,
-} from '$lib/server/models/discord/message/component/button/base';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import type { Emoji } from '$lib/server/models/discord/emoji';
 
-export const MessageComponentButtonNormal = object({
-  ...MessageComponentButtonBase.entries,
-  type: literal(MessageComponentType.Button),
-  style: picklist([
-    MessageComponentButtonStyle.Primary,
-    MessageComponentButtonStyle.Secondary,
-    MessageComponentButtonStyle.Success,
-    MessageComponentButtonStyle.Danger,
-  ]),
-  custom_id: string(),
-});
-
-export type MessageComponentButtonNormal = InferOutput<typeof MessageComponentButtonNormal>;
-
 /**
- * Outbound interface for creating a normal (non-link, non-premium) button.
+ * Outbound interface for a normal (non-link, non-premium) button.
  */
-export interface CreateButtonNormal {
+export interface MessageComponentButtonNormal {
   type: MessageComponentType.Button;
   style:
     | MessageComponentButtonStyle.Primary
@@ -36,3 +17,6 @@ export interface CreateButtonNormal {
   disabled?: boolean;
   emoji?: Emoji;
 }
+
+/** Alias for backward compatibility. */
+export type CreateButtonNormal = MessageComponentButtonNormal;

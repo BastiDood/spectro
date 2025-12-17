@@ -1,17 +1,5 @@
-import {
-  type InferOutput,
-  array,
-  nullable,
-  number,
-  object,
-  optional,
-  pipe,
-  safeInteger,
-  string,
-  transform,
-} from 'valibot';
+import { type InferOutput, object } from 'valibot';
 
-import { Embed } from '$lib/server/models/discord/embed';
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Timestamp } from '$lib/server/models/timestamp';
 
@@ -26,20 +14,14 @@ export const enum MessageFlags {
   IsComponentsV2 = 1 << 15,
 }
 
+/**
+ * Inbound schema for parsed Message responses.
+ * Only includes fields that are actually accessed in the codebase.
+ */
 export const MessageBase = object({
   id: Snowflake,
   channel_id: Snowflake,
-  content: string(),
   timestamp: Timestamp,
-  flags: optional(
-    pipe(
-      number(),
-      safeInteger(),
-      transform(flags => flags as MessageFlags),
-    ),
-  ),
-  edited_timestamp: nullable(Timestamp),
-  embeds: optional(array(Embed)),
 });
 
 export type MessageBase = InferOutput<typeof MessageBase>;

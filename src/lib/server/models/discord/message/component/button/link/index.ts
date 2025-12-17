@@ -1,27 +1,12 @@
-import { type InferOutput, literal, object } from 'valibot';
-
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import {
-  MessageComponentButtonBase,
-  MessageComponentButtonStyle,
-} from '$lib/server/models/discord/message/component/button/base';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import type { Emoji } from '$lib/server/models/discord/emoji';
-import { Url } from '$lib/server/models/url';
-
-export const MessageComponentButtonLink = object({
-  ...MessageComponentButtonBase.entries,
-  type: literal(MessageComponentType.Button),
-  style: literal(MessageComponentButtonStyle.Link),
-  url: Url,
-});
-
-export type MessageComponentButtonLink = InferOutput<typeof MessageComponentButtonLink>;
 
 /**
- * Outbound interface for creating a link button.
+ * Outbound interface for a link button.
  * Note: Link buttons don't trigger interactions - they open URLs directly.
  */
-export interface CreateButtonLink {
+export interface MessageComponentButtonLink {
   type: MessageComponentType.Button;
   style: MessageComponentButtonStyle.Link;
   url: string;
@@ -29,3 +14,6 @@ export interface CreateButtonLink {
   disabled?: boolean;
   emoji?: Emoji;
 }
+
+/** Alias for backward compatibility. */
+export type CreateButtonLink = MessageComponentButtonLink;

@@ -1,33 +1,29 @@
-import { type InferOutput, array, maxLength, pipe, variant } from 'valibot';
-
-import { MessageComponentActionRowButtons, MessageComponentActionRowSelect } from './action-row';
-import { MessageComponentTextDisplay } from './text-display';
-import { MessageComponentMediaGallery } from './media-gallery';
-import { MessageComponentFile } from './file';
-import { MessageComponentSeparator } from './separator';
-import { MessageComponentSection } from './section';
-import { MessageComponentContainer } from './container';
-
 // Re-export all component types
 export { MessageComponentType } from './base';
-export {
-  MessageComponentActionRow,
-  MessageComponentActionRowButtons,
-  MessageComponentActionRowSelect,
-} from './action-row';
-export { MessageComponentButton } from './button';
+export type { MessageComponentActionRow, MessageComponentActionRowButtons } from './action-row';
+export type { MessageComponentButton, CreateButton } from './button';
 export { MessageComponentButtonStyle } from './button/base';
-export { MessageComponentTextInput, MessageComponentTextInputStyle } from './text-input';
-export { MessageComponentTextDisplay } from './text-display';
-export { MessageComponentThumbnail } from './thumbnail';
-export { MessageComponentMediaGallery, MediaGalleryItem } from './media-gallery';
-export { MessageComponentFile } from './file';
-export { MessageComponentSeparator, SeparatorSpacing } from './separator';
-export { MessageComponentSection, SectionAccessory } from './section';
-export { MessageComponentContainer, ContainerChildComponent } from './container';
-export { MessageComponentLabel, LabelChildComponent } from './label';
-export { MessageComponentFileUpload } from './file-upload';
-export { UnfurledMediaItem } from './unfurled-media';
+export type { MessageComponentTextInput, CreateMessageComponentTextInput } from './text-input';
+export { MessageComponentTextInputStyle } from './text-input';
+export type {
+  MessageComponentTextDisplay,
+  CreateMessageComponentTextDisplay,
+} from './text-display';
+export type { MessageComponentThumbnail } from './thumbnail';
+export type { MessageComponentMediaGallery, MediaGalleryItem } from './media-gallery';
+export type { MessageComponentFile } from './file';
+export type { MessageComponentSeparator } from './separator';
+export { SeparatorSpacing } from './separator';
+export type { MessageComponentSection, SectionAccessory } from './section';
+export type { MessageComponentContainer, ContainerChildComponent } from './container';
+export type {
+  MessageComponentLabel,
+  LabelChildComponent,
+  CreateMessageComponentLabel,
+  CreateLabelChildComponent,
+} from './label';
+export type { MessageComponentFileUpload, CreateMessageComponentFileUpload } from './file-upload';
+export type { UnfurledMediaItem } from './unfurled-media';
 export {
   MessageComponentSelect,
   MessageComponentSelectBase,
@@ -39,37 +35,25 @@ export {
   StringSelectOption,
 } from './select';
 
-/**
- * Non-ActionRow top-level components for Components V2.
- * Discriminated by `type` field.
- */
-const MessageComponentNonActionRow = variant('type', [
-  MessageComponentTextDisplay,
-  MessageComponentMediaGallery,
-  MessageComponentFile,
-  MessageComponentSeparator,
-  MessageComponentSection,
-  MessageComponentContainer,
-]);
+// Import types for aggregate type definition
+import type { MessageComponentActionRowButtons } from './action-row';
+import type { MessageComponentTextDisplay } from './text-display';
+import type { MessageComponentMediaGallery } from './media-gallery';
+import type { MessageComponentFile } from './file';
+import type { MessageComponentSeparator } from './separator';
+import type { MessageComponentSection } from './section';
+import type { MessageComponentContainer } from './container';
 
 /**
- * Top-level message component for Components V2.
- * ActionRow has multiple valid sub-types (buttons, select) with the same type value,
- * so we use variant to combine all possibilities.
+ * Outbound type for top-level message components in Components V2.
  *
  * Note: For modals, use the Label component instead of ActionRow with TextInput.
  */
-export const MessageComponent = variant('type', [
-  MessageComponentActionRowButtons,
-  MessageComponentActionRowSelect,
-  MessageComponentNonActionRow,
-]);
-
-export type MessageComponent = InferOutput<typeof MessageComponent>;
-
-/**
- * Array of top-level message components.
- * Maximum 10 components per message with IS_COMPONENTS_V2 flag.
- */
-export const MessageComponents = pipe(array(MessageComponent), maxLength(10));
-export type MessageComponents = InferOutput<typeof MessageComponents>;
+export type MessageComponent =
+  | MessageComponentActionRowButtons
+  | MessageComponentTextDisplay
+  | MessageComponentMediaGallery
+  | MessageComponentFile
+  | MessageComponentSeparator
+  | MessageComponentSection
+  | MessageComponentContainer;

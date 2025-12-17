@@ -1,5 +1,3 @@
-import { type InferOutput, boolean, literal, number, object, optional, picklist } from 'valibot';
-
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 
 export const enum SeparatorSpacing {
@@ -8,19 +6,15 @@ export const enum SeparatorSpacing {
 }
 
 /**
+ * Outbound interface for a separator component.
  * A layout component that adds vertical padding between other components.
- * Can optionally display a visual divider line.
  * Only available in messages with the IS_COMPONENTS_V2 flag.
  */
-export const MessageComponentSeparator = object({
+export interface MessageComponentSeparator {
   /** Component type identifier. */
-  type: literal(MessageComponentType.Separator),
-  /** Optional identifier for the component. */
-  id: optional(number()),
+  type: MessageComponentType.Separator;
   /** Whether to display a visual divider line. Defaults to true. */
-  divider: optional(boolean()),
+  divider?: boolean;
   /** The size of the separator padding. Defaults to Small. */
-  spacing: optional(picklist([SeparatorSpacing.Small, SeparatorSpacing.Large])),
-});
-
-export type MessageComponentSeparator = InferOutput<typeof MessageComponentSeparator>;
+  spacing?: SeparatorSpacing;
+}

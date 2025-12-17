@@ -1,17 +1,8 @@
-import { type InferOutput, nullish, number, object, optional, string } from 'valibot';
-
 /**
- * Represents a media item that can be referenced by URL or attachment ID.
- * Used by Thumbnail, MediaGallery, and File components.
+ * Outbound interface for media items in Thumbnail, MediaGallery, and File components.
+ * Only url is needed when sending - Discord returns proxy_url, height, width, content_type.
  */
-export const UnfurledMediaItem = object({
+export interface UnfurledMediaItem {
   /** The URL of the media (external or Discord CDN). */
-  url: string(),
-  proxy_url: optional(string()),
-  height: nullish(number()),
-  width: nullish(number()),
-  content_type: optional(string()),
-  // TODO: attachment_id
-});
-
-export type UnfurledMediaItem = InferOutput<typeof UnfurledMediaItem>;
+  url: string;
+}

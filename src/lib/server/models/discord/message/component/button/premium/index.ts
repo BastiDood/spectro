@@ -1,25 +1,11 @@
-import { type InferOutput, literal, object, string } from 'valibot';
-
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import {
-  MessageComponentButtonBase,
-  MessageComponentButtonStyle,
-} from '$lib/server/models/discord/message/component/button/base';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import type { Emoji } from '$lib/server/models/discord/emoji';
 
-export const MessageComponentButtonPremium = object({
-  ...MessageComponentButtonBase.entries,
-  type: literal(MessageComponentType.Button),
-  style: literal(MessageComponentButtonStyle.Premium),
-  sku_id: string(),
-});
-
-export type MessageComponentButtonPremium = InferOutput<typeof MessageComponentButtonPremium>;
-
 /**
- * Outbound interface for creating a premium button (used for SKU purchases).
+ * Outbound interface for a premium button (used for SKU purchases).
  */
-export interface CreateButtonPremium {
+export interface MessageComponentButtonPremium {
   type: MessageComponentType.Button;
   style: MessageComponentButtonStyle.Premium;
   sku_id: string;
@@ -27,3 +13,6 @@ export interface CreateButtonPremium {
   disabled?: boolean;
   emoji?: Emoji;
 }
+
+/** Alias for backward compatibility. */
+export type CreateButtonPremium = MessageComponentButtonPremium;

@@ -4,7 +4,10 @@ import {
   type CreateMessageComponentLabel,
   MessageComponentLabel,
 } from '$lib/server/models/discord/message/component/label';
-import { MessageComponentTextDisplay } from '$lib/server/models/discord/message/component/text-display';
+import {
+  type CreateMessageComponentTextDisplay,
+  MessageComponentTextDisplay,
+} from '$lib/server/models/discord/message/component/text-display';
 
 /**
  * Top-level modal component (inbound).
@@ -25,9 +28,9 @@ export type ModalComponents = InferOutput<typeof ModalComponents>;
 
 /**
  * Top-level modal component for creating modals (outbound).
- * Label requires the label field, TextDisplay remains the same.
+ * Label requires the label field, TextDisplay requires content.
  */
-export type CreateModalComponent = CreateMessageComponentLabel | MessageComponentTextDisplay;
+export type CreateModalComponent = CreateMessageComponentLabel | CreateMessageComponentTextDisplay;
 
 /**
  * Array of top-level modal components for creating modals (outbound).

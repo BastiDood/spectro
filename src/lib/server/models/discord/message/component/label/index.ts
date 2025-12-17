@@ -1,8 +1,10 @@
-import { type InferOutput, literal, number, object, optional, string, variant } from 'valibot';
+import { type InferOutput, literal, object, variant } from 'valibot';
 
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import { MessageComponentTextInput } from '$lib/server/models/discord/message/component/text-input';
-import { MessageComponentFileUpload } from '$lib/server/models/discord/message/component/file-upload';
+import {
+  type CreateMessageComponentFileUpload,
+  MessageComponentFileUpload,
+} from '$lib/server/models/discord/message/component/file-upload';
 import {
   MessageComponentStringSelect,
   MessageComponentUserSelect,
@@ -10,10 +12,14 @@ import {
   MessageComponentMentionableSelect,
   MessageComponentChannelSelect,
 } from '$lib/server/models/discord/message/component/select';
+import {
+  type CreateMessageComponentTextInput,
+  MessageComponentTextInput,
+} from '$lib/server/models/discord/message/component/text-input';
 
 /**
- * Child components that can be wrapped by a Label.
- * Includes: TextInput, FileUpload, and various Select menus.
+ * Inbound Valibot variant for child components that can be wrapped by a Label.
+ * Used for parsing modal submission responses.
  */
 export const LabelChildComponent = variant('type', [
   MessageComponentTextInput,
@@ -28,19 +34,21 @@ export const LabelChildComponent = variant('type', [
 export type LabelChildComponent = InferOutput<typeof LabelChildComponent>;
 
 /**
- * A layout component that associates a label and description with another component.
- * Only available in modals. This is the inbound schema for receiving modal submits.
- * Discord strips the label field when returning modal submit data.
+ * Outbound type for child components that can be wrapped by a Label.
+ * Used for creating modal components.
+ */
+export type CreateLabelChildComponent =
+  | CreateMessageComponentTextInput
+  | CreateMessageComponentFileUpload;
+
+/**
+ * Inbound schema for Label component from modal submissions.
+ * Only includes fields actually accessed. Discord strips: label, description.
+ * We also omit id (never accessed).
  */
 export const MessageComponentLabel = object({
   /** Component type identifier. */
   type: literal(MessageComponentType.Label),
-  /** Optional identifier for the component. */
-  id: optional(number()),
-  /** The label text displayed above the component. Optional when receiving. */
-  label: optional(string()),
-  /** Optional description text displayed below the label. */
-  description: optional(string()),
   /** The wrapped component. */
   component: LabelChildComponent,
 });
@@ -61,5 +69,5 @@ export interface CreateMessageComponentLabel {
   /** Optional description text displayed below the label. */
   description?: string;
   /** The wrapped component. */
-  component: LabelChildComponent;
+  component: CreateLabelChildComponent;
 }
