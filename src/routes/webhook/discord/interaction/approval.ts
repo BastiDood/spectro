@@ -4,18 +4,15 @@ import { eq } from 'drizzle-orm';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
+import { type Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import type {
-  ContainerChildComponent,
-  MessageComponent,
-} from '$lib/server/models/discord/message/component';
 
-import { Color } from '$lib/server/constants';
+import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { attachment, channel, confession } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
@@ -129,10 +126,11 @@ async function submitVerdict(
         details;
 
       // TODO: Refactor to Relations API once the `bigint` bug is fixed.
-      let retrievedAttachment: { url: string; contentType: string | null } | null = null;
+      let embedAttachment: EmbedAttachment | null = null;
       if (attachmentId !== null) {
         const [retrieved, ...others] = await tx
           .select({
+            filename: attachment.filename,
             contentType: attachment.contentType,
             url: attachment.url,
           })
@@ -140,7 +138,11 @@ async function submitVerdict(
           .where(eq(attachment.id, attachmentId));
         strictEqual(others.length, 0);
         assert(typeof retrieved !== 'undefined');
-        retrievedAttachment = retrieved;
+        embedAttachment = {
+          filename: retrieved.filename,
+          url: retrieved.url,
+          content_type: retrieved.contentType ?? void 0,
+        };
       }
 
       logger.debug('confession details fetched', {
@@ -171,112 +173,87 @@ async function submitVerdict(
         });
         logger.debug('inngest event emitted', { 'inngest.events.id': ids });
 
-        const unixTimestamp = Math.floor(timestamp.valueOf() / 1000);
-
-        // Build container children
-        const containerChildren: ContainerChildComponent[] = [
+        const fields = [
           {
-            type: MessageComponentType.TextDisplay,
-            content: `# ${label} #${confessionId}`,
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
           },
           {
-            type: MessageComponentType.TextDisplay,
-            content,
-          },
-        ];
-
-        // Add image as MediaGallery
-        if (retrievedAttachment !== null && retrievedAttachment.contentType?.startsWith('image/'))
-          containerChildren.push({
-            type: MessageComponentType.MediaGallery,
-            items: [{ media: { url: retrievedAttachment.url } }],
-          });
-
-        // Build metadata text
-        let metadataText = `**Authored by:** ||<@${authorId}>|| \u{2022} **Approved by:** <@${moderatorId}>`;
-        if (retrievedAttachment !== null)
-          metadataText += `\n**Attachment:** ${retrievedAttachment.url}`;
-
-        containerChildren.push(
-          {
-            type: MessageComponentType.Separator,
-            divider: true,
-          },
-          {
-            type: MessageComponentType.TextDisplay,
-            content: metadataText,
-          },
-          {
-            type: MessageComponentType.TextDisplay,
-            content: `-# Spectro Logs \u{2022} <t:${unixTimestamp}:R>`,
-          },
-        );
-
-        const components: MessageComponent[] = [
-          {
-            type: MessageComponentType.Container,
-            accent_color: Color.Success,
-            components: containerChildren,
+            name: 'Approved by',
+            value: `<@${moderatorId}>`,
+            inline: true,
           },
         ];
+
+        // eslint-disable-next-line @typescript-eslint/init-declarations
+        let image: EmbedImage | undefined;
+        if (embedAttachment !== null) {
+          fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+          if (embedAttachment.content_type?.startsWith('image/'))
+            image = {
+              url: embedAttachment.url,
+              height: embedAttachment.height ?? void 0,
+              width: embedAttachment.width ?? void 0,
+            };
+        }
 
         logger.info('confession approved', { 'confession.id': confessionId.toString() });
-        return { flags: MessageFlags.IsComponentsV2, components };
+        return {
+          type: EmbedType.Rich,
+          title: `${label} #${confessionId}`,
+          color: Color.Success,
+          timestamp: timestamp.toISOString(),
+          description: content,
+          footer: {
+            text: 'Spectro Logs',
+            icon_url: APP_ICON_URL,
+          },
+          fields,
+          image,
+        };
+      }
+
+      const fields = [
+        {
+          name: 'Authored by',
+          value: `||<@${authorId}>||`,
+          inline: true,
+        },
+        {
+          name: 'Deleted by',
+          value: `<@${moderatorId}>`,
+          inline: true,
+        },
+      ];
+
+      // eslint-disable-next-line @typescript-eslint/init-declarations
+      let image: EmbedImage | undefined;
+      if (embedAttachment !== null) {
+        fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+        if (embedAttachment.content_type?.startsWith('image/'))
+          image = {
+            url: embedAttachment.url,
+            height: embedAttachment.height ?? void 0,
+            width: embedAttachment.width ?? void 0,
+          };
       }
 
       await tx.delete(confession).where(eq(confession.internalId, internalId));
-
-      const unixTimestamp = Math.floor(timestamp.valueOf() / 1000);
-
-      // Build container children
-      const containerChildren: ContainerChildComponent[] = [
-        {
-          type: MessageComponentType.TextDisplay,
-          content: `# ${label} #${confessionId}`,
-        },
-        {
-          type: MessageComponentType.TextDisplay,
-          content,
-        },
-      ];
-
-      // Add image as MediaGallery
-      if (retrievedAttachment !== null && retrievedAttachment.contentType?.startsWith('image/'))
-        containerChildren.push({
-          type: MessageComponentType.MediaGallery,
-          items: [{ media: { url: retrievedAttachment.url } }],
-        });
-
-      // Build metadata text
-      let metadataText = `**Authored by:** ||<@${authorId}>|| \u{2022} **Deleted by:** <@${moderatorId}>`;
-      if (retrievedAttachment !== null)
-        metadataText += `\n**Attachment:** ${retrievedAttachment.url}`;
-
-      containerChildren.push(
-        {
-          type: MessageComponentType.Separator,
-          divider: true,
-        },
-        {
-          type: MessageComponentType.TextDisplay,
-          content: metadataText,
-        },
-        {
-          type: MessageComponentType.TextDisplay,
-          content: `-# Spectro Logs \u{2022} <t:${unixTimestamp}:R>`,
-        },
-      );
-
-      const components: MessageComponent[] = [
-        {
-          type: MessageComponentType.Container,
-          accent_color: Color.Failure,
-          components: containerChildren,
-        },
-      ];
-
       logger.info('confession rejected', { 'confession.id': confessionId.toString() });
-      return { flags: MessageFlags.IsComponentsV2, components };
+      return {
+        type: EmbedType.Rich,
+        title: `${label} #${confessionId}`,
+        color: Color.Failure,
+        timestamp: timestamp.toISOString(),
+        description: content,
+        footer: {
+          text: 'Spectro Logs',
+          icon_url: APP_ICON_URL,
+        },
+        fields,
+        image,
+      };
     });
   });
 }
@@ -309,9 +286,9 @@ export async function handleApproval(
   }
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
-  let data: { flags: MessageFlags; components: MessageComponent[] };
+  let embed: Embed;
   try {
-    data = await submitVerdict(
+    embed = await submitVerdict(
       timestamp,
       applicationId,
       interactionToken,
@@ -326,11 +303,12 @@ export async function handleApproval(
         type: InteractionResponseType.ChannelMessageWithSource,
         data: { flags: MessageFlags.Ephemeral, content: err.message },
       };
+
     throw err;
   }
 
   return {
     type: InteractionResponseType.UpdateMessage,
-    data,
+    data: { components: [], embeds: [embed] },
   };
 }
