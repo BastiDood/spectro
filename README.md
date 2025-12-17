@@ -78,6 +78,9 @@ To register the application commands in Discord, a one-time initialization scrip
 curl --request 'PUT' --header 'Content-Type: application/json' --header "Authorization: Bot $DISCORD_BOT_TOKEN" --data '@discord.json' "https://discord.com/api/v10/applications/$DISCORD_APPLICATION_ID/commands"
 ```
 
+> [!NOTE]
+> This invocation is implemented as a Nushell script in [`register.nu`](./register.nu).
+
 ## Developing Spectro
 
 Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files.
