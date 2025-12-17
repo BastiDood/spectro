@@ -25,7 +25,7 @@ export class InsufficientPermissionsConfessionError extends ConfessError {
     this.name = 'InsufficientPermissionsConfessionError';
   }
 
-  static throwNew(logger: Logger, permissions: bigint): never {
+  static throwNew(permissions: bigint): never {
     const error = new InsufficientPermissionsConfessionError();
     logger.error('insufficient attach files permission', error, {
       'error.permissions': permissions.toString(),
@@ -40,7 +40,7 @@ export class InsufficientSendMessagesConfessionError extends ConfessError {
     this.name = 'InsufficientSendMessagesConfessionError';
   }
 
-  static throwNew(logger: Logger, permissions: bigint): never {
+  static throwNew(permissions: bigint): never {
     const error = new InsufficientSendMessagesConfessionError();
     logger.error('insufficient send messages permission', error, {
       'error.permissions': permissions.toString(),
@@ -55,7 +55,7 @@ export class UnknownChannelConfessError extends ConfessError {
     this.name = 'UnknownChannelConfessError';
   }
 
-  static throwNew(logger: Logger): never {
+  static throwNew(): never {
     const error = new UnknownChannelConfessError();
     logger.error('unknown confession channel', error);
     throw error;
@@ -69,7 +69,7 @@ export class DisabledChannelConfessError extends ConfessError {
     this.name = 'DisabledChannelConfessError';
   }
 
-  static throwNew(logger: Logger, disabledAt: Date): never {
+  static throwNew(disabledAt: Date): never {
     const error = new DisabledChannelConfessError(disabledAt);
     logger.error('confession channel disabled', error, {
       'error.disabled.at': disabledAt.toISOString(),
@@ -86,7 +86,7 @@ export class MissingLogConfessError extends ConfessError {
     this.name = 'MissingLogConfessError';
   }
 
-  static throwNew(logger: Logger): never {
+  static throwNew(): never {
     const error = new MissingLogConfessError();
     logger.error('missing log channel for confession', error);
     throw error;
@@ -125,10 +125,10 @@ export async function submitConfession(
       });
 
     if (!hasAllPermissions(permission, SEND_MESSAGES))
-      InsufficientSendMessagesConfessionError.throwNew(logger, permission);
+      InsufficientSendMessagesConfessionError.throwNew(permission);
 
     if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
-      InsufficientPermissionsConfessionError.throwNew(logger, permission);
+      InsufficientPermissionsConfessionError.throwNew(permission);
 
     const channel = await db.query.channel.findFirst({
       columns: {
@@ -143,7 +143,7 @@ export async function submitConfession(
       },
     });
 
-    if (typeof channel === 'undefined') UnknownChannelConfessError.throwNew(logger);
+    if (typeof channel === 'undefined') UnknownChannelConfessError.throwNew();
 
     const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
 
@@ -154,9 +154,9 @@ export async function submitConfession(
     });
 
     if (disabledAt !== null && disabledAt <= timestamp)
-      DisabledChannelConfessError.throwNew(logger, disabledAt);
+      DisabledChannelConfessError.throwNew(disabledAt);
 
-    if (logChannelId === null) MissingLogConfessError.throwNew(logger);
+    if (logChannelId === null) MissingLogConfessError.throwNew();
 
     // Insert confession to database
     const { internalId, confessionId } = await db.transaction(

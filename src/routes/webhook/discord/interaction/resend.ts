@@ -173,14 +173,13 @@ export async function handleResend(
       confessionId,
       moderatorId,
     );
-  } catch (err) {
-    if (err instanceof ResendError)
+  } catch (error) {
+    if (error instanceof ResendError)
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
-        data: { flags: MessageFlags.Ephemeral, content: err.message },
+        data: { flags: MessageFlags.Ephemeral, content: error.message },
       };
-
-    throw err;
+    throw error;
   }
 
   return {

@@ -93,9 +93,9 @@ export const logConfession = inngest.createFunction(
                 confession.channel.logChannelId,
                 createLogPayload(confession, mode),
               );
-            } catch (err) {
-              if (err instanceof DiscordError)
-                switch (err.code) {
+            } catch (error) {
+              if (error instanceof DiscordError)
+                switch (error.code) {
                   case DiscordErrorCode.UnknownChannel:
                     await resetLogChannel(db, BigInt(confession.channelId));
                     logger.warn('log channel reset');
@@ -104,7 +104,7 @@ export const logConfession = inngest.createFunction(
                   case DiscordErrorCode.MissingPermissions:
                     return {
                       type: Result.Failure,
-                      message: getConfessionErrorMessage(err.code, {
+                      message: getConfessionErrorMessage(error.code, {
                         label: confession.channel.label,
                         confessionId: confession.confessionId,
                         channel: ConfessionChannel.Log,
@@ -120,7 +120,7 @@ export const logConfession = inngest.createFunction(
                   default:
                     break;
                 }
-              throw err;
+              throw error;
             }
 
             logger.trace('confession logged', {
@@ -173,7 +173,7 @@ export const logConfession = inngest.createFunction(
           );
           break;
         default:
-          return UnreachableCodeError.throwNew();
+          UnreachableCodeError.throwNew();
       }
     }),
 );

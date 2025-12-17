@@ -15,9 +15,9 @@ export class Tracer {
     return this.#tracer.startActiveSpan(name, span => {
       try {
         return fn(span);
-      } catch (err) {
-        if (err instanceof Error) Tracer.#LOGGER.fatal('unhandled error', err);
-        throw err;
+      } catch (error) {
+        if (error instanceof Error) Tracer.#LOGGER.fatal('unhandled error', error);
+        throw error;
       } finally {
         span.end();
       }
@@ -28,9 +28,9 @@ export class Tracer {
     return await this.#tracer.startActiveSpan(name, async span => {
       try {
         return await fn(span);
-      } catch (err) {
-        if (err instanceof Error) Tracer.#LOGGER.fatal('unhandled error', err);
-        throw err;
+      } catch (error) {
+        if (error instanceof Error) Tracer.#LOGGER.fatal('unhandled error', error);
+        throw error;
       } finally {
         span.end();
       }

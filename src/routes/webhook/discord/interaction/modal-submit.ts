@@ -9,7 +9,6 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import {
@@ -20,7 +19,6 @@ import {
 import { hasAllPermissions } from './util';
 
 const SERVICE_NAME = 'webhook.interaction.confess-submit';
-const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
 export async function handleModalSubmit(
@@ -73,7 +71,7 @@ export async function handleModalSubmit(
 
       // Lazy permission check: only validate `ATTACH_FILES` when attachment is present
       if (!hasAllPermissions(permissions, ATTACH_FILES))
-        InsufficientPermissionsConfessionError.throwNew(logger, permissions);
+        InsufficientPermissionsConfessionError.throwNew(permissions);
 
       attachment = {
         id: attachmentData.id,
@@ -96,13 +94,13 @@ export async function handleModalSubmit(
         attachment,
         parentMessageId,
       );
-    } catch (err) {
-      if (err instanceof ConfessError)
+    } catch (error) {
+      if (error instanceof ConfessError)
         return {
           type: InteractionResponseType.ChannelMessageWithSource,
-          data: { flags: MessageFlags.Ephemeral, content: err.message },
+          data: { flags: MessageFlags.Ephemeral, content: error.message },
         };
-      throw err;
+      throw error;
     }
 
     return {
