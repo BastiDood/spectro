@@ -73,6 +73,7 @@ export function createConfessionModal(parentMessageId: Snowflake | null): Intera
           component: {
             custom_id: 'attachment',
             type: MessageComponentType.FileUpload,
+            required: false,
           },
         },
         {

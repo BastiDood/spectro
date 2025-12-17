@@ -30,7 +30,7 @@ export async function handleModalSubmit(
   channelId: Snowflake,
   authorId: Snowflake,
   permissions: bigint,
-  [contentLabel, attachmentLabel, ...otherComponents]: ModalComponents,
+  [contentLabel, attachmentLabel, disclaimerDisplay, ...otherComponents]: ModalComponents,
   resolved: Resolved | undefined,
 ): Promise<InteractionResponse> {
   return await tracer.asyncSpan('handle-confess-submit', async span => {
@@ -38,9 +38,14 @@ export async function handleModalSubmit(
 
     strictEqual(otherComponents.length, 0);
 
+    // Validate disclaimer TextDisplay (read-only, no action needed)
+    assert(typeof disclaimerDisplay !== 'undefined');
+    strictEqual(disclaimerDisplay.type, MessageComponentType.TextDisplay);
+
     // Parse content from text input
     assert(typeof contentLabel !== 'undefined');
     strictEqual(contentLabel.type, MessageComponentType.Label);
+
     const { component: contentComponent } = contentLabel;
     strictEqual(contentComponent.type, MessageComponentType.TextInput);
     assert(typeof contentComponent.value !== 'undefined');
@@ -52,15 +57,16 @@ export async function handleModalSubmit(
     // Parse optional attachment from file upload
     assert(typeof attachmentLabel !== 'undefined');
     strictEqual(attachmentLabel.type, MessageComponentType.Label);
+
     const { component: attachmentComponent } = attachmentLabel;
     strictEqual(attachmentComponent.type, MessageComponentType.FileUpload);
     strictEqual(attachmentComponent.custom_id, 'attachment');
 
+    const [attachmentId, ...otherAttachments] = attachmentComponent.values ?? [];
+    strictEqual(otherAttachments.length, 0);
+
     let attachment: InsertableAttachment | null = null;
-    if (typeof attachmentComponent.values !== 'undefined') {
-      const [attachmentId, ...otherAttachments] = attachmentComponent.values;
-      strictEqual(otherAttachments.length, 0);
-      assert(typeof attachmentId !== 'undefined');
+    if (typeof attachmentId !== 'undefined') {
       assert(typeof resolved?.attachments !== 'undefined');
       const attachmentData = resolved.attachments[attachmentId];
       assert(typeof attachmentData !== 'undefined');
