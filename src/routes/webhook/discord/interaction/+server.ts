@@ -25,12 +25,6 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { handleApproval } from './approval';
 import { handleConfess } from './confess-modal';
 import { handleModalSubmit } from './modal-submit';
-import {
-  UnexpectedApplicationCommandChatInputNameError,
-  UnexpectedApplicationCommandMessageNameError,
-  UnexpectedApplicationCommandTypeError,
-  UnexpectedModalSubmitError,
-} from './errors';
 import { handleHelp } from './help';
 import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';
@@ -38,6 +32,13 @@ import { handleReplyModal } from './reply-modal';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
 import { hasAllPermissions } from './util';
+import {
+  UnexpectedApplicationCommandChatInputNameError,
+  UnexpectedApplicationCommandMessageNameError,
+  UnexpectedApplicationCommandTypeError,
+  UnexpectedModalSubmitError,
+} from './errors';
+import { UnreachableCodeError } from '$lib/assert';
 
 const SERVICE_NAME = 'webhook.interaction';
 const logger = new Logger(SERVICE_NAME);
@@ -47,7 +48,6 @@ async function handleInteraction(
   timestamp: Date,
   interaction: Interaction,
 ): Promise<InteractionResponse> {
-  // eslint-disable-next-line default-case
   switch (interaction.type) {
     case InteractionType.Ping:
       return { type: InteractionResponseType.Pong };
@@ -166,9 +166,10 @@ async function handleInteraction(
             interaction.data.resolved,
           );
         default:
-          UnexpectedModalSubmitError.throwNew(interaction.data.custom_id);
+          return UnexpectedModalSubmitError.throwNew(interaction.data.custom_id);
       }
-      break;
+    default:
+      UnreachableCodeError.throwNew();
   }
 }
 

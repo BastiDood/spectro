@@ -1,5 +1,3 @@
-import { fail } from 'node:assert/strict';
-
 import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions';
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import type { CreateMessage } from '$lib/server/models/discord/message';
@@ -24,6 +22,7 @@ import type {
   SerializedConfessionForResend,
 } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { UnreachableCodeError } from '$lib/assert';
 
 export function createConfessionModal(parentMessageId: Snowflake | null): InteractionResponseModal {
   // eslint-disable-next-line @typescript-eslint/init-declarations
@@ -218,7 +217,7 @@ export function createLogPayload(
       color = Color.Replay;
       break;
     default:
-      fail('unreachable');
+      UnreachableCodeError.throwNew();
   }
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
@@ -232,7 +231,7 @@ export function createLogPayload(
       timestamp = confession.createdAt;
       break;
     default:
-      fail('unreachable');
+      UnreachableCodeError.throwNew();
   }
 
   const params: CreateMessage = {

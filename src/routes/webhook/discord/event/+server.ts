@@ -13,6 +13,7 @@ import {
 } from '$lib/server/models/discord/event';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
+import { UnreachableCodeError } from '$lib/assert';
 
 import { handleApplicationAuthorized } from './application-authorized';
 
@@ -21,16 +22,25 @@ const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
 async function handleWebhook(timestamp: Date, webhook: Webhook) {
-  // eslint-disable-next-line default-case
   switch (webhook.type) {
     case WebhookType.Ping:
       logger.info('ping');
       break;
     case WebhookType.Event:
       strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
-      strictEqual(webhook.event.data.integration_type, IntegrationType.Guild);
-      await handleApplicationAuthorized(timestamp, webhook.event.data.guild.id);
+      switch (webhook.event.data.integration_type) {
+        case IntegrationType.Guild:
+          await handleApplicationAuthorized(timestamp, webhook.event.data.guild.id);
+          break;
+        case IntegrationType.User:
+          logger.warn('user installed application', { 'user.id': webhook.event.data.user.id });
+          break;
+        default:
+          UnreachableCodeError.throwNew();
+      }
       break;
+    default:
+      UnreachableCodeError.throwNew();
   }
 }
 
