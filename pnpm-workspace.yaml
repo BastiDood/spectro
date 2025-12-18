@@ -14,5 +14,5 @@ strictDepBuilds: true
 trustPolicy: no-downgrade
 
 trustPolicyExclude:
-  - '@types/node@22.19.3'
   - chokidar@4.0.3
+  - undici-types@6.21.0

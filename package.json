@@ -47,7 +47,7 @@
     "@sveltejs/adapter-vercel": "^6.2.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^25.0.2",
+    "@types/node": "^25.0.3",
     "@types/pg": "^8.16.0",
     "daisyui": "^5.5.14",
     "dotenv-cli": "^11.0.0",
