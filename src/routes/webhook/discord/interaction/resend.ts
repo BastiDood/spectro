@@ -147,7 +147,7 @@ async function resendConfession(
           },
         })
         .then(({ ids }) =>
-          logger.info('confession resend submitted', {
+          logger.debug('confession resend submitted', {
             'inngest.events.id': ids,
             'confession.id': confessionId.toString(),
           }),

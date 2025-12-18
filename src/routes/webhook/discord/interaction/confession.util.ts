@@ -193,10 +193,13 @@ export async function submitConfession(
           },
         })
         .then(({ ids }) =>
-          logger.info(isApprovalRequired ? 'confession pending approval' : 'confession submitted', {
-            'inngest.events.id': ids,
-            'confession.id': confessionId.toString(),
-          }),
+          logger.debug(
+            isApprovalRequired ? 'confession pending approval' : 'confession submitted',
+            {
+              'inngest.events.id': ids,
+              'confession.id': confessionId.toString(),
+            },
+          ),
         ),
     );
   });
