@@ -167,7 +167,11 @@ export function createConfessionPayload(
       };
     else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
 
-  const params: CreateMessage = { embeds: [embed] };
+  const params: CreateMessage = {
+    allowed_mentions: { parse: [AllowedMentionType.Users] },
+    embeds: [embed],
+  };
+
   if (confession.parentMessageId !== null)
     params.message_reference = {
       type: MessageReferenceType.Default,
