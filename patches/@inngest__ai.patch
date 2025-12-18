@@ -1,0 +1,23 @@
+diff --git a/package.json b/package.json
+index 3bb2e63e5f1a593c53b17cfabfb6e258a0d7b911..ad67381d63741ec8e3c82655333526bc12b48c35 100644
+--- a/package.json
++++ b/package.json
+@@ -51,16 +51,14 @@
+   },
+   "author": "Inngest Inc. <hello@inngest.com>",
+   "license": "Apache-2.0",
+-  "dependencies": {
+-    "@types/node": "^22.10.5",
+-    "typescript": "^5.7.3"
+-  },
+   "devDependencies": {
++    "@types/node": "^22.10.5",
+     "@eslint/js": "^9.7.0",
+     "dotenv": "^17.0.1",
+     "eslint": "^9.18.0",
+     "eslint-plugin-prettier": "^5.2.1",
+     "globals": "^15.14.0",
++    "typescript": "^5.7.3",
+     "typescript-eslint": "^8.44.1",
+     "vitest": "^2.1.8"
+   }
