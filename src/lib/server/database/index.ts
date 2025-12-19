@@ -80,11 +80,11 @@ async function insertAttachmentData(db: Interface, attachment: InsertableAttachm
 
     switch (rowCount) {
       case null:
-        UnexpectedRowCountDatabaseError.throwNew();
+        return UnexpectedRowCountDatabaseError.throwNew();
       case 1:
         break;
       default:
-        UnexpectedRowCountDatabaseError.throwNew(rowCount);
+        return UnexpectedRowCountDatabaseError.throwNew(rowCount);
     }
 
     logger.debug('attachment inserted');
@@ -124,19 +124,19 @@ export async function insertConfession(
 
     strictEqual(otherResults.length, 0);
     assert(typeof result !== 'undefined');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._internal_id === 'string');
-    // eslint-disable-next-line no-underscore-dangle
-    assert(typeof result._confession_id === 'string');
+
+    const { _internal_id: internalId, _confession_id: confessionId } = result;
+    assert(typeof internalId === 'string');
+    assert(typeof confessionId === 'string');
 
     logger.debug('confession inserted', {
-      'internal.id': result._internal_id,
-      'confession.id': result._confession_id,
+      'internal.id': internalId,
+      'confession.id': confessionId,
     });
 
     return {
-      internalId: BigInt(result._internal_id),
-      confessionId: BigInt(result._confession_id),
+      internalId: BigInt(internalId),
+      confessionId: BigInt(confessionId),
     };
   });
 }
@@ -159,7 +159,7 @@ export async function disableConfessionChannel(db: Interface, channelId: bigint,
 
     switch (rowCount) {
       case null:
-        UnexpectedRowCountDatabaseError.throwNew();
+        return UnexpectedRowCountDatabaseError.throwNew();
       case 0:
         logger.debug('confession channel not found for disable');
         return false;
@@ -167,7 +167,7 @@ export async function disableConfessionChannel(db: Interface, channelId: bigint,
         logger.debug('confession channel disabled');
         return true;
       default:
-        UnexpectedRowCountDatabaseError.throwNew(rowCount);
+        return UnexpectedRowCountDatabaseError.throwNew(rowCount);
     }
   });
 }
@@ -187,7 +187,7 @@ export async function resetLogChannel(db: Interface, channelId: bigint) {
 
     switch (rowCount) {
       case null:
-        UnexpectedRowCountDatabaseError.throwNew();
+        return UnexpectedRowCountDatabaseError.throwNew();
       case 0:
         logger.debug('confession channel not found for log reset');
         return false;
@@ -195,7 +195,7 @@ export async function resetLogChannel(db: Interface, channelId: bigint) {
         logger.debug('log channel reset');
         return true;
       default:
-        UnexpectedRowCountDatabaseError.throwNew(rowCount);
+        return UnexpectedRowCountDatabaseError.throwNew(rowCount);
     }
   });
 }
