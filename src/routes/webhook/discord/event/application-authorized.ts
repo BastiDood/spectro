@@ -11,10 +11,12 @@ const tracer = new Tracer(SERVICE_NAME);
 export async function handleApplicationAuthorized(createdAt: Date, guildId: Snowflake) {
   return await tracer.asyncSpan('handle-application-authorized', async span => {
     span.setAttribute('guild.id', guildId);
-    const { rowCount } = await db
-      .insert(guild)
-      .values({ id: BigInt(guildId), createdAt })
-      .onConflictDoNothing({ target: guild.id });
-    logger.info('guild authorized application', { 'row.count': rowCount });
+    await tracer.asyncSpan('insert-guild', async () => {
+      const { rowCount } = await db
+        .insert(guild)
+        .values({ id: BigInt(guildId), createdAt })
+        .onConflictDoNothing({ target: guild.id });
+      logger.info('guild authorized application', { 'row.count': rowCount });
+    });
   });
 }

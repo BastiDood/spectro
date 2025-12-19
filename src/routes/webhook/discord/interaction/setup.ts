@@ -49,26 +49,30 @@ async function enableConfessions(
     if (typeof isApprovalRequired !== 'undefined')
       set.isApprovalRequired = sql`excluded.${sql.raw(channel.isApprovalRequired.name)}`;
 
-    const [result, ...otherResults] = await db
-      .insert(channel)
-      .values({
-        id: BigInt(channelId),
-        guildId: BigInt(guildId),
-        logChannelId: BigInt(logChannelId),
-        label,
-        isApprovalRequired,
-        color: color?.toString(2).padStart(24, '0'),
-        disabledAt: null,
-      })
-      .onConflictDoUpdate({ target: [channel.guildId, channel.id], set })
-      .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
-    strictEqual(otherResults.length, 0);
-    assert(typeof result !== 'undefined');
+    const result = await tracer.asyncSpan('upsert-channel', async () => {
+      const [row, ...otherRows] = await db
+        .insert(channel)
+        .values({
+          id: BigInt(channelId),
+          guildId: BigInt(guildId),
+          logChannelId: BigInt(logChannelId),
+          label,
+          isApprovalRequired,
+          color: color?.toString(2).padStart(24, '0'),
+          disabledAt: null,
+        })
+        .onConflictDoUpdate({ target: [channel.guildId, channel.id], set })
+        .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
+      strictEqual(otherRows.length, 0);
+      assert(typeof row !== 'undefined');
+
+      logger.info('confessions enabled');
+      return row;
+    });
 
     // TODO: Send a test message to the log channel.
     // TODO: Send a test message to the confession channel.
 
-    logger.info('confessions enabled', { 'channel.id': channelId });
     return result;
   });
 }

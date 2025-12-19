@@ -36,6 +36,12 @@ class ConfessionNotFoundResendError extends ResendError {
     super(`Confession #${confessionId} does not exist in this channel.`);
     this.name = 'ConfessionNotFoundResendError';
   }
+
+  static throwNew(confessionId: bigint): never {
+    const error = new ConfessionNotFoundResendError(confessionId);
+    logger.error('confession not found for resend', error);
+    throw error;
+  }
 }
 
 class InsufficientPermissionsResendError extends ResendError {
@@ -43,12 +49,26 @@ class InsufficientPermissionsResendError extends ResendError {
     super('You do not have the permission to resend confessions with attachments in this channel.');
     this.name = 'InsufficientPermissionsResendError';
   }
+
+  static throwNew(permissions: bigint): never {
+    const error = new InsufficientPermissionsResendError();
+    logger.error('insufficient permissions for resend with attachment', error, {
+      'error.permissions': permissions.toString(),
+    });
+    throw error;
+  }
 }
 
 class PendingApprovalResendError extends ResendError {
   constructor(public confessionId: bigint) {
     super(`Confession #${confessionId} has not yet been approved for publication in this channel.`);
     this.name = 'PendingApprovalResendError';
+  }
+
+  static throwNew(confessionId: bigint): never {
+    const error = new PendingApprovalResendError(confessionId);
+    logger.error('confession pending approval for resend', error);
+    throw error;
   }
 }
 
@@ -58,6 +78,12 @@ class MissingLogChannelResendError extends ResendError {
       'You cannot resend confessions until a valid confession log channel has been configured.',
     );
     this.name = 'MissingLogChannelResendError';
+  }
+
+  static throwNew(): never {
+    const error = new MissingLogChannelResendError();
+    logger.error('missing log channel for resend', error);
+    throw error;
   }
 }
 
@@ -82,57 +108,52 @@ async function resendConfession(
       'moderator.id': moderatorId.toString(),
     });
 
-    const result = await db
-      .select({
-        internalId: confession.internalId,
-        logChannelId: channel.logChannelId,
-        label: channel.label,
-        approvedAt: confession.approvedAt,
-        retrievedAttachment: { attachmentUrl: attachment.url },
-      })
-      .from(confession)
-      .innerJoin(channel, eq(confession.channelId, channel.id))
-      .leftJoin(attachment, eq(confession.attachmentId, attachment.id))
-      .where(
-        and(
-          eq(confession.channelId, BigInt(confessionChannelId)),
-          eq(confession.confessionId, confessionId),
-        ),
-      )
-      .limit(1)
-      .then(assertOptional);
+    const result = await tracer.asyncSpan('select-confession-for-resend', async span => {
+      span.setAttributes({
+        'channel.id': confessionChannelId.toString(),
+        'confession.id': confessionId.toString(),
+      });
 
-    if (typeof result === 'undefined') {
-      const error = new ConfessionNotFoundResendError(confessionId);
-      logger.error('confession not found for resend', error);
-      throw error;
-    }
+      const row = await db
+        .select({
+          internalId: confession.internalId,
+          logChannelId: channel.logChannelId,
+          label: channel.label,
+          approvedAt: confession.approvedAt,
+          retrievedAttachment: { attachmentUrl: attachment.url },
+        })
+        .from(confession)
+        .innerJoin(channel, eq(confession.channelId, channel.id))
+        .leftJoin(attachment, eq(confession.attachmentId, attachment.id))
+        .where(
+          and(
+            eq(confession.channelId, BigInt(confessionChannelId)),
+            eq(confession.confessionId, confessionId),
+          ),
+        )
+        .limit(1)
+        .then(assertOptional);
 
-    const { internalId, approvedAt, logChannelId, retrievedAttachment } = result;
+      if (typeof row === 'undefined') logger.warn('confession not found for resend');
+      else
+        logger.debug('confession found for resend', {
+          label: row.label,
+          'internal.id': row.internalId.toString(),
+        });
 
-    logger.debug('confession found', {
-      label: result.label,
-      'internal.id': result.internalId.toString(),
+      return row;
     });
 
-    if (approvedAt === null) {
-      const error = new PendingApprovalResendError(confessionId);
-      logger.error('confession pending approval for resend', error);
-      throw error;
-    }
+    if (typeof result === 'undefined') ConfessionNotFoundResendError.throwNew(confessionId);
+    const { internalId, approvedAt, logChannelId, retrievedAttachment } = result;
 
-    if (logChannelId === null) {
-      const error = new MissingLogChannelResendError();
-      logger.error('missing log channel for resend', error);
-      throw error;
-    }
+    if (approvedAt === null) PendingApprovalResendError.throwNew(confessionId);
+
+    if (logChannelId === null) MissingLogChannelResendError.throwNew();
 
     // Check permission if attachment exists
-    if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES)) {
-      const error = new InsufficientPermissionsResendError();
-      logger.error('insufficient permissions for resend with attachment', error);
-      throw error;
-    }
+    if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
+      InsufficientPermissionsResendError.throwNew(permission);
 
     // Emit Inngest event for async processing (fans out to post-confession + log-confession)
     waitUntil(

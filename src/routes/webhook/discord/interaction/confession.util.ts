@@ -132,28 +132,36 @@ export async function submitConfession(
     if (attachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
       InsufficientPermissionsConfessionError.throwNew(permission);
 
-    const channel = await db.query.channel.findFirst({
-      columns: {
-        logChannelId: true,
-        guildId: true,
-        disabledAt: true,
-        isApprovalRequired: true,
-        label: true,
-      },
-      where({ id }, { eq }) {
-        return eq(id, BigInt(confessionChannelId));
-      },
+    const channel = await tracer.asyncSpan('find-by-confession-channel-id', async span => {
+      span.setAttribute('channel.id', confessionChannelId);
+
+      const result = await db.query.channel.findFirst({
+        columns: {
+          logChannelId: true,
+          guildId: true,
+          disabledAt: true,
+          isApprovalRequired: true,
+          label: true,
+        },
+        where({ id }, { eq }) {
+          return eq(id, BigInt(confessionChannelId));
+        },
+      });
+
+      if (typeof result === 'undefined') logger.warn('confession channel not found');
+      else
+        logger.debug('channel found', {
+          'guild.id': result.guildId.toString(),
+          label: result.label,
+          'approval.required': result.isApprovalRequired,
+        });
+
+      return result;
     });
 
     if (typeof channel === 'undefined') UnknownChannelConfessError.throwNew();
 
     const { logChannelId, guildId, disabledAt, isApprovalRequired } = channel;
-
-    logger.debug('channel found', {
-      'guild.id': channel.guildId.toString(),
-      label: channel.label,
-      'approval.required': channel.isApprovalRequired,
-    });
 
     if (disabledAt !== null && disabledAt <= timestamp)
       DisabledChannelConfessError.throwNew(disabledAt);
@@ -161,25 +169,24 @@ export async function submitConfession(
     if (logChannelId === null) MissingLogConfessError.throwNew();
 
     // Insert confession to database
-    const { internalId, confessionId } = await db.transaction(
-      async db =>
-        await insertConfession(
-          db,
-          timestamp,
-          guildId,
-          BigInt(confessionChannelId),
-          BigInt(authorId),
-          description,
-          isApprovalRequired ? null : timestamp, // approvedAt
-          parentMessageId === null ? null : BigInt(parentMessageId),
-          attachment,
+    const { internalId, confessionId } = await tracer.asyncSpan(
+      'insert-confession',
+      async () =>
+        await db.transaction(
+          async db =>
+            await insertConfession(
+              db,
+              timestamp,
+              guildId,
+              BigInt(confessionChannelId),
+              BigInt(authorId),
+              description,
+              isApprovalRequired ? null : timestamp, // approvedAt
+              parentMessageId === null ? null : BigInt(parentMessageId),
+              attachment,
+            ),
         ),
     );
-
-    logger.debug('confession inserted', {
-      'internal.id': internalId.toString(),
-      'confession.id': confessionId.toString(),
-    });
 
     // Emit Inngest event for async processing (fan-out to post-confession and log-confession)
     waitUntil(

@@ -75,24 +75,33 @@ async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId
       'message.id': messageId,
     });
 
-    const channel = await db.query.channel.findFirst({
-      columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
-      where({ id }, { eq }) {
-        return eq(id, BigInt(channelId));
-      },
+    const channel = await tracer.asyncSpan('find-channel-by-id', async span => {
+      span.setAttribute('channel.id', channelId);
+
+      const result = await db.query.channel.findFirst({
+        columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
+        where({ id }, { eq }) {
+          return eq(id, BigInt(channelId));
+        },
+      });
+
+      if (typeof result === 'undefined') logger.warn('channel not found for reply modal');
+      else
+        logger.debug('channel found for reply modal', {
+          'guild.id': result.guildId.toString(),
+          'approval.required': result.isApprovalRequired,
+        });
+
+      return result;
     });
 
     if (typeof channel === 'undefined') UnknownChannelReplyModalError.throwNew();
 
     const { disabledAt, isApprovalRequired } = channel;
 
-    logger.debug('channel found', {
-      'guild.id': channel.guildId.toString(),
-      'approval.required': channel.isApprovalRequired,
-    });
-
     if (disabledAt !== null && disabledAt <= timestamp)
       DisabledChannelReplyModalError.throwNew(disabledAt);
+
     if (isApprovalRequired) ApprovalRequiredReplyModalError.throwNew();
 
     logger.debug('reply modal prompted');

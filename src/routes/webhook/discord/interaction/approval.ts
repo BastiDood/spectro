@@ -106,50 +106,63 @@ async function submitVerdict(
       InsufficientPermissionsApprovalError.throwNew(permissions);
 
     return await db.transaction(async tx => {
-      const [details, ...rest] = await tx
-        .select({
-          disabledAt: channel.disabledAt,
-          label: channel.label,
-          authorId: confession.authorId,
-          approvedAt: confession.approvedAt,
-          content: confession.content,
-          confessionId: confession.confessionId,
-          attachmentId: confession.attachmentId,
-        })
-        .from(confession)
-        .innerJoin(channel, eq(confession.channelId, channel.id))
-        .where(eq(confession.internalId, internalId))
-        .limit(1)
-        .for('update');
-      strictEqual(rest.length, 0);
-      assert(typeof details !== 'undefined');
       const { approvedAt, disabledAt, authorId, confessionId, label, content, attachmentId } =
-        details;
+        await tracer.asyncSpan('select-confession-details', async span => {
+          span.setAttribute('confession.internal.id', internalId.toString());
+
+          const [result, ...rest] = await tx
+            .select({
+              disabledAt: channel.disabledAt,
+              label: channel.label,
+              authorId: confession.authorId,
+              approvedAt: confession.approvedAt,
+              content: confession.content,
+              confessionId: confession.confessionId,
+              attachmentId: confession.attachmentId,
+            })
+            .from(confession)
+            .innerJoin(channel, eq(confession.channelId, channel.id))
+            .where(eq(confession.internalId, internalId))
+            .limit(1)
+            .for('update');
+          strictEqual(rest.length, 0);
+          assert(typeof result !== 'undefined');
+
+          logger.debug('confession details fetched', {
+            'confession.id': result.confessionId.toString(),
+            label: result.label,
+          });
+
+          return result;
+        });
 
       // TODO: Refactor to Relations API once the `bigint` bug is fixed.
       let embedAttachment: EmbedAttachment | null = null;
-      if (attachmentId !== null) {
-        const [retrieved, ...others] = await tx
-          .select({
-            filename: attachment.filename,
-            contentType: attachment.contentType,
-            url: attachment.url,
-          })
-          .from(attachment)
-          .where(eq(attachment.id, attachmentId));
-        strictEqual(others.length, 0);
-        assert(typeof retrieved !== 'undefined');
-        embedAttachment = {
-          filename: retrieved.filename,
-          url: retrieved.url,
-          content_type: retrieved.contentType ?? void 0,
-        };
-      }
+      if (attachmentId !== null)
+        embedAttachment = await tracer.asyncSpan('select-attachment', async span => {
+          span.setAttribute('attachment.id', attachmentId.toString());
 
-      logger.debug('confession details fetched', {
-        'confession.id': details.confessionId.toString(),
-        label: details.label,
-      });
+          const [retrieved, ...others] = await tx
+            .select({
+              filename: attachment.filename,
+              contentType: attachment.contentType,
+              url: attachment.url,
+            })
+            .from(attachment)
+            .where(eq(attachment.id, attachmentId));
+          strictEqual(others.length, 0);
+          assert(typeof retrieved !== 'undefined');
+
+          logger.debug('attachment fetched', {
+            'attachment.filename': retrieved.filename,
+          });
+
+          return {
+            filename: retrieved.filename,
+            url: retrieved.url,
+            content_type: retrieved.contentType ?? void 0,
+          };
+        });
 
       if (disabledAt !== null && disabledAt <= timestamp)
         DisabledChannelConfessError.throwNew(disabledAt);
@@ -157,11 +170,17 @@ async function submitVerdict(
       if (approvedAt !== null) AlreadyApprovedApprovalError.throwNew(approvedAt);
 
       if (isApproved) {
-        const { rowCount } = await tx
-          .update(confession)
-          .set({ approvedAt: timestamp })
-          .where(eq(confession.internalId, internalId));
-        strictEqual(rowCount, 1);
+        await tracer.asyncSpan('update-confession-approved-at', async span => {
+          span.setAttribute('confession.internal.id', internalId.toString());
+
+          const { rowCount } = await tx
+            .update(confession)
+            .set({ approvedAt: timestamp })
+            .where(eq(confession.internalId, internalId));
+          strictEqual(rowCount, 1);
+
+          logger.debug('confession approved_at updated');
+        });
 
         // Emit Inngest event for async dispatch (will send follow-up on failure)
         waitUntil(
@@ -243,8 +262,13 @@ async function submitVerdict(
           };
       }
 
-      await tx.delete(confession).where(eq(confession.internalId, internalId));
-      logger.info('confession rejected', { 'confession.id': confessionId.toString() });
+      await tracer.asyncSpan('delete-confession', async span => {
+        span.setAttribute('confession.internal.id', internalId.toString());
+
+        await tx.delete(confession).where(eq(confession.internalId, internalId));
+
+        logger.info('confession rejected', { 'confession.id': confessionId.toString() });
+      });
       return {
         type: EmbedType.Rich,
         title: `${label} #${confessionId}`,
