@@ -169,7 +169,7 @@ pnpm lint
 
 ## OpenTelemetry Instrumentation
 
-Spectro supports [OpenTelemetry](https://opentelemetry.io/) for distributed tracing and structured logging. The instrumentation is configured in [`src/instrumentation.server.js`](./src/instrumentation.server.js), which SvelteKit automatically loads on server startup.
+Spectro supports [OpenTelemetry](https://opentelemetry.io/) for distributed tracing and structured logging. The instrumentation is configured in [`src/instrumentation.server.ts`](./src/instrumentation.server.ts), which SvelteKit automatically loads on server startup.
 
 - **Auto-instrumented**: HTTP requests and PostgreSQL queries are automatically traced.
 - **Fallback behavior**: When OTLP endpoints are not configured, telemetry falls back to console exporters.
