@@ -42,7 +42,11 @@ interface Failure {
 }
 
 export const logConfession = inngest.createFunction(
-  { id: 'discord/interaction.log', name: 'Log Confession' },
+  {
+    id: 'discord/interaction.log',
+    name: 'Log Confession',
+    idempotency: 'event.data.interactionId',
+  },
   { event: 'discord/confession.submit' },
   async ({ event, step }) =>
     await tracer.asyncSpan('log-confession-function', async span => {

@@ -18,7 +18,11 @@ const logger = new Logger(SERVICE_NAME);
 const tracer = new Tracer(SERVICE_NAME);
 
 export const dispatchApproval = inngest.createFunction(
-  { id: 'discord/interaction.approve', name: 'Dispatch Approved Confession' },
+  {
+    id: 'discord/interaction.approve',
+    name: 'Dispatch Approved Confession',
+    idempotency: 'event.data.interactionId',
+  },
   { event: 'discord/confession.approve' },
   async ({ event, step }) =>
     await tracer.asyncSpan('dispatch-approval-function', async span => {

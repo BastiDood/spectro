@@ -107,6 +107,7 @@ export async function submitConfession(
   timestamp: Date,
   applicationId: Snowflake,
   interactionToken: string,
+  interactionId: Snowflake,
   permission: bigint,
   confessionChannelId: Snowflake,
   authorId: Snowflake,
@@ -196,6 +197,7 @@ export async function submitConfession(
           data: {
             applicationId,
             interactionToken,
+            interactionId,
             internalId: internalId.toString(),
           },
         })

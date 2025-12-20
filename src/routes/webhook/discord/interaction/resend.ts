@@ -96,6 +96,7 @@ class MissingLogChannelResendError extends ResendError {
 async function resendConfession(
   applicationId: Snowflake,
   interactionToken: string,
+  interactionId: Snowflake,
   permission: bigint,
   confessionChannelId: Snowflake,
   confessionId: bigint,
@@ -163,6 +164,7 @@ async function resendConfession(
           data: {
             applicationId,
             interactionToken,
+            interactionId,
             internalId: internalId.toString(),
             moderatorId: moderatorId.toString(),
           },
@@ -180,6 +182,7 @@ async function resendConfession(
 export async function handleResend(
   applicationId: Snowflake,
   interactionToken: string,
+  interactionId: Snowflake,
   permission: bigint,
   channelId: Snowflake,
   moderatorId: Snowflake,
@@ -194,6 +197,7 @@ export async function handleResend(
     await resendConfession(
       applicationId,
       interactionToken,
+      interactionId,
       permission,
       channelId,
       confessionId,

@@ -4,6 +4,7 @@ import { type InferOutput, object, optional, string } from 'valibot';
 export const ConfessionSubmitEventData = object({
   applicationId: string(),
   interactionToken: string(),
+  interactionId: string(),
   internalId: string(),
   /** Present for resend, absent for fresh submit */
   moderatorId: optional(string()),
@@ -14,6 +15,7 @@ export type ConfessionSubmitEventData = InferOutput<typeof ConfessionSubmitEvent
 export const ApprovalEventData = object({
   applicationId: string(),
   interactionToken: string(),
+  interactionId: string(),
   internalId: string(),
 });
 export type ApprovalEventData = InferOutput<typeof ApprovalEventData>;

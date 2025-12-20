@@ -103,6 +103,7 @@ async function handleInteraction(
               return await handleResend(
                 interaction.application_id,
                 interaction.token,
+                interaction.id,
                 interaction.member.permissions,
                 interaction.channel_id,
                 interaction.member.user.id,
@@ -145,6 +146,7 @@ async function handleInteraction(
         timestamp,
         interaction.application_id,
         interaction.token,
+        interaction.id,
         interaction.data.custom_id,
         interaction.member.user.id,
         interaction.member.permissions,
@@ -159,6 +161,7 @@ async function handleInteraction(
             timestamp,
             interaction.application_id,
             interaction.token,
+            interaction.id,
             interaction.channel_id,
             interaction.member.user.id,
             interaction.member.permissions,

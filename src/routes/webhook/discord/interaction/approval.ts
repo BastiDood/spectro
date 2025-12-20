@@ -88,6 +88,7 @@ async function submitVerdict(
   timestamp: Date,
   applicationId: Snowflake,
   interactionToken: string,
+  interactionId: Snowflake,
   isApproved: boolean,
   internalId: bigint,
   moderatorId: Snowflake,
@@ -190,6 +191,7 @@ async function submitVerdict(
               data: {
                 applicationId,
                 interactionToken,
+                interactionId,
                 internalId: internalId.toString(),
               },
             })
@@ -290,6 +292,7 @@ export async function handleApproval(
   timestamp: Date,
   applicationId: Snowflake,
   interactionToken: string,
+  interactionId: Snowflake,
   customId: string,
   userId: Snowflake,
   permissions: bigint,
@@ -320,6 +323,7 @@ export async function handleApproval(
       timestamp,
       applicationId,
       interactionToken,
+      interactionId,
       isApproved,
       internalId,
       userId,
