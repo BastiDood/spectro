@@ -20,7 +20,7 @@ services:
       retries: 10
     restart: always
   inngest:
-    image: inngest/inngest:v1.15.2
+    image: inngest/inngest:v1.15.3
     ports:
       - 8288:8288
     command:
