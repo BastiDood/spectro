@@ -71,6 +71,11 @@
     >
     permission can now invoke the {@render command('confess')} command to publish an anonymous confession.
   </p>
+  <p>
+    The confession modal includes an optional <strong>Attachment</strong> field where you can attach
+    images or files to your confession. If you choose to attach a file, you must have the
+    <span class="badge badge-accent">Attach Files</span> permission.
+  </p>
   <div class="alert alert-warning">
     <Icon icon={BaselineAnnouncement} width={24} />
     <span>All confessions are logged for moderation purposes.</span>
@@ -111,13 +116,11 @@
     <a href="/reference/#reply" class="link link-primary">Apps &gt; Reply Anonymously</a> option. A modal
     with a text area input should pop up on the screen, where the anonymous reply can be drafted.
   </p>
-  <div class="alert alert-info">
-    <Icon icon={BaselineAnnouncement} width={24} />
-    <span
-      >Attaching a file alongside a message reply is currently unsupported. This feature is blocked
-      on Discord finally implementing file select inputs for modal submit components.</span
-    >
-  </div>
+  <p>
+    Like confessions, the reply modal includes an optional <strong>Attachment</strong> field. You
+    can attach images or files to your anonymous reply. If you attach a file, the
+    <span class="badge badge-accent">Attach Files</span> permission is required.
+  </p>
 </section>
 <section>
   <h2 id="resend-confessions">Resending Confessions</h2>

@@ -1,7 +1,5 @@
 <script lang="ts">
-  import BaselineAnnouncement from '@iconify-icons/ic/baseline-announcement';
   import CommandOption from './CommandOption.svelte';
-  import Icon from '@iconify/svelte';
 </script>
 
 {#snippet permissionBadge(perms: string)}
@@ -68,6 +66,11 @@
       A modal will be shown where you can draft your message. This command fails if the current channel
       has not yet been configured by the server moderators to accept anonymous confessions.
     </p>
+    <p class="mb-10">
+      <strong>Optional Attachments.</strong> The confession modal includes an optional attachment
+      field where you can upload images or files. If you attach a file, you must have the
+      <span class="badge badge-accent">Attach Files</span> permission.
+    </p>
   </section>
   <section>
     <div
@@ -87,13 +90,11 @@
       on that message and invoking the
       <code class="whitespace-nowrap">Apps &gt; Reply Anonymously</code> command.
     </p>
-    <div class="alert alert-info">
-      <Icon icon={BaselineAnnouncement} width={24} />
-      <span
-        >Attaching a file alongside a message reply is currently unsupported. This feature is
-        blocked on Discord finally implementing file select inputs for modal submit components.</span
-      >
-    </div>
+    <p class="mb-10">
+      <strong>Optional Attachments.</strong> The reply modal also includes an optional attachment
+      field for uploading images or files with your anonymous reply. The
+      <span class="badge badge-accent">Attach Files</span> permission is required when attaching files.
+    </p>
   </section>
 </section>
 <section>
