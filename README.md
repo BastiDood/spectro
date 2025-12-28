@@ -1,8 +1,6 @@
 ![Spectro Logotype](./src/lib/brand/logotype/banner-dark.svg)
 
-Spectro is a [Discord bot][spectro-invite-link] that enables your community members to post anonymous confessions and replies to moderator-configured channels. However, for the sake of moderation, confessions are still logged for later viewing.
-
-[spectro-invite-link]: https://discord.com/oauth2/authorize?client_id=1310159012234264617
+Spectro is a Discord bot that enables your community members to post anonymous confessions and replies to moderator-configured channels. However, for the sake of moderation, confessions are still logged for later viewing.
 
 # Development
 
