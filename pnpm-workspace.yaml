@@ -1,3 +1,5 @@
+blockExoticSubdeps: true
+
 engineStrict: true
 
 minimumReleaseAge: 1440 # 1 Day
