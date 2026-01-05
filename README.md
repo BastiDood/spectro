@@ -101,9 +101,9 @@ The following variables are optional in development, but _highly_ recommended in
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | The underlying exporter protocol (e.g., JSON, Protobufs, gRPC, etc.).                   | `http/protobuf`                                                |
 
 > [!NOTE]
-> The "recommended" values are only applicable to the development environment with OpenObserve running in the background. See the [`compose.yml`] for more details on the OpenObserve configuration.
+> The "recommended" values are only applicable to the development environment with OpenObserve running in the background. See the [`compose.yaml`] for more details on the OpenObserve configuration.
 
-[`compose.yml`]: ./compose.yml
+[`compose.yaml`]: ./compose.yaml
 
 ### Local Telemetry with OpenObserve
 
