@@ -18,6 +18,7 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'inngest.log-confession';
 const logger = Logger.byName(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 const enum Result {
   Success = 'success',
@@ -47,10 +48,16 @@ export const logConfession = inngest.createFunction(
     idempotency: 'event.data.interactionId',
   },
   { event: 'discord/confession.submit' },
-  async ({ event, step, tracer: inngestTracer }) => {
-    const tracer = new Tracer(inngestTracer);
-    return await tracer.asyncSpan('log-confession-function', async span => {
-      span.setAttribute('confession.internal.id', event.data.internalId);
+  async ({ event, step }) =>
+    await tracer.asyncSpan('log-confession-function', async span => {
+      span.setAttributes({
+        'inngest.event.id': event.id,
+        'inngest.event.name': event.name,
+        'inngest.event.ts': event.ts,
+        'inngest.event.data.internalId': event.data.internalId,
+        'inngest.event.data.applicationId': event.data.applicationId,
+        'inngest.event.data.interactionId': event.data.interactionId,
+      });
 
       const result = await step.run(
         { id: 'log-confession', name: 'Log Confession' },
@@ -179,6 +186,5 @@ export const logConfession = inngest.createFunction(
         default:
           UnreachableCodeError.throwNew();
       }
-    });
-  },
+    }),
 );

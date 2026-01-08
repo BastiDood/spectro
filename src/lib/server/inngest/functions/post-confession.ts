@@ -16,6 +16,7 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'inngest.post-confession';
 const logger = Logger.byName(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 const enum Result {
   Success = 'Success',
@@ -47,12 +48,17 @@ export const postConfession = inngest.createFunction(
     idempotency: 'event.data.interactionId',
   },
   { event: 'discord/confession.submit' },
-  async ({ event, step, tracer: inngestTracer }) => {
-    const tracer = new Tracer(inngestTracer);
-    return await tracer.asyncSpan('post-confession-function', async span => {
-      span.setAttribute('confession', event.data.internalId);
-      if (typeof event.data.moderatorId !== 'undefined')
-        span.setAttribute('confession.moderator.id', event.data.moderatorId);
+  async ({ event, step }) =>
+    await tracer.asyncSpan('post-confession-function', async span => {
+      span.setAttributes({
+        'inngest.event.id': event.id,
+        'inngest.event.name': event.name,
+        'inngest.event.ts': event.ts,
+        'inngest.event.data.internalId': event.data.internalId,
+        'inngest.event.data.applicationId': event.data.applicationId,
+        'inngest.event.data.interactionId': event.data.interactionId,
+        'inngest.event.data.moderatorId': event.data.moderatorId,
+      });
 
       const result = await step.run(
         { id: 'post-confession', name: 'Post Confession' },
@@ -171,6 +177,5 @@ export const postConfession = inngest.createFunction(
             }
           }),
       );
-    });
-  },
+    }),
 );

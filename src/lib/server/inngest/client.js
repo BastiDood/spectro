@@ -1,5 +1,4 @@
 import { EventSchemas, Inngest } from 'inngest';
-import { extendedTracesMiddleware } from 'inngest/experimental';
 
 import { INNGEST_EVENT_KEY } from '$lib/server/env/inngest';
 import { Logger } from '$lib/server/telemetry/logger';
@@ -18,5 +17,4 @@ export const inngest = new Inngest({
     'discord/confession.submit': ConfessionSubmitEventData,
     'discord/confession.approve': ApprovalEventData,
   }),
-  middleware: [extendedTracesMiddleware()],
 });
