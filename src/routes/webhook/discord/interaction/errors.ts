@@ -4,7 +4,7 @@ import { Logger } from '$lib/server/telemetry/logger';
 import type { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 
 const SERVICE_NAME = 'webhook.interaction.error';
-const logger = new Logger(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
 
 export class UnexpectedApplicationCommandChatInputNameError extends Error {
   constructor(public commandName: string) {

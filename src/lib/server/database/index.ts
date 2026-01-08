@@ -18,8 +18,8 @@ import * as schema from './models';
 import { UnexpectedRowCountDatabaseError } from './errors';
 
 const SERVICE_NAME = 'database';
-const logger = new Logger(SERVICE_NAME);
-const tracer = new Tracer(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 function init() {
   switch (SPECTRO_DATABASE_DRIVER) {

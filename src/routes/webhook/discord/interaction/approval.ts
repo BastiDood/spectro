@@ -22,8 +22,8 @@ import { hasAllPermissions } from './util';
 import { MalformedCustomIdFormat } from './errors';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
-const logger = new Logger(SERVICE_NAME);
-const tracer = new Tracer(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 abstract class ApprovalError extends Error {
   constructor(message?: string) {

@@ -9,8 +9,8 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 const SERVICE_NAME = 'webhook.interaction.reply-modal';
-const logger = new Logger(SERVICE_NAME);
-const tracer = new Tracer(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 abstract class ReplyModalError extends Error {
   constructor(message?: string) {

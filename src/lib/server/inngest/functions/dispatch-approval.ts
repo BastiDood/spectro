@@ -14,8 +14,7 @@ import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'inngest.dispatch-approval';
-const logger = new Logger(SERVICE_NAME);
-const tracer = new Tracer(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
 
 export const dispatchApproval = inngest.createFunction(
   {
@@ -24,8 +23,9 @@ export const dispatchApproval = inngest.createFunction(
     idempotency: 'event.data.interactionId',
   },
   { event: 'discord/confession.approve' },
-  async ({ event, step }) =>
-    await tracer.asyncSpan('dispatch-approval-function', async span => {
+  async ({ event, step, tracer: inngestTracer }) => {
+    const tracer = new Tracer(inngestTracer);
+    return await tracer.asyncSpan('dispatch-approval-function', async span => {
       span.setAttribute('confession.internal.id', event.data.internalId);
 
       const error = await step.run(
@@ -112,5 +112,6 @@ export const dispatchApproval = inngest.createFunction(
             });
           }),
       );
-    }),
+    });
+  },
 );

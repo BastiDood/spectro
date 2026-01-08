@@ -19,7 +19,7 @@ import {
 import { hasAllPermissions } from './util';
 
 const SERVICE_NAME = 'webhook.interaction.confess-submit';
-const tracer = new Tracer(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 export async function handleModalSubmit(
   timestamp: Date,

@@ -4,8 +4,8 @@ import { db, disableConfessionChannel } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 const SERVICE_NAME = 'webhook.interaction.lockdown';
-const logger = new Logger(SERVICE_NAME);
-const tracer = new Tracer(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 abstract class LockdownError extends Error {
   constructor(message?: string) {

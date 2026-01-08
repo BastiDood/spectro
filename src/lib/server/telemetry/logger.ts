@@ -27,8 +27,12 @@ function recordExceptionChain(span: Span, exception: Exception, depth = 10) {
 export class Logger {
   #logger: OTelLogger;
 
-  constructor(name: string) {
-    this.#logger = logs.getLogger(name);
+  constructor(logger: OTelLogger) {
+    this.#logger = logger;
+  }
+
+  static byName(name: string) {
+    return new Logger(logs.getLogger(name));
   }
 
   trace(body: string, attributes?: AnyValueMap) {

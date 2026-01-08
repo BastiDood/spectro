@@ -1,6 +1,6 @@
 import { Logger } from '$lib/server/telemetry/logger';
 
-const logger = new Logger('database.errors');
+const logger = Logger.byName('database.errors');
 
 export class UnexpectedRowCountDatabaseError extends Error {
   constructor(public readonly count: number | null = null) {

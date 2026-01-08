@@ -3,12 +3,16 @@ import { type Tracer as OTelTracer, type Span, trace } from '@opentelemetry/api'
 import { Logger } from './logger';
 
 export class Tracer {
-  static #LOGGER = new Logger('tracer');
+  static #LOGGER = Logger.byName('tracer');
 
   #tracer: OTelTracer;
 
-  constructor(name: string) {
-    this.#tracer = trace.getTracer(name);
+  constructor(tracer: OTelTracer) {
+    this.#tracer = tracer;
+  }
+
+  static byName(name: string) {
+    return new Tracer(trace.getTracer(name));
   }
 
   span<T>(name: string, fn: (span: Span) => T) {

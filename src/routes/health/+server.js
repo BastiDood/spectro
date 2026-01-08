@@ -1,6 +1,6 @@
 import { Logger } from '$lib/server/telemetry/logger';
 
-const logger = new Logger('health');
+const logger = Logger.byName('health');
 
 export function GET() {
   logger.debug('health check pinged');

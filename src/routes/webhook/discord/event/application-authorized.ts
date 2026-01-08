@@ -5,8 +5,8 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'webhook.event.application-authorized';
-const logger = new Logger(SERVICE_NAME);
-const tracer = new Tracer(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 export async function handleApplicationAuthorized(createdAt: Date, guildId: Snowflake) {
   return await tracer.asyncSpan('handle-application-authorized', async span => {

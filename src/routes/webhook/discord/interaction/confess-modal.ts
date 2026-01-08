@@ -5,7 +5,7 @@ import type { InteractionResponse } from '$lib/server/models/discord/interaction
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 const SERVICE_NAME = 'webhook.interaction.confess';
-const tracer = new Tracer(SERVICE_NAME);
+const tracer = Tracer.byName(SERVICE_NAME);
 
 export function handleConfess(channelId: Snowflake, authorId: Snowflake): InteractionResponse {
   return tracer.span('handle-confess', span => {

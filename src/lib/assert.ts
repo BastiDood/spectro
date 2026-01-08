@@ -1,7 +1,7 @@
 import { Logger } from '$lib/server/telemetry/logger';
 
 const SERVICE_NAME = 'lib.assert';
-const logger = new Logger(SERVICE_NAME);
+const logger = Logger.byName(SERVICE_NAME);
 
 export class UnreachableCodeError extends Error {
   constructor() {
