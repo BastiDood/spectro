@@ -6,7 +6,7 @@
 
 <div class="not-prose alert alert-info">
   <Icon icon={BaselineInfo} width={24} />
-  <span>Last updated on <time datetime="2025-12-16">December 16, 2025</time>.</span>
+  <span>Last updated on <time datetime="2026-01-16">January 16, 2026</time>.</span>
 </div>
 
 <br />
@@ -104,12 +104,16 @@
 
 <h2>Persisted Data</h2>
 <p>
-  As an "anonymous" confession bot for Discord, it must clarified what is meant by the word
+  As an "anonymous" confession bot for Discord, it must be clarified what is meant by the word
   "anonymous" in the Bot's context. To aid in server moderation, the Bot persists all user-generated
   confessions in a database that can only be viewed by server moderators and bot developers. With
   that said, anonymity is limited with respect to the visibility of regular members in a Server.
   That is to say, anonymity is preserved in so far that unauthorized and untrusted persons are kept
   out of the system.
+</p>
+<p>
+  <strong>Important:</strong> Anonymity is a convenience feature, not a security guarantee. Users should
+  not submit content they would not want associated with their identity under any circumstances.
 </p>
 <p>
   Concretely, each persisted confession (for the purposes of effective server moderation) includes
@@ -121,6 +125,16 @@
   <li>User-generated URLs to uploaded attachments via the Discord platform.</li>
   <li>Discord user ID of the confessor.</li>
   <li>Discord channel ID in which the confession was submitted.</li>
+</ul>
+
+<h2>Data Retention</h2>
+<ul>
+  <li><strong>Logs:</strong> Retained for up to 30 days, then automatically deleted.</li>
+  <li>
+    <strong>Confessions:</strong> Retained indefinitely until (a) you request deletion, (b) the guild
+    removes the Bot, or (c) the guild is deleted from Discord.
+  </li>
+  <li><strong>Guild data:</strong> Deleted when the Bot is removed from the guild.</li>
 </ul>
 
 <h2>Third Parties</h2>
@@ -164,10 +178,92 @@
   >
 </p>
 
-<h2>Data Deletion</h2>
+<h2>International Data Transfers</h2>
 <p>
-  Should the User wish to have their data deleted, they must coordinate with the bot maintainer (via <a
-    rel="external"
-    href="mailto:39114273+BastiDood@users.noreply.github.com">email</a
-  >) and the concerned server moderators.
+  Your data may be transferred to and processed in countries outside your jurisdiction, including
+  the United States (where Vercel, Neon, Inngest, and Logfire operate). These providers maintain
+  their own data protection measures as described in their respective privacy policies linked above.
+</p>
+
+<h2>Legal Basis for Processing</h2>
+<p>We process your data under the following legal bases:</p>
+<ul>
+  <li>
+    <strong>Legitimate interests:</strong> Operating and improving the Service, preventing abuse.
+  </li>
+  <li><strong>Consent:</strong> By using the Bot, you consent to this processing.</li>
+  <li>
+    <strong>Legal obligation:</strong> Complying with applicable laws and valid legal requests.
+  </li>
+</ul>
+
+<h2>Your Rights</h2>
+<p>Depending on your jurisdiction, you may have the right to:</p>
+<ul>
+  <li>Access the personal data we hold about you.</li>
+  <li>Request correction of inaccurate data.</li>
+  <li>Request deletion of your data ("right to be forgotten").</li>
+  <li>Object to or restrict certain processing.</li>
+  <li>Data portability (receive your data in a structured format).</li>
+  <li>Lodge a complaint with your local data protection authority.</li>
+</ul>
+<p>
+  To exercise these rights, contact us via
+  <a rel="external" href="mailto:39114273+BastiDood@users.noreply.github.com">email</a> with your Discord
+  User ID and other pertinent details about your request.
+</p>
+
+<h2>Security</h2>
+<p>
+  We implement appropriate technical measures to protect your data, including encryption in transit
+  (TLS/HTTPS), access controls, and secure authentication. However, no system is completely secure,
+  and we cannot guarantee absolute security.
+</p>
+
+<h2>Data Breach Notification</h2>
+<p>
+  In the event of a data breach affecting your personal information, we will notify affected users
+  and relevant authorities as required by applicable law.
+</p>
+
+<h2>Children's Privacy</h2>
+<p>
+  The Service is not intended for users under 13 years of age (or the minimum age required by
+  Discord in your jurisdiction). We do not knowingly collect personal information from children. If
+  you believe a child has provided us with personal data, please contact us for deletion.
+</p>
+
+<h2>Disclosure to Authorities</h2>
+<p>
+  We may disclose your information if required by law, subpoena, court order, or other valid legal
+  process, or when we believe disclosure is necessary to protect our rights, your safety, or the
+  safety of others.
+</p>
+
+<h2>Data Deletion</h2>
+<p>To request deletion of your data:</p>
+<ol>
+  <li>
+    Email
+    <a rel="external" href="mailto:39114273+BastiDood@users.noreply.github.com"
+      ><code>39114273+BastiDood@users.noreply.github.com</code></a
+    > with your Discord User ID.
+  </li>
+  <li>
+    Alternatively,
+    <a rel="external" target="_blank" href="https://github.com/BastiDood/spectro/issues/new"
+      >open a GitHub issue</a
+    >.
+  </li>
+</ol>
+<p>We will respond within 30 days. Note:</p>
+<ul>
+  <li>Server moderators retain their own moderation logs independently.</li>
+  <li>Some data may be retained as required by law or for legitimate dispute resolution.</li>
+  <li>Deletion of your confessions requires coordination with the relevant server moderators.</li>
+</ul>
+
+<h2>California Residents</h2>
+<p>
+  We do not sell personal information as defined under the California Consumer Privacy Act (CCPA).
 </p>
