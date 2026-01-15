@@ -4,6 +4,10 @@ engineStrict: true
 
 minimumReleaseAge: 1440 # 1 Day
 
+minimumReleaseAgeExclude:
+  - '@sveltejs/kit@2.49.5'
+  - pg@8.17.1
+
 onlyBuiltDependencies:
   - esbuild
   - protobufjs
