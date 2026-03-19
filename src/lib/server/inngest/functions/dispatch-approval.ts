@@ -7,6 +7,7 @@ import {
 } from '$lib/server/confession';
 import { DiscordClient } from '$lib/server/api/discord';
 import { db, fetchConfessionForDispatch } from '$lib/server/database';
+import { ConfessionApprovalEvent } from '$lib/server/inngest/schema';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
 import type { Message } from '$lib/server/models/discord/message';
@@ -22,8 +23,8 @@ export const dispatchApproval = inngest.createFunction(
     id: 'discord/interaction.approve',
     name: 'Dispatch Approved Confession',
     idempotency: 'event.data.interactionId',
+    triggers: [ConfessionApprovalEvent],
   },
-  { event: 'discord/confession.approve' },
   async ({ event, step }) =>
     await tracer.asyncSpan('dispatch-approval-function', async span => {
       span.setAttributes({

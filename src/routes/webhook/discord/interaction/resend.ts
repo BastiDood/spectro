@@ -8,6 +8,7 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import { attachment, channel, confession } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
+import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
 
 import { assertOptional } from '$lib/assert';
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
@@ -159,16 +160,15 @@ async function resendConfession(
     // Emit Inngest event for async processing (fans out to post-confession + log-confession)
     waitUntil(
       inngest
-        .send({
-          name: 'discord/confession.submit',
-          data: {
+        .send(
+          ConfessionSubmitEvent.create({
             applicationId,
             interactionToken,
             interactionId,
             internalId: internalId.toString(),
             moderatorId: moderatorId.toString(),
-          },
-        })
+          }),
+        )
         .then(({ ids }) =>
           logger.debug('confession resend submitted', {
             'inngest.events.id': ids,

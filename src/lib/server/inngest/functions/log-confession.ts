@@ -12,6 +12,7 @@ import { DiscordClient } from '$lib/server/api/discord';
 import { db, fetchConfessionForLog, resetLogChannel } from '$lib/server/database';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
+import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
 import type { Message } from '$lib/server/models/discord/message';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -46,8 +47,8 @@ export const logConfession = inngest.createFunction(
     id: 'discord/interaction.log',
     name: 'Log Confession',
     idempotency: 'event.data.interactionId',
+    triggers: [ConfessionSubmitEvent],
   },
-  { event: 'discord/confession.submit' },
   async ({ event, step }) =>
     await tracer.asyncSpan('log-confession-function', async span => {
       span.setAttributes({

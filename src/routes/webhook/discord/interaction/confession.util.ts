@@ -3,6 +3,7 @@ import { waitUntil } from '@vercel/functions';
 import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import { type InsertableAttachment, db, insertConfession } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
+import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
 import { Logger } from '$lib/server/telemetry/logger';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -192,15 +193,14 @@ export async function submitConfession(
     // Emit Inngest event for async processing (fan-out to post-confession and log-confession)
     waitUntil(
       inngest
-        .send({
-          name: 'discord/confession.submit',
-          data: {
+        .send(
+          ConfessionSubmitEvent.create({
             applicationId,
             interactionToken,
             interactionId,
             internalId: internalId.toString(),
-          },
-        })
+          }),
+        )
         .then(({ ids }) =>
           logger.debug(
             isApprovalRequired ? 'confession pending approval' : 'confession submitted',

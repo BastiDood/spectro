@@ -1,3 +1,4 @@
+import { eventType } from 'inngest';
 import { type InferOutput, object, optional, string } from 'valibot';
 
 /** For confession submissions and resends (triggers post-confession + log-confession fan-out) */
@@ -19,3 +20,11 @@ export const ApprovalEventData = object({
   internalId: string(),
 });
 export type ApprovalEventData = InferOutput<typeof ApprovalEventData>;
+
+export const ConfessionSubmitEvent = eventType('discord/confession.submit', {
+  schema: ConfessionSubmitEventData,
+});
+
+export const ConfessionApprovalEvent = eventType('discord/confession.approve', {
+  schema: ApprovalEventData,
+});

@@ -17,6 +17,7 @@ import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { attachment, channel, confession } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
+import { ConfessionApprovalEvent } from '$lib/server/inngest/schema';
 
 import { hasAllPermissions } from './util';
 import { MalformedCustomIdFormat } from './errors';
@@ -186,15 +187,14 @@ async function submitVerdict(
         // Emit Inngest event for async dispatch (will send follow-up on failure)
         waitUntil(
           inngest
-            .send({
-              name: 'discord/confession.approve',
-              data: {
+            .send(
+              ConfessionApprovalEvent.create({
                 applicationId,
                 interactionToken,
                 interactionId,
                 internalId: internalId.toString(),
-              },
-            })
+              }),
+            )
             .then(({ ids }) => logger.debug('inngest event emitted', { 'inngest.events.id': ids })),
         );
 

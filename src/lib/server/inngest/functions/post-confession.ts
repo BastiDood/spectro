@@ -9,6 +9,7 @@ import {
 import { DiscordClient } from '$lib/server/api/discord';
 import { db, fetchConfessionForDispatch } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
+import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import type { Message } from '$lib/server/models/discord/message';
 import { Logger } from '$lib/server/telemetry/logger';
@@ -46,8 +47,8 @@ export const postConfession = inngest.createFunction(
     id: 'discord/interaction.post',
     name: 'Post Confession to Channel',
     idempotency: 'event.data.interactionId',
+    triggers: [ConfessionSubmitEvent],
   },
-  { event: 'discord/confession.submit' },
   async ({ event, step }) =>
     await tracer.asyncSpan('post-confession-function', async span => {
       span.setAttributes({
