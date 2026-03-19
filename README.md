@@ -92,13 +92,12 @@ Spectro requires some environment variables to run correctly. If the following t
 | `POSTGRES_DATABASE_URL`   | The URL connection string for the PostgreSQL production database.                                                   |             |
 | `SPECTRO_DATABASE_DRIVER` | The database driver to use. Accepts `pg` for the standard driver or `neon` for the Neon serverless driver.          | `pg`        |
 
-The following variables are optional in development, but _highly_ recommended in the production environment for [OpenTelemetry](#opentelemetry-instrumentation) integration. The standard environment variables are supported, such as (but not limited to):
+The following variables are optional in development, but _highly_ recommended in production for [OpenTelemetry](#opentelemetry-instrumentation) integration:
 
 | **Name**                      | **Description**                                                                         | **Recommended**                                                |
 | ----------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | The base OTLP endpoint URL for exporting logs, metrics, and traces.                     | `http://localhost:5080/api/default`                            |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The base OTLP endpoint URL for exporting logs and traces.                               | `http://localhost:5080/api/default`                            |
 | `OTEL_EXPORTER_OTLP_HEADERS`  | Extra percent-encoded HTTP headers used for exporting telemetry (e.g., authentication). | `Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D` |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | The underlying exporter protocol (e.g., JSON, Protobufs, gRPC, etc.).                   | `http/protobuf`                                                |
 
 > [!NOTE]
 > The "recommended" values are only applicable to the development environment with OpenObserve running in the background. See the [`compose.yaml`] for more details on the OpenObserve configuration.
@@ -120,13 +119,12 @@ To enable full observability in local development:
    ```bash
    export OTEL_EXPORTER_OTLP_ENDPOINT='http://localhost:5080/api/default'
    export OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D'
-   export OTEL_EXPORTER_OTLP_PROTOCOL='http/protobuf'
    pnpm dev
    ```
 
 3. View traces and logs at `http://localhost:5080`.
 
-In production deployments, the `OTEL_*` variables may be customized to export the telemetry data to external observability providers.
+In production deployments, `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` may be pointed at an external observability provider. Spectro hard-codes the OTLP HTTP/protobuf trace exporter in [`src/instrumentation.server.ts`](./src/instrumentation.server.ts) instead of exposing the exporter protocol as runtime configuration.
 
 ### Running the Web Server
 
@@ -169,9 +167,9 @@ pnpm lint
 
 Spectro supports [OpenTelemetry](https://opentelemetry.io/) for distributed tracing and structured logging. The instrumentation is configured in [`src/instrumentation.server.ts`](./src/instrumentation.server.ts), which SvelteKit automatically loads on server startup.
 
-- **Auto-instrumented**: HTTP requests and PostgreSQL queries are automatically traced.
-- **Fallback behavior**: When OTLP endpoints are not configured, telemetry falls back to console exporters.
-- **Graceful shutdown**: The SDK properly flushes pending telemetry data on server shutdown.
+- **Trace exporters**: Traces are exported through a manually configured OTLP HTTP/protobuf span processor and mirrored to Inngest extended traces.
+- **Logs**: Structured logs are exported through the OTLP HTTP log exporter.
+- **Instrumentations**: PostgreSQL auto-instrumentation is enabled when `SPECTRO_DATABASE_DRIVER=pg`, and request-level `vercel.*` attributes still come from `@vercel/otel`.
 
 For local development, [OpenObserve](https://openobserve.ai/) is included in the Docker Compose setup (port `5080`) as a web UI for visualizing traces and logs.
 
