@@ -56,7 +56,7 @@ src/lib/server/
 ├── database/
 │   ├── index.ts             # Main DB operations
 │   └── models/index.ts      # Drizzle schema (guild, channel, confession, attachment)
-├── env/                     # Environment variable loaders
+├── env/                     # Environment variable loaders for app-specific runtime config
 ├── inngest/
 │   ├── functions/           # Background jobs (post-confession, log-confession, dispatch-approval)
 │   └── schema.ts            # Event schemas (Valibot)
@@ -132,7 +132,7 @@ Required:
 
 - `DISCORD_PUBLIC_KEY` - Ed25519 public key for webhook verification
 - `DISCORD_BOT_TOKEN` - Bot token for API calls
-- `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` - Inngest auth
+- `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` - Inngest auth, read directly from runtime environment variables by the SDK
 - `POSTGRES_DATABASE_URL` - PostgreSQL connection string
 
 Optional:

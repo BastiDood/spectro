@@ -81,7 +81,7 @@ curl --request 'PUT' --header 'Content-Type: application/json' --header "Authori
 
 ## Developing Spectro
 
-Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files.
+Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files for app-specific server config. Inngest reads its runtime auth values directly from the deployment environment.
 
 | **Name**                  | **Description**                                                                                                     | **Default** |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
