@@ -8,7 +8,7 @@
     <img
       src={Spectro}
       alt="Spectro mascot"
-      class="animate-float max-h-48 object-contain drop-shadow-[0_0_32px_rgba(255,255,157,0.35)]"
+      class="max-h-48 animate-float object-contain drop-shadow-[0_0_32px_rgba(255,255,157,0.35)]"
     />
     <img src={TextLogo} alt="Spectro logo" class="max-h-32 object-contain md:max-h-48" />
   </div>
@@ -17,12 +17,12 @@
   </h1>
   <div class="grid grid-flow-col gap-4">
     <div class="tooltip tooltip-primary" data-tip="Coming soon!">
-      <button class="btn btn-primary rounded-full md:px-8 md:text-lg" disabled
+      <button class="btn rounded-full btn-primary md:px-8 md:text-lg" disabled
         >Add to Discord</button
       >
     </div>
     <a href="/guide/">
-      <button class="btn btn-secondary rounded-full md:px-8 md:text-lg">Read the Guide</button>
+      <button class="btn rounded-full btn-secondary md:px-8 md:text-lg">Read the Guide</button>
     </a>
   </div>
 </div>

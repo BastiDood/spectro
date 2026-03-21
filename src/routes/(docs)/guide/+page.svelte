@@ -89,8 +89,8 @@
     >. While a confession is pending approval in the log <strong>channel</strong>, any server
     moderator with the
     <span class="badge badge-accent">Manage Messages</span>
-    permission can press the <button class="btn btn-success btn-xs">Publish</button> button or the
-    <button class="btn btn-error btn-xs">Delete</button>
+    permission can press the <button class="btn btn-xs btn-success">Publish</button> button or the
+    <button class="btn btn-xs btn-error">Delete</button>
     button to moderate the confession.
   </p>
   <p>
