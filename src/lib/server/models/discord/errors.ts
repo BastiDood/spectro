@@ -4,6 +4,7 @@ export const enum DiscordErrorCode {
   UnknownChannel = 10003,
   MissingAccess = 50001,
   MissingPermissions = 50013,
+  InvalidFormBody = 50035,
 }
 
 export const DiscordErrorResponse = object({

@@ -72,10 +72,23 @@ export const dispatchApproval = inngest.createFunction(
               message = await DiscordClient.ENV.createMessage(
                 confession.channelId,
                 createConfessionPayload(confession),
+                `${event.id}:approval`,
               );
             } catch (error) {
               if (error instanceof DiscordError)
                 switch (error.code) {
+                  case DiscordErrorCode.InvalidFormBody: {
+                    const wrapped = new NonRetriableError(
+                      'discord rejected createMessage nonce payload',
+                      { cause: error },
+                    );
+                    logger.error('discord nonce validation failed in dispatch-approval', wrapped, {
+                      'inngest.event.id': event.id,
+                      'discord.error.code': error.code,
+                      'discord.error.message': error.message,
+                    });
+                    throw wrapped;
+                  }
                   case DiscordErrorCode.UnknownChannel:
                   case DiscordErrorCode.MissingAccess:
                   case DiscordErrorCode.MissingPermissions:

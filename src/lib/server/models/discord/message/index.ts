@@ -24,6 +24,8 @@ export type Message = InferOutput<typeof Message>;
  */
 export interface CreateMessage {
   content?: string;
+  nonce?: string;
+  enforce_nonce?: boolean;
   flags?: MessageFlags;
   allowed_mentions?: Partial<AllowedMentions>;
   embeds?: Embed[];

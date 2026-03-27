@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 import { parse } from 'valibot';
 
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
@@ -11,6 +13,12 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 const SERVICE_NAME = 'api.discord';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
+const encoder = new TextEncoder();
+
+async function createDiscordNonce(seed: string) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(seed));
+  return Buffer.from(digest).toString('base64url').slice(0, 25);
+}
 
 export class DiscordClient {
   static readonly #API_BASE_URL = 'https://discord.com/api/v10';
@@ -22,14 +30,24 @@ export class DiscordClient {
     this.#botToken = `Bot ${botToken}`;
   }
 
-  async createMessage(channelId: Snowflake, data: CreateMessage) {
+  async createMessage(channelId: Snowflake, data: CreateMessage, idempotencySeed: string) {
     return await tracer.asyncSpan('create-message', async span => {
-      span.setAttribute('channel.id', channelId);
+      span.setAttributes({
+        'channel.id': channelId,
+        'idempotency.seed': idempotencySeed,
+      });
+
+      const nonce = await createDiscordNonce(idempotencySeed);
+      logger.debug('created discord nonce', { 'idempotency.nonce': nonce });
 
       const response = await fetch(
         `${DiscordClient.#API_BASE_URL}/channels/${channelId}/messages`,
         {
-          body: JSON.stringify(data),
+          body: JSON.stringify({
+            ...data,
+            nonce,
+            enforce_nonce: true,
+          } satisfies CreateMessage),
           method: 'POST',
           headers: {
             Authorization: this.#botToken,

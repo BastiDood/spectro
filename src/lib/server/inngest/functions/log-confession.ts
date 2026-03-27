@@ -104,10 +104,23 @@ export const logConfession = inngest.createFunction(
               message = await DiscordClient.ENV.createMessage(
                 confession.channel.logChannelId,
                 createLogPayload(confession, mode),
+                `${event.id}:log`,
               );
             } catch (error) {
               if (error instanceof DiscordError)
                 switch (error.code) {
+                  case DiscordErrorCode.InvalidFormBody: {
+                    const wrapped = new NonRetriableError(
+                      'discord rejected createMessage nonce payload',
+                      { cause: error },
+                    );
+                    logger.error('discord nonce validation failed in log-confession', wrapped, {
+                      'inngest.event.id': event.id,
+                      'discord.error.code': error.code,
+                      'discord.error.message': error.message,
+                    });
+                    throw wrapped;
+                  }
                   case DiscordErrorCode.UnknownChannel:
                     await resetLogChannel(db, BigInt(confession.channelId));
                     logger.warn('log channel reset');
