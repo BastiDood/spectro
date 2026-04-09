@@ -211,5 +211,7 @@ export async function submitConfession(
           ),
         ),
     );
+
+    return isApprovalRequired;
   });
 }

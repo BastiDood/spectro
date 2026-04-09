@@ -84,7 +84,7 @@ export async function handleModalSubmit(
     }
 
     try {
-      await submitConfession(
+      const isApprovalRequired = await submitConfession(
         timestamp,
         applicationId,
         interactionToken,
@@ -96,6 +96,15 @@ export async function handleModalSubmit(
         attachment,
         parentMessageId,
       );
+      return {
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: {
+          flags: MessageFlags.Ephemeral,
+          content: isApprovalRequired
+            ? 'Your confession has been received and is pending moderator approval.'
+            : 'Your confession has been received.',
+        },
+      };
     } catch (error) {
       if (error instanceof ConfessError)
         return {
@@ -104,10 +113,5 @@ export async function handleModalSubmit(
         };
       throw error;
     }
-
-    return {
-      type: InteractionResponseType.DeferredChannelMessageWithSource,
-      data: { flags: MessageFlags.Ephemeral },
-    };
   });
 }

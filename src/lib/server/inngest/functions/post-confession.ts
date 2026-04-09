@@ -1,6 +1,5 @@
 import { NonRetriableError } from 'inngest';
 
-import { UnreachableCodeError } from '$lib/assert';
 import {
   ConfessionChannel,
   createConfessionPayload,
@@ -12,35 +11,13 @@ import { inngest } from '$lib/server/inngest/client';
 import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import type { Message } from '$lib/server/models/discord/message';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'inngest.post-confession';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
-
-const enum Result {
-  Success = 'Success',
-  Pending = 'Pending',
-  Failure = 'Failure',
-}
-
-interface Success {
-  type: Result.Success;
-  confessionId: string;
-  channelLabel: string;
-}
-
-interface Pending {
-  type: Result.Pending;
-  confessionId: string;
-  channelLabel: string;
-}
-
-interface Failure {
-  type: Result.Failure;
-  message: string;
-}
 
 export const postConfession = inngest.createFunction(
   {
@@ -77,11 +54,7 @@ export const postConfession = inngest.createFunction(
 
             if (confession.approvedAt === null) {
               logger.warn('confession pending approval, skipping post');
-              return {
-                type: Result.Pending,
-                confessionId: confession.confessionId,
-                channelLabel: confession.channel.label,
-              } as Pending;
+              return;
             }
 
             logger.debug('fetched confession', {
@@ -118,15 +91,12 @@ export const postConfession = inngest.createFunction(
                   case DiscordErrorCode.UnknownChannel:
                   case DiscordErrorCode.MissingAccess:
                   case DiscordErrorCode.MissingPermissions:
-                    return {
-                      type: Result.Failure,
-                      message: getConfessionErrorMessage(error.code, {
-                        label: confession.channel.label,
-                        confessionId: confession.confessionId,
-                        channel: ConfessionChannel.Confession,
-                        status: 'submitted',
-                      }),
-                    } as Failure;
+                    return getConfessionErrorMessage(error.code, {
+                      label: confession.channel.label,
+                      confessionId: confession.confessionId,
+                      channel: ConfessionChannel.Confession,
+                      status: 'submitted',
+                    });
                   default:
                     break; // might be a transient error?
                 }
@@ -138,56 +108,39 @@ export const postConfession = inngest.createFunction(
               'discord.message.channel.id': message.channel_id,
               'discord.message.timestamp': message.timestamp,
             });
-
-            return {
-              type: Result.Success,
-              confessionId: confession.confessionId,
-              channelLabel: confession.channel.label,
-            } as Success;
           }),
       );
 
+      if (result === null) return;
+
       await step.run(
-        { id: 'send-acknowledgement', name: 'Send Acknowledgement' },
+        { id: 'send-failure-follow-up', name: 'Send Failure Follow-up' },
         async () =>
-          await tracer.asyncSpan('send-acknowledgement-step', async () => {
-            switch (result.type) {
-              case Result.Success:
-                await DiscordClient.ENV.deleteOriginalResponse(
-                  event.data.applicationId,
-                  event.data.interactionToken,
-                );
-                logger.info('original response deleted');
-                break;
-              case Result.Pending: {
-                const acknowledgement = `Your confession (${result.channelLabel} #${result.confessionId}) has been submitted and is pending moderator approval.`;
-                const message = await DiscordClient.ENV.editOriginalResponse(
-                  event.data.applicationId,
-                  event.data.interactionToken,
-                  acknowledgement,
-                );
-                logger.info('acknowledgement sent', {
-                  'discord.message.id': message.id,
-                  'discord.message.channel.id': message.channel_id,
-                  'discord.message.timestamp': message.timestamp,
-                });
-                break;
-              }
-              case Result.Failure: {
-                const message = await DiscordClient.ENV.editOriginalResponse(
-                  event.data.applicationId,
-                  event.data.interactionToken,
-                  result.message,
-                );
-                logger.info('failure acknowledgement sent', {
-                  'discord.message.id': message.id,
-                  'discord.message.channel.id': message.channel_id,
-                  'discord.message.timestamp': message.timestamp,
-                });
-                break;
-              }
-              default:
-                UnreachableCodeError.throwNew();
+          await tracer.asyncSpan('send-failure-follow-up-step', async () => {
+            try {
+              const message = await DiscordClient.createFollowupMessage(
+                event.data.applicationId,
+                event.data.interactionToken,
+                {
+                  content: result,
+                  flags: MessageFlags.Ephemeral,
+                },
+              );
+              logger.info('failure follow-up sent', {
+                'discord.message.id': message.id,
+                'discord.message.channel.id': message.channel_id,
+                'discord.message.timestamp': message.timestamp,
+              });
+            } catch (error) {
+              logger.error(
+                'failed to send failure follow-up',
+                error instanceof Error ? error : void 0,
+                {
+                  'inngest.event.id': event.id,
+                  'discord.application.id': event.data.applicationId,
+                },
+              );
+              throw error;
             }
           }),
       );

@@ -11,6 +11,7 @@ import { ConfessionApprovalEvent } from '$lib/server/inngest/schema';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
 import type { Message } from '$lib/server/models/discord/message';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
@@ -36,7 +37,7 @@ export const dispatchApproval = inngest.createFunction(
         'inngest.event.data.interactionId': event.data.interactionId,
       });
 
-      const error = await step.run(
+      const result = await step.run(
         { id: 'dispatch-approval', name: 'Dispatch Approved Confession' },
         async () =>
           await tracer.asyncSpan('dispatch-approval-step', async () => {
@@ -115,22 +116,37 @@ export const dispatchApproval = inngest.createFunction(
           }),
       );
 
-      if (error === null) return;
+      if (result === null) return;
 
       await step.run(
-        { id: 'send-failure', name: 'Send Failure Message' },
+        { id: 'send-failure-follow-up', name: 'Send Failure Follow-up' },
         async () =>
-          await tracer.asyncSpan('send-failure-step', async () => {
-            const message = await DiscordClient.ENV.editOriginalResponse(
-              event.data.applicationId,
-              event.data.interactionToken,
-              error,
-            );
-            logger.info('failure message sent', {
-              'discord.message.id': message.id,
-              'discord.channel.id': message.channel_id,
-              'discord.message.timestamp': message.timestamp,
-            });
+          await tracer.asyncSpan('send-failure-follow-up-step', async () => {
+            try {
+              const message = await DiscordClient.createFollowupMessage(
+                event.data.applicationId,
+                event.data.interactionToken,
+                {
+                  content: result,
+                  flags: MessageFlags.Ephemeral,
+                },
+              );
+              logger.info('failure follow-up sent', {
+                'discord.message.id': message.id,
+                'discord.channel.id': message.channel_id,
+                'discord.message.timestamp': message.timestamp,
+              });
+            } catch (error) {
+              logger.error(
+                'failed to send failure follow-up',
+                error instanceof Error ? error : void 0,
+                {
+                  'inngest.event.id': event.id,
+                  'discord.application.id': event.data.applicationId,
+                },
+              );
+              throw error;
+            }
           }),
       );
     }),
