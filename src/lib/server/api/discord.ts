@@ -75,59 +75,38 @@ export class DiscordClient {
     });
   }
 
-  async editOriginalResponse(applicationId: string, interactionToken: string, content: string) {
-    return await tracer.asyncSpan('edit-original-response', async () => {
+  static async createFollowupMessage(
+    applicationId: Snowflake,
+    interactionToken: string,
+    data: Pick<CreateMessage, 'content' | 'flags'>,
+  ) {
+    return await tracer.asyncSpan('create-followup-message', async span => {
+      // Interaction token is too sensitive to log.
+      span.setAttribute('discord.application.id', applicationId);
+
       const response = await fetch(
-        `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+        `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}`,
         {
-          body: JSON.stringify({ content }),
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: this.#botToken,
-          },
+          body: JSON.stringify(data),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
         },
       );
 
-      if (response.ok) {
+      if (response.status === 200) {
         const json = await response.json();
         const parsed = parse(Message, json);
-        logger.debug('original response edited', { 'message.id': parsed.id });
+        logger.debug('follow-up message created', { 'message.id': parsed.id });
         return parsed;
       }
 
       const json = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
       const error = new DiscordError(code, message);
-      logger.error('discord api error in editOriginalResponse', error, {
+      logger.error('discord api error in createFollowupMessage', error, {
         'discord.error.code': code,
         'discord.error.message': message,
-      });
-      throw error;
-    });
-  }
-
-  async deleteOriginalResponse(applicationId: string, interactionToken: string) {
-    return await tracer.asyncSpan('delete-original-response', async () => {
-      const response = await fetch(
-        `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: this.#botToken },
-        },
-      );
-
-      if (response.ok) {
-        logger.debug('original response deleted');
-        return;
-      }
-
-      const json = await response.json();
-      const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in deleteOriginalResponse', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
+        'discord.application.id': applicationId,
       });
       throw error;
     });
