@@ -4,7 +4,6 @@ import type { InteractionResponseType } from '$lib/server/models/discord/interac
 export interface InteractionResponseMessage {
   type:
     | InteractionResponseType.ChannelMessageWithSource
-    | InteractionResponseType.DeferredChannelMessageWithSource
     | InteractionResponseType.DeferredUpdateMessage
     | InteractionResponseType.UpdateMessage;
   data: Partial<CreateMessage>;
