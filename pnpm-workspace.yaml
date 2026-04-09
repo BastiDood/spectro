@@ -2,10 +2,7 @@ blockExoticSubdeps: true
 
 engineStrict: true
 
-minimumReleaseAge: 1440 # 1 Day
-
-minimumReleaseAgeExclude:
-  - vite@8.0.5
+minimumReleaseAge: 720 # 1 Day
 
 onlyBuiltDependencies:
   - esbuild
