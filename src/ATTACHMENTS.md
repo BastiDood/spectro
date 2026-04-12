@@ -21,11 +21,12 @@ The active flow is:
 3. The singleton `process-confession` function fetches the confession.
 4. If the confession has an attachment, the function downloads the original ephemeral CDN URL.
 5. The function creates the moderator log message and uploads the file directly into that message.
-6. Discord returns a `Message` payload containing the newly created durable attachment in `message.attachments`.
-7. That durable attachment metadata is persisted in `durable_attachment`.
-8. `ephemeral_attachment.durable_attachment_id` is updated to point at the durable row.
-9. If the confession is already approved, the public confession message is dispatched using the durable attachment URL.
-10. If approval is required, later approval and resend paths also read from the durable attachment only.
+6. Discord returns a `Message` payload for the moderator log message.
+7. The durable attachment metadata is extracted from that returned message.
+8. That durable attachment metadata is persisted in `durable_attachment`.
+9. `ephemeral_attachment.durable_attachment_id` is updated to point at the durable row.
+10. If the confession is already approved, the public confession message is dispatched using the durable attachment URL.
+11. If approval is required, later approval and resend paths also read from the durable attachment only.
 
 The key design point is that the moderator log message is the persistence anchor for the file artifact.
 
@@ -66,6 +67,28 @@ Persisted fields include:
 - normalized proxy URL
 - image height
 - image width
+
+### Why the Durable Row is Separate
+
+The current schema intentionally does not overwrite `ephemeral_attachment.url` or
+`ephemeral_attachment.proxy_url` with the durable values.
+
+That separation exists for a reason:
+
+- `ephemeral_attachment` preserves the original modal-upload metadata exactly as received from Discord
+- `durable_attachment` records the later moderator-log-backed artifact that was created from it
+- `ephemeral_attachment.durable_attachment_id` explicitly encodes the lifecycle transition from
+  temporary upload to durable upload
+
+If the durable values were written back into `ephemeral_attachment` in place, the system would lose
+the distinction between:
+
+- the original temporary upload token
+- the later durable artifact
+- whether the durable upgrade actually happened
+
+Keeping these records separate makes legacy-data handling, failure analysis, and attachment lifecycle
+invariants much easier to reason about.
 
 ### Relationship
 
@@ -135,6 +158,19 @@ In the current design, that means the durable upload step should have succeeded 
 
 Because of that, approval and resend treat a missing durable attachment on an attachment-bearing confession as a legacy-data problem, not as a normal modern-path outcome.
 
+### Invariant 6: Durable extraction depends on Discord's returned message shape
+
+The durable attachment is not always returned by Discord in the same field.
+
+Current observed behavior:
+
+- non-image uploads return the durable attachment in `message.attachments`
+- image uploads rendered through the moderator log embed may instead surface the durable URL in
+  `message.embeds[n].image`
+
+Because of that, the durable extraction step must branch on the attachment kind instead of assuming
+that `message.attachments` always contains the uploaded file.
+
 ## URL Handling Rules
 
 URL handling is intentionally asymmetric.
@@ -163,9 +199,45 @@ Reason:
 
 Durable Discord attachment URLs should be stored without ephemeral query parameters so later rendering can rely on the stable attachment path shape.
 
+## Discord Response Nuance
+
+Discord's returned `Message` payload for the moderator log upload is not uniform across attachment
+types.
+
+### Non-image Uploads
+
+For non-image uploads, the durable metadata is extracted from `message.attachments`.
+
+This is the straightforward case and matches the original assumption behind the durable upload flow.
+
+### Image Uploads
+
+For image uploads rendered in the moderator log embed, Discord may expose the uploaded image through
+the returned embed image instead of the returned attachment array.
+
+In practice, this means:
+
+- the moderator log message is created successfully
+- `message.attachments` may be empty or absent
+- `message.embeds[0].image.url` contains the durable CDN URL
+- `message.embeds[0].image.proxy_url` contains the durable proxy URL
+
+The current implementation therefore extracts image durability metadata from the returned embed image
+and non-image durability metadata from the returned attachment array.
+
+### Consequence for Log Rendering
+
+The moderator log payload is allowed to render image uploads through the embed image path because the
+durable extraction logic now understands that Discord may place the returned durable URL there.
+
+Public confession messages remain simpler:
+
+- once the durable URL is already known, public image rendering just uses that durable URL directly
+- there is no need for `attachment://...` indirection outside the initial log upload step
+
 ## Active Runtime Flow
 
-### Fresh confession without attachment
+### Fresh confession without Attachment
 
 1. Insert confession.
 2. Emit `discord/confession.process`.
@@ -173,7 +245,7 @@ Durable Discord attachment URLs should be stored without ephemeral query paramet
 4. If already approved, `process-confession` posts the public confession.
 5. No durable attachment row is involved.
 
-### Fresh confession with attachment
+### Fresh confession with Attachment
 
 1. Insert confession.
 2. Insert the original modal attachment into `ephemeral_attachment`.
@@ -181,12 +253,14 @@ Durable Discord attachment URLs should be stored without ephemeral query paramet
 4. `process-confession` fetches the confession and original attachment metadata.
 5. `process-confession` downloads the ephemeral file from the signed CDN URL.
 6. `process-confession` uploads that file as part of the moderator log message.
-7. Discord returns the durable attachment in `message.attachments`.
-8. `process-confession` persists the durable row.
-9. `process-confession` links `ephemeral_attachment.durable_attachment_id`.
-10. If approved, `process-confession` posts the public confession using the durable URL.
+7. Discord returns the created moderator log message.
+8. `process-confession` extracts the durable metadata from `message.attachments` for non-images or
+   `message.embeds[*].image` for images.
+9. `process-confession` persists the durable row.
+10. `process-confession` links `ephemeral_attachment.durable_attachment_id`.
+11. If approved, `process-confession` posts the public confession using the durable URL.
 
-### Approval-required confession with attachment
+### Approval-required Confession with Attachment
 
 1. The confession still goes through `process-confession`.
 2. The durable upload still happens before the moderator review message exists.
@@ -225,6 +299,11 @@ This is a deliberate simplification. The system does not maintain a separate dur
 - moderator log messages are rarely deleted in practice
 - the simpler design keeps the migration small and reviewable
 - Discord already provides the durable attachment object we need after message creation
+
+More precisely:
+
+- for non-images, Discord exposes the durable artifact in the returned attachment array
+- for images, Discord may expose the durable artifact through the returned embed image instead
 
 ### Consequence
 
