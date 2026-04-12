@@ -1,4 +1,13 @@
-import { bigint, bit, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  bit,
+  boolean,
+  integer,
+  pgSchema,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
@@ -31,12 +40,30 @@ export const channel = app.table('channel', {
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
+export const durableAttachment = app.table('durable_attachment', {
+  id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+  messageId: bigint('message_id', { mode: 'bigint' }).notNull(),
+  channelId: bigint('channel_id', { mode: 'bigint' }).notNull(),
+  filename: text('filename').notNull(),
+  contentType: text('content_type'),
+  url: text('url').notNull(),
+  proxyUrl: text('proxy_url').notNull(),
+  height: integer('height'),
+  width: integer('width'),
+});
+
+export type DurableAttachmentData = typeof durableAttachment.$inferSelect;
+export type NewDurableAttachmentData = typeof durableAttachment.$inferInsert;
+
 export const ephemeralAttachment = app.table('ephemeral_attachment', {
   id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
   filename: text('filename').notNull(),
   contentType: text('content_type'),
   url: text('url').notNull(),
   proxyUrl: text('proxy_url').notNull(),
+  durableAttachmentId: bigint('durable_attachment_id', { mode: 'bigint' })
+    .references(() => durableAttachment.id)
+    .unique(),
 });
 
 export type EphemeralAttachmentData = typeof ephemeralAttachment.$inferSelect;
@@ -79,5 +106,12 @@ export const confessionRelations = relations(confession, ({ one }) => ({
   attachment: one(ephemeralAttachment, {
     fields: [confession.attachmentId],
     references: [ephemeralAttachment.id],
+  }),
+}));
+
+export const ephemeralAttachmentRelations = relations(ephemeralAttachment, ({ one }) => ({
+  durableAttachment: one(durableAttachment, {
+    fields: [ephemeralAttachment.durableAttachmentId],
+    references: [durableAttachment.id],
   }),
 }));
