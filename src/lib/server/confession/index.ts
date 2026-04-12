@@ -17,8 +17,8 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type {
   SerializedAttachment,
+  SerializedConfessionForProcess,
   SerializedConfessionForDispatch,
-  SerializedConfessionForLog,
   SerializedConfessionForResend,
 } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -137,7 +137,10 @@ function deserializeAttachment(attachment: SerializedAttachment | null) {
 
 /** Create a confession message payload for the public confession channel */
 export function createConfessionPayload(
-  confession: SerializedConfessionForDispatch | SerializedConfessionForResend,
+  confession:
+    | SerializedConfessionForDispatch
+    | SerializedConfessionForProcess
+    | SerializedConfessionForResend,
   timestampOverride?: Date,
 ) {
   const attachment = deserializeAttachment(confession.attachment);
@@ -159,13 +162,13 @@ export function createConfessionPayload(
   };
 
   if (attachment !== null)
-    if (attachment.content_type?.includes('image') === true)
-      embed.image = {
-        url: attachment.url,
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-    else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
+    if (attachment.content_type?.includes('image') === true) {
+      embed.image = { url: attachment.url };
+      if (typeof attachment.height === 'number') embed.image.height = attachment.height;
+      if (typeof attachment.width === 'number') embed.image.width = attachment.width;
+    } else {
+      embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
+    }
 
   const params: CreateMessage = {
     allowed_mentions: { parse: [AllowedMentionType.Users] },
@@ -184,10 +187,11 @@ export function createConfessionPayload(
 
 /** Create a log message payload for the moderator log channel */
 export function createLogPayload(
-  confession: SerializedConfessionForLog | SerializedConfessionForResend,
+  confession: SerializedConfessionForProcess | SerializedConfessionForResend,
   mode: LogPayloadMode,
+  durableAttachmentUrl?: string,
 ) {
-  const attachment = deserializeAttachment(confession.attachment);
+  const ephemeralAttachment = deserializeAttachment(confession.attachment);
 
   const fields: EmbedField[] = [
     { name: 'Authored by', value: `||<@${confession.authorId}>||`, inline: true },
@@ -198,15 +202,18 @@ export function createLogPayload(
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
   let image: EmbedImage | undefined;
-  if (attachment !== null) {
-    fields.push({ name: 'Attachment', value: attachment.url, inline: true });
-    if (attachment.content_type?.startsWith('image/'))
-      image = {
-        url: attachment.url,
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
+  if (
+    ephemeralAttachment !== null &&
+    typeof durableAttachmentUrl !== 'undefined' &&
+    ephemeralAttachment.content_type?.startsWith('image/')
+  ) {
+    image = { url: durableAttachmentUrl };
+    if (typeof ephemeralAttachment.height === 'number') image.height = ephemeralAttachment.height;
+    if (typeof ephemeralAttachment.width === 'number') image.width = ephemeralAttachment.width;
   }
+
+  // Regular non-image attachments will be attached literally above the embed.
+  // There is no need to duplicate the attachment reference here.
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
   let color: Color;

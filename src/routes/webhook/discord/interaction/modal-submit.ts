@@ -1,5 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
+import { assertOptional } from '$lib/assert';
 import type { InsertableAttachment } from '$lib/server/database';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -61,9 +62,7 @@ export async function handleModalSubmit(
     strictEqual(attachmentComponent.type, MessageComponentType.FileUpload);
     strictEqual(attachmentComponent.custom_id, 'attachment');
 
-    const [attachmentId, ...otherAttachments] = attachmentComponent.values ?? [];
-    strictEqual(otherAttachments.length, 0);
-
+    const attachmentId = assertOptional(attachmentComponent.values ?? []);
     let attachment: InsertableAttachment | null = null;
     if (typeof attachmentId !== 'undefined') {
       assert(typeof resolved?.attachments !== 'undefined');

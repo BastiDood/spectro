@@ -1,9 +1,9 @@
-import { type InferOutput, object } from 'valibot';
+import { array, type InferOutput, object, optional } from 'valibot';
 
 import type { AllowedMentions } from '$lib/server/models/discord/allowed-mentions';
-import type { Embed } from '$lib/server/models/discord/embed';
+import { Attachment } from '$lib/server/models/discord/attachment';
+import { Embed } from '$lib/server/models/discord/embed';
 
-import type { Attachment } from '../attachment';
 import { MessageBase, MessageFlags } from './base';
 import type { MessageComponent } from './component';
 import type { MessageReference } from './reference';
@@ -14,9 +14,17 @@ import type { MessageReference } from './reference';
  */
 export const Message = object({
   ...MessageBase.entries,
+  attachments: optional(array(Attachment)),
+  embeds: optional(array(Embed)),
 });
 
 export type Message = InferOutput<typeof Message>;
+
+export interface CreateMessageAttachment {
+  id: number | string;
+  filename: string;
+  description?: string;
+}
 
 /**
  * Outbound interface for creating messages.
@@ -31,5 +39,5 @@ export interface CreateMessage {
   embeds?: Embed[];
   components?: MessageComponent[];
   message_reference?: MessageReference;
-  attachments?: Attachment[];
+  attachments?: CreateMessageAttachment[];
 }

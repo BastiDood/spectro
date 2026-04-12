@@ -15,6 +15,12 @@ const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 const encoder = new TextEncoder();
 
+interface CreateMessageFile {
+  data: ArrayBuffer;
+  filename: string;
+  contentType?: string;
+}
+
 async function createDiscordNonce(seed: string) {
   const digest = await crypto.subtle.digest('SHA-256', encoder.encode(seed));
   return Buffer.from(digest).toString('base64url').slice(0, 25);
@@ -30,7 +36,12 @@ export class DiscordClient {
     this.#botToken = `Bot ${botToken}`;
   }
 
-  async createMessage(channelId: Snowflake, data: CreateMessage, idempotencySeed: string) {
+  async createMessage(
+    channelId: Snowflake,
+    data: Omit<CreateMessage, 'attachments'>,
+    idempotencySeed: string,
+    files?: CreateMessageFile[],
+  ) {
     return await tracer.asyncSpan('create-message', async span => {
       span.setAttributes({
         'channel.id': channelId,
@@ -40,9 +51,10 @@ export class DiscordClient {
       const nonce = await createDiscordNonce(idempotencySeed);
       logger.debug('created discord nonce', { 'idempotency.nonce': nonce });
 
-      const response = await fetch(
-        `${DiscordClient.#API_BASE_URL}/channels/${channelId}/messages`,
-        {
+      // eslint-disable-next-line @typescript-eslint/init-declarations
+      let response: Response;
+      if (typeof files === 'undefined') {
+        response = await fetch(`${DiscordClient.#API_BASE_URL}/channels/${channelId}/messages`, {
           body: JSON.stringify({
             ...data,
             nonce,
@@ -53,8 +65,34 @@ export class DiscordClient {
             Authorization: this.#botToken,
             'Content-Type': 'application/json',
           },
-        },
-      );
+        });
+      } else {
+        const form = new FormData();
+        form.append(
+          'payload_json',
+          JSON.stringify({
+            ...data,
+            nonce,
+            enforce_nonce: true,
+            attachments: files.map(({ filename }, index) => ({ id: index, filename })),
+          } satisfies CreateMessage),
+        );
+
+        for (const [index, file] of files.entries())
+          form.append(
+            `files[${index}]`,
+            new Blob([file.data], { type: file.contentType }),
+            file.filename,
+          );
+
+        response = await fetch(`${DiscordClient.#API_BASE_URL}/channels/${channelId}/messages`, {
+          method: 'POST',
+          body: form,
+          headers: {
+            Authorization: this.#botToken,
+          },
+        });
+      }
 
       const json = await response.json();
 

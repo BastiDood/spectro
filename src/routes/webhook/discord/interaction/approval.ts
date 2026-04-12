@@ -5,7 +5,7 @@ import { waitUntil } from '@vercel/functions';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { type Embed, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import { type Embed, EmbedField, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
@@ -14,13 +14,19 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { attachment, channel, confession } from '$lib/server/database/models';
+import {
+  channel,
+  confession,
+  durableAttachment,
+  ephemeralAttachment,
+} from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/schema';
 
 import { hasAllPermissions } from './util';
 import { MalformedCustomIdFormat } from './errors';
+import { assertSingle } from '$lib/assert';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
 const logger = Logger.byName(SERVICE_NAME);
@@ -80,10 +86,28 @@ class AlreadyApprovedApprovalError extends ApprovalError {
   }
 }
 
+class MissingDurableAttachmentApprovalError extends ApprovalError {
+  constructor() {
+    super(
+      'This legacy confession includes an attachment that is no longer available in the Discord CDN, so it cannot be approved or rejected.',
+    );
+    this.name = 'MissingDurableAttachmentApprovalError';
+  }
+
+  static throwNew(confessionInternalId: bigint): never {
+    const error = new MissingDurableAttachmentApprovalError();
+    logger.error('missing durable attachment for approval', error, {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    throw error;
+  }
+}
+
 /**
  * @throws {InsufficientPermissionsApprovalError}
  * @throws {DisabledChannelConfessError}
  * @throws {AlreadyApprovedApprovalError}
+ * @throws {MissingDurableAttachmentApprovalError}
  */
 async function submitVerdict(
   timestamp: Date,
@@ -144,26 +168,34 @@ async function submitVerdict(
         embedAttachment = await tracer.asyncSpan('select-attachment', async span => {
           span.setAttribute('attachment.id', attachmentId.toString());
 
-          const [retrieved, ...others] = await tx
+          const retrieved = await tx
             .select({
-              filename: attachment.filename,
-              contentType: attachment.contentType,
-              url: attachment.url,
+              durableAttachmentId: durableAttachment.id,
+              filename: durableAttachment.filename,
+              contentType: durableAttachment.contentType,
+              url: durableAttachment.url,
+              height: durableAttachment.height,
+              width: durableAttachment.width,
             })
-            .from(attachment)
-            .where(eq(attachment.id, attachmentId));
-          strictEqual(others.length, 0);
-          assert(typeof retrieved !== 'undefined');
+            .from(ephemeralAttachment)
+            .leftJoin(
+              durableAttachment,
+              eq(ephemeralAttachment.durableAttachmentId, durableAttachment.id),
+            )
+            .where(eq(ephemeralAttachment.id, attachmentId))
+            .then(assertSingle);
 
-          logger.debug('attachment fetched', {
-            'attachment.filename': retrieved.filename,
-          });
+          if (retrieved.durableAttachmentId === null)
+            MissingDurableAttachmentApprovalError.throwNew(internalId);
+          assert(retrieved.filename !== null);
+          assert(retrieved.url !== null);
+          logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });
 
-          return {
-            filename: retrieved.filename,
-            url: retrieved.url,
-            content_type: retrieved.contentType ?? void 0,
-          };
+          const embed: EmbedAttachment = { filename: retrieved.filename, url: retrieved.url };
+          if (retrieved.contentType !== null) embed.content_type = retrieved.contentType;
+          if (retrieved.height !== null) embed.height = retrieved.height;
+          if (retrieved.width !== null) embed.width = retrieved.width;
+          return embed;
         });
 
       if (disabledAt !== null && disabledAt <= timestamp)
@@ -171,45 +203,32 @@ async function submitVerdict(
 
       if (approvedAt !== null) AlreadyApprovedApprovalError.throwNew(approvedAt);
 
+      const fields: EmbedField[] = [
+        {
+          name: 'Authored by',
+          value: `||<@${authorId}>||`,
+          inline: true,
+        },
+      ];
+
+      // eslint-disable-next-line @typescript-eslint/init-declarations
+      let embed: Embed;
       if (isApproved) {
         await tracer.asyncSpan('update-confession-approved-at', async span => {
           span.setAttribute('confession.internal.id', internalId.toString());
-
           const { rowCount } = await tx
             .update(confession)
             .set({ approvedAt: timestamp })
             .where(eq(confession.internalId, internalId));
           strictEqual(rowCount, 1);
-
           logger.debug('confession approved_at updated');
         });
 
-        // Emit Inngest event for async dispatch (will send follow-up on failure)
-        waitUntil(
-          inngest
-            .send(
-              ConfessionApprovalEvent.create({
-                applicationId,
-                interactionToken,
-                interactionId,
-                internalId: internalId.toString(),
-              }),
-            )
-            .then(({ ids }) => logger.debug('inngest event emitted', { 'inngest.events.id': ids })),
-        );
-
-        const fields = [
-          {
-            name: 'Authored by',
-            value: `||<@${authorId}>||`,
-            inline: true,
-          },
-          {
-            name: 'Approved by',
-            value: `<@${moderatorId}>`,
-            inline: true,
-          },
-        ];
+        fields.push({
+          name: 'Approved by',
+          value: `<@${moderatorId}>`,
+          inline: true,
+        });
 
         // eslint-disable-next-line @typescript-eslint/init-declarations
         let image: EmbedImage | undefined;
@@ -224,7 +243,7 @@ async function submitVerdict(
         }
 
         logger.info('confession approved', { 'confession.id': confessionId.toString() });
-        return {
+        embed = {
           type: EmbedType.Rich,
           title: `${label} #${confessionId}`,
           color: Color.Success,
@@ -237,53 +256,61 @@ async function submitVerdict(
           fields,
           image,
         };
-      }
 
-      const fields = [
-        {
-          name: 'Authored by',
-          value: `||<@${authorId}>||`,
-          inline: true,
-        },
-        {
+        // Emit Inngest event for async dispatch (will send follow-up on failure)
+        waitUntil(
+          inngest
+            .send(
+              ConfessionApprovalEvent.create({
+                applicationId,
+                interactionToken,
+                interactionId,
+                internalId: internalId.toString(),
+              }),
+            )
+            .then(({ ids }) => logger.debug('inngest event emitted', { 'inngest.events.id': ids })),
+        );
+      } else {
+        fields.push({
           name: 'Deleted by',
           value: `<@${moderatorId}>`,
           inline: true,
-        },
-      ];
+        });
 
-      // eslint-disable-next-line @typescript-eslint/init-declarations
-      let image: EmbedImage | undefined;
-      if (embedAttachment !== null) {
-        fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
-        if (embedAttachment.content_type?.startsWith('image/'))
-          image = {
-            url: embedAttachment.url,
-            height: embedAttachment.height ?? void 0,
-            width: embedAttachment.width ?? void 0,
-          };
+        // eslint-disable-next-line @typescript-eslint/init-declarations
+        let image: EmbedImage | undefined;
+        if (embedAttachment !== null) {
+          fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+          if (embedAttachment.content_type?.startsWith('image/'))
+            image = {
+              url: embedAttachment.url,
+              height: embedAttachment.height ?? void 0,
+              width: embedAttachment.width ?? void 0,
+            };
+        }
+
+        await tracer.asyncSpan('delete-confession', async span => {
+          span.setAttribute('confession.internal.id', internalId.toString());
+          await tx.delete(confession).where(eq(confession.internalId, internalId));
+          logger.info('confession rejected', { 'confession.id': confessionId.toString() });
+        });
+
+        embed = {
+          type: EmbedType.Rich,
+          title: `${label} #${confessionId}`,
+          color: Color.Failure,
+          timestamp: timestamp.toISOString(),
+          description: content,
+          footer: {
+            text: 'Spectro Logs',
+            icon_url: APP_ICON_URL,
+          },
+          fields,
+          image,
+        };
       }
 
-      await tracer.asyncSpan('delete-confession', async span => {
-        span.setAttribute('confession.internal.id', internalId.toString());
-
-        await tx.delete(confession).where(eq(confession.internalId, internalId));
-
-        logger.info('confession rejected', { 'confession.id': confessionId.toString() });
-      });
-      return {
-        type: EmbedType.Rich,
-        title: `${label} #${confessionId}`,
-        color: Color.Failure,
-        timestamp: timestamp.toISOString(),
-        description: content,
-        footer: {
-          text: 'Spectro Logs',
-          icon_url: APP_ICON_URL,
-        },
-        fields,
-        image,
-      };
+      return embed;
     });
   });
 }

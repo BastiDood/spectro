@@ -5,10 +5,15 @@ import { waitUntil } from '@vercel/functions';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { attachment, channel, confession } from '$lib/server/database/models';
+import {
+  channel,
+  confession,
+  durableAttachment,
+  ephemeralAttachment,
+} from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
-import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
+import { ConfessionProcessEvent } from '$lib/server/inngest/schema';
 
 import { assertOptional } from '$lib/assert';
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
@@ -88,11 +93,29 @@ class MissingLogChannelResendError extends ResendError {
   }
 }
 
+class MissingDurableAttachmentResendError extends ResendError {
+  constructor(public confessionId: bigint) {
+    super(
+      `Confession #${confessionId} includes a legacy attachment that is no longer available in the Discord CDN, so it cannot be resent.`,
+    );
+    this.name = 'MissingDurableAttachmentResendError';
+  }
+
+  static throwNew(confessionId: bigint): never {
+    const error = new MissingDurableAttachmentResendError(confessionId);
+    logger.error('missing durable attachment for resend', error, {
+      'confession.id': confessionId.toString(),
+    });
+    throw error;
+  }
+}
+
 /**
  * @throws {ConfessionNotFoundResendError}
  * @throws {InsufficientPermissionsResendError}
  * @throws {PendingApprovalResendError}
  * @throws {MissingLogChannelResendError}
+ * @throws {MissingDurableAttachmentResendError}
  */
 async function resendConfession(
   applicationId: Snowflake,
@@ -122,11 +145,16 @@ async function resendConfession(
           logChannelId: channel.logChannelId,
           label: channel.label,
           approvedAt: confession.approvedAt,
-          retrievedAttachment: { attachmentUrl: attachment.url },
+          attachmentId: confession.attachmentId,
+          durableAttachmentId: durableAttachment.id,
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
-        .leftJoin(attachment, eq(confession.attachmentId, attachment.id))
+        .leftJoin(ephemeralAttachment, eq(confession.attachmentId, ephemeralAttachment.id))
+        .leftJoin(
+          durableAttachment,
+          eq(ephemeralAttachment.durableAttachmentId, durableAttachment.id),
+        )
         .where(
           and(
             eq(confession.channelId, BigInt(confessionChannelId)),
@@ -147,21 +175,23 @@ async function resendConfession(
     });
 
     if (typeof result === 'undefined') ConfessionNotFoundResendError.throwNew(confessionId);
-    const { internalId, approvedAt, logChannelId, retrievedAttachment } = result;
+    const { internalId, approvedAt, logChannelId, attachmentId, durableAttachmentId } = result;
 
     if (approvedAt === null) PendingApprovalResendError.throwNew(confessionId);
 
     if (logChannelId === null) MissingLogChannelResendError.throwNew();
 
-    // Check permission if attachment exists
-    if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
-      InsufficientPermissionsResendError.throwNew(permission);
+    if (attachmentId !== null) {
+      if (durableAttachmentId === null) MissingDurableAttachmentResendError.throwNew(confessionId);
+      if (!hasAllPermissions(permission, ATTACH_FILES))
+        InsufficientPermissionsResendError.throwNew(permission);
+    }
 
-    // Emit Inngest event for async processing (fans out to post-confession + log-confession)
+    // Emit Inngest event for async processing
     waitUntil(
       inngest
         .send(
-          ConfessionSubmitEvent.create({
+          ConfessionProcessEvent.create({
             applicationId,
             interactionToken,
             interactionId,

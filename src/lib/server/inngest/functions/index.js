@@ -1,5 +1,4 @@
 import { dispatchApproval } from './dispatch-approval';
-import { logConfession } from './log-confession';
-import { postConfession } from './post-confession';
+import { processConfession } from './process-confession';
 
-export const functions = [postConfession, logConfession, dispatchApproval];
+export const functions = [processConfession, dispatchApproval];

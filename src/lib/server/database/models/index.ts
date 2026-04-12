@@ -1,4 +1,13 @@
-import { bigint, bit, boolean, pgSchema, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  bit,
+  boolean,
+  integer,
+  pgSchema,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
@@ -15,36 +24,50 @@ export const guild = app.table('guild', {
 export type Guild = typeof guild.$inferSelect;
 export type NewGuild = typeof guild.$inferInsert;
 
-export const channel = app.table(
-  'channel',
-  {
-    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-    guildId: bigint('guild_id', { mode: 'bigint' })
-      .notNull()
-      .references(() => guild.id, { onDelete: 'cascade' }),
-    // TODO: Eventually add the `notNull` constraint once all guilds have transitioned.
-    logChannelId: bigint('log_channel_id', { mode: 'bigint' }),
-    disabledAt: timestamp('disabled_at', { withTimezone: true }),
-    color: bit('color', { dimensions: 24 }),
-    isApprovalRequired: boolean('is_approval_required').notNull().default(false),
-    label: text('label').notNull().default('Confession'),
-  },
-  ({ guildId, id }) => [uniqueIndex('guild_to_channel_unique_idx').on(guildId, id)],
-);
+export const channel = app.table('channel', {
+  id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+  guildId: bigint('guild_id', { mode: 'bigint' })
+    .notNull()
+    .references(() => guild.id, { onDelete: 'cascade' }),
+  // TODO: Eventually add the `notNull` constraint once all guilds have transitioned.
+  logChannelId: bigint('log_channel_id', { mode: 'bigint' }),
+  disabledAt: timestamp('disabled_at', { withTimezone: true }),
+  color: bit('color', { dimensions: 24 }),
+  isApprovalRequired: boolean('is_approval_required').notNull().default(false),
+  label: text('label').notNull().default('Confession'),
+});
 
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
-export const attachment = app.table('attachment_data', {
+export const durableAttachment = app.table('durable_attachment', {
+  id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+  messageId: bigint('message_id', { mode: 'bigint' }).notNull(),
+  channelId: bigint('channel_id', { mode: 'bigint' }).notNull(),
+  filename: text('filename').notNull(),
+  contentType: text('content_type'),
+  url: text('url').notNull(),
+  proxyUrl: text('proxy_url').notNull(),
+  height: integer('height'),
+  width: integer('width'),
+});
+
+export type DurableAttachmentData = typeof durableAttachment.$inferSelect;
+export type NewDurableAttachmentData = typeof durableAttachment.$inferInsert;
+
+export const ephemeralAttachment = app.table('ephemeral_attachment', {
   id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
   filename: text('filename').notNull(),
   contentType: text('content_type'),
   url: text('url').notNull(),
   proxyUrl: text('proxy_url').notNull(),
+  durableAttachmentId: bigint('durable_attachment_id', { mode: 'bigint' })
+    .references(() => durableAttachment.id)
+    .unique(),
 });
 
-export type AttachmentData = typeof attachment.$inferSelect;
-export type NewAttachmentData = typeof attachment.$inferInsert;
+export type EphemeralAttachmentData = typeof ephemeralAttachment.$inferSelect;
+export type NewEphemeralAttachmentData = typeof ephemeralAttachment.$inferInsert;
 
 export const confession = app.table(
   'confession',
@@ -65,7 +88,9 @@ export const confession = app.table(
     approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
     authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
     content: text('content').notNull(),
-    attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(() => attachment.id),
+    attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(
+      () => ephemeralAttachment.id,
+    ),
   },
   ({ confessionId, channelId, attachmentId }) => [
     uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId),
@@ -78,5 +103,15 @@ export type NewConfession = typeof confession.$inferInsert;
 
 export const confessionRelations = relations(confession, ({ one }) => ({
   channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
-  attachment: one(attachment, { fields: [confession.attachmentId], references: [attachment.id] }),
+  attachment: one(ephemeralAttachment, {
+    fields: [confession.attachmentId],
+    references: [ephemeralAttachment.id],
+  }),
+}));
+
+export const ephemeralAttachmentRelations = relations(ephemeralAttachment, ({ one }) => ({
+  durableAttachment: one(durableAttachment, {
+    fields: [ephemeralAttachment.durableAttachmentId],
+    references: [durableAttachment.id],
+  }),
 }));

@@ -1,4 +1,4 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import process from 'node:process';
 
 import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
@@ -7,7 +7,7 @@ import { Pool as NeonPool } from '@neondatabase/serverless';
 import { Pool as PgPool } from 'pg';
 import { eq, sql } from 'drizzle-orm';
 
-import { assertOptional, UnreachableCodeError } from '$lib/assert';
+import { assertOptional, assertSingle, UnreachableCodeError } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { Logger } from '$lib/server/telemetry/logger';
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
@@ -57,39 +57,33 @@ export type Database = typeof db;
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type Interface = Database | Transaction;
 
-const CONFESSION_CREATED_AT = sql.raw(schema.confession.createdAt.name);
-const CONFESSION_CHANNEL_ID = sql.raw(schema.confession.channelId.name);
-const CONFESSION_AUTHOR_ID = sql.raw(schema.confession.authorId.name);
-const CONFESSION_CONFESSION_ID = sql.raw(schema.confession.confessionId.name);
-const CONFESSION_CONTENT = sql.raw(schema.confession.content.name);
-const CONFESSION_APPROVED_AT = sql.raw(schema.confession.approvedAt.name);
-const CONFESSION_PARENT_MESSAGE_ID = sql.raw(schema.confession.parentMessageId.name);
-const CONFESSION_ATTACHMENT_ID = sql.raw(schema.confession.attachmentId.name);
-
-const GUILD_LAST_CONFESSION_ID = sql.raw(schema.guild.lastConfessionId.name);
-
-function updateLastConfession(db: Interface, guildId: bigint) {
-  return db
-    .update(schema.guild)
-    .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
-    .where(eq(schema.guild.id, guildId))
-    .returning({ confessionId: schema.guild.lastConfessionId });
-}
-
 export type InsertableAttachment = Pick<
   Attachment,
   'id' | 'filename' | 'content_type' | 'url' | 'proxy_url'
 >;
-async function insertAttachmentData(db: Interface, attachment: InsertableAttachment) {
-  return await tracer.asyncSpan('insert-attachment', async span => {
-    span.setAttribute('attachment.id', attachment.id);
 
-    const { rowCount } = await db.insert(schema.attachment).values({
-      id: BigInt(attachment.id),
-      filename: attachment.filename,
-      contentType: attachment.content_type,
-      url: attachment.url,
-      proxyUrl: attachment.proxy_url,
+export interface PersistableDurableAttachment {
+  id: string;
+  messageId: string;
+  channelId: string;
+  filename: string;
+  contentType: string | null;
+  url: string;
+  proxyUrl: string;
+  height: number | null;
+  width: number | null;
+}
+
+async function insertAttachmentData(db: Interface, ephemeralAttachment: InsertableAttachment) {
+  return await tracer.asyncSpan('insert-attachment', async span => {
+    span.setAttribute('attachment.id', ephemeralAttachment.id);
+
+    const { rowCount } = await db.insert(schema.ephemeralAttachment).values({
+      id: BigInt(ephemeralAttachment.id),
+      filename: ephemeralAttachment.filename,
+      contentType: ephemeralAttachment.content_type,
+      url: ephemeralAttachment.url,
+      proxyUrl: ephemeralAttachment.proxy_url,
     });
 
     switch (rowCount) {
@@ -105,13 +99,87 @@ async function insertAttachmentData(db: Interface, attachment: InsertableAttachm
   });
 }
 
+function normalizeAttachmentUrl(url: string) {
+  const normalizedUrl = new URL(url);
+  normalizedUrl.search = '';
+  return normalizedUrl.toString();
+}
+
+export async function upsertDurableAttachmentData(
+  db: Interface,
+  ephemeralAttachmentId: bigint,
+  durableAttachment: PersistableDurableAttachment,
+) {
+  return await tracer.asyncSpan('upsert-durable-attachment', async span => {
+    span.setAttributes({
+      'attachment.id': ephemeralAttachmentId.toString(),
+      'durable.attachment.id': durableAttachment.id,
+      'durable.message.id': durableAttachment.messageId,
+      'durable.channel.id': durableAttachment.channelId,
+    });
+    await db
+      .insert(schema.durableAttachment)
+      .values({
+        id: BigInt(durableAttachment.id),
+        messageId: BigInt(durableAttachment.messageId),
+        channelId: BigInt(durableAttachment.channelId),
+        filename: durableAttachment.filename,
+        contentType: durableAttachment.contentType,
+        url: normalizeAttachmentUrl(durableAttachment.url),
+        proxyUrl: normalizeAttachmentUrl(durableAttachment.proxyUrl),
+        height: durableAttachment.height,
+        width: durableAttachment.width,
+      })
+      .onConflictDoUpdate({
+        target: schema.durableAttachment.id,
+        set: {
+          messageId: sql`excluded.${sql.raw(schema.durableAttachment.messageId.name)}`,
+          channelId: sql`excluded.${sql.raw(schema.durableAttachment.channelId.name)}`,
+          filename: sql`excluded.${sql.raw(schema.durableAttachment.filename.name)}`,
+          contentType: sql`excluded.${sql.raw(schema.durableAttachment.contentType.name)}`,
+          url: sql`excluded.${sql.raw(schema.durableAttachment.url.name)}`,
+          proxyUrl: sql`excluded.${sql.raw(schema.durableAttachment.proxyUrl.name)}`,
+          height: sql`excluded.${sql.raw(schema.durableAttachment.height.name)}`,
+          width: sql`excluded.${sql.raw(schema.durableAttachment.width.name)}`,
+        },
+      });
+  });
+}
+
+export async function linkDurableAttachmentData(
+  db: Interface,
+  ephemeralAttachmentId: bigint,
+  durableAttachmentId: bigint,
+) {
+  return await tracer.asyncSpan('link-durable-attachment', async span => {
+    span.setAttributes({
+      'attachment.id': ephemeralAttachmentId.toString(),
+      'durable.attachment.id': durableAttachmentId.toString(),
+    });
+
+    const { rowCount } = await db
+      .update(schema.ephemeralAttachment)
+      .set({ durableAttachmentId })
+      .where(eq(schema.ephemeralAttachment.id, ephemeralAttachmentId));
+
+    switch (rowCount) {
+      case null:
+        return UnexpectedRowCountDatabaseError.throwNew();
+      case 1:
+        return;
+      default:
+        return UnexpectedRowCountDatabaseError.throwNew(rowCount);
+    }
+  });
+}
+
 export async function insertConfession(
   db: Transaction,
-  timestamp: Date,
+  createdAt: Date,
   guildId: bigint,
   channelId: bigint,
   authorId: bigint,
-  description: string,
+  content: string,
   approvedAt: Date | null,
   parentMessageId: bigint | null,
   attachment: InsertableAttachment | null,
@@ -129,29 +197,34 @@ export async function insertConfession(
       await insertAttachmentData(db, attachment);
     }
 
-    const guild = updateLastConfession(db, guildId);
-    const {
-      rows: [result, ...otherResults],
-    } = await db.execute(
-      sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
-    );
+    const { confessionId } = await db
+      .update(schema.guild)
+      .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
+      .where(eq(schema.guild.id, guildId))
+      .returning({ confessionId: schema.guild.lastConfessionId })
+      .then(assertSingle);
 
-    strictEqual(otherResults.length, 0);
-    assert(typeof result !== 'undefined');
-
-    const { _internal_id: internalId, _confession_id: confessionId } = result;
-    assert(typeof internalId === 'string');
-    assert(typeof confessionId === 'string');
+    const { internalId } = await db
+      .insert(schema.confession)
+      .values({
+        createdAt,
+        channelId,
+        authorId,
+        confessionId,
+        content,
+        approvedAt,
+        parentMessageId,
+        attachmentId,
+      })
+      .returning({ internalId: schema.confession.internalId })
+      .then(assertSingle);
 
     logger.debug('confession inserted', {
-      'internal.id': internalId,
-      'confession.id': confessionId,
+      'internal.id': internalId.toString(),
+      'confession.id': confessionId.toString(),
     });
 
-    return {
-      internalId: BigInt(internalId),
-      confessionId: BigInt(confessionId),
-    };
+    return { internalId, confessionId };
   });
 }
 
@@ -224,7 +297,25 @@ export interface SerializedAttachment {
   width?: number | null;
 }
 
-/** Serialized confession for dispatch operations (post-confession, dispatch-approval) */
+export interface SerializedConfessionForProcess {
+  internalId: string;
+  confessionId: string;
+  channelId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  approvedAt: string | null;
+  parentMessageId: string | null;
+  channel: {
+    label: string;
+    color: string | null;
+    logChannelId: string | null;
+    isApprovalRequired: boolean;
+  };
+  attachment: SerializedAttachment | null;
+}
+
+/** Serialized confession for public dispatch operations */
 export interface SerializedConfessionForDispatch {
   confessionId: string;
   channelId: string;
@@ -235,23 +326,6 @@ export interface SerializedConfessionForDispatch {
   channel: {
     label: string;
     color: string | null;
-  };
-  attachment: SerializedAttachment | null;
-}
-
-/** Serialized confession for log operations (log-confession) */
-export interface SerializedConfessionForLog {
-  internalId: string;
-  confessionId: string;
-  channelId: string;
-  authorId: string;
-  content: string;
-  createdAt: string;
-  approvedAt: string | null;
-  channel: {
-    label: string;
-    logChannelId: string | null;
-    isApprovalRequired: boolean;
   };
   attachment: SerializedAttachment | null;
 }
@@ -273,11 +347,107 @@ export interface SerializedConfessionForResend {
   attachment: SerializedAttachment | null;
 }
 
+function serializeAttachment({
+  attachmentId,
+  attachmentFilename,
+  attachmentContentType,
+  attachmentUrl,
+  attachmentProxyUrl,
+  attachmentHeight,
+  attachmentWidth,
+}: {
+  attachmentId: bigint | null;
+  attachmentFilename: string | null;
+  attachmentContentType: string | null;
+  attachmentUrl: string | null;
+  attachmentProxyUrl: string | null;
+  attachmentHeight?: number | null;
+  attachmentWidth?: number | null;
+}) {
+  if (attachmentId === null) return null;
+  assert(attachmentFilename !== null);
+  assert(attachmentUrl !== null);
+  assert(attachmentProxyUrl !== null);
+  return {
+    id: attachmentId.toString(),
+    filename: attachmentFilename,
+    contentType: attachmentContentType,
+    url: attachmentUrl,
+    proxyUrl: attachmentProxyUrl,
+    height: attachmentHeight,
+    width: attachmentWidth,
+  } satisfies SerializedAttachment;
+}
+
 // HACK: Do NOT use the Relations API (`db.query.*.findFirst()` with `with` clauses) in Drizzle.
 // The Relations API is not compatible with OpenTelemetry instrumentation, so we use plain query
 // builders with explicit `innerJoin`/`leftJoin` operations instead.
 
-/** Fetch confession for dispatch operations (post-confession, dispatch-approval) */
+/** Fetch confession for process operations (process-confession) */
+export async function fetchConfessionForProcess(db: Interface, confessionInternalId: bigint) {
+  return await tracer.asyncSpan('fetch-confession-for-process', async span => {
+    span.setAttribute('confession.internal.id', confessionInternalId.toString());
+
+    const result = await db
+      .select({
+        internalId: schema.confession.internalId,
+        confessionId: schema.confession.confessionId,
+        channelId: schema.confession.channelId,
+        authorId: schema.confession.authorId,
+        content: schema.confession.content,
+        createdAt: schema.confession.createdAt,
+        approvedAt: schema.confession.approvedAt,
+        parentMessageId: schema.confession.parentMessageId,
+        channelLabel: schema.channel.label,
+        channelColor: schema.channel.color,
+        channelLogChannelId: schema.channel.logChannelId,
+        channelIsApprovalRequired: schema.channel.isApprovalRequired,
+        attachmentId: schema.ephemeralAttachment.id,
+        attachmentFilename: schema.ephemeralAttachment.filename,
+        attachmentContentType: schema.ephemeralAttachment.contentType,
+        attachmentUrl: schema.ephemeralAttachment.url,
+        attachmentProxyUrl: schema.ephemeralAttachment.proxyUrl,
+      })
+      .from(schema.confession)
+      .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+      .leftJoin(
+        schema.ephemeralAttachment,
+        eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+      )
+      .where(eq(schema.confession.internalId, confessionInternalId))
+      .limit(1)
+      .then(assertOptional);
+
+    if (typeof result === 'undefined') {
+      logger.warn('confession not found for process');
+      return null;
+    }
+
+    logger.debug('confession fetched for process', {
+      'confession.id': result.confessionId.toString(),
+    });
+
+    return {
+      internalId: result.internalId.toString(),
+      confessionId: result.confessionId.toString(),
+      channelId: result.channelId.toString(),
+      authorId: result.authorId.toString(),
+      content: result.content,
+      createdAt: result.createdAt.toISOString(),
+      approvedAt: result.approvedAt?.toISOString() ?? null,
+      parentMessageId: result.parentMessageId?.toString() ?? null,
+      channel: {
+        label: result.channelLabel,
+        color: result.channelColor,
+        logChannelId: result.channelLogChannelId?.toString() ?? null,
+        isApprovalRequired: result.channelIsApprovalRequired,
+      },
+      attachment: serializeAttachment(result),
+    } satisfies SerializedConfessionForProcess;
+  });
+}
+
+/** Fetch confession for public dispatch operations */
 export async function fetchConfessionForDispatch(db: Interface, confessionInternalId: bigint) {
   return await tracer.asyncSpan('fetch-confession-for-dispatch', async span => {
     span.setAttribute('confession.internal.id', confessionInternalId.toString());
@@ -292,15 +462,25 @@ export async function fetchConfessionForDispatch(db: Interface, confessionIntern
         parentMessageId: schema.confession.parentMessageId,
         channelLabel: schema.channel.label,
         channelColor: schema.channel.color,
-        attachmentId: schema.attachment.id,
-        attachmentFilename: schema.attachment.filename,
-        attachmentContentType: schema.attachment.contentType,
-        attachmentUrl: schema.attachment.url,
-        attachmentProxyUrl: schema.attachment.proxyUrl,
+        ephemeralAttachmentId: schema.ephemeralAttachment.id,
+        attachmentId: schema.durableAttachment.id,
+        attachmentFilename: schema.durableAttachment.filename,
+        attachmentContentType: schema.durableAttachment.contentType,
+        attachmentUrl: schema.durableAttachment.url,
+        attachmentProxyUrl: schema.durableAttachment.proxyUrl,
+        attachmentHeight: schema.durableAttachment.height,
+        attachmentWidth: schema.durableAttachment.width,
       })
       .from(schema.confession)
       .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-      .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+      .leftJoin(
+        schema.ephemeralAttachment,
+        eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+      )
+      .leftJoin(
+        schema.durableAttachment,
+        eq(schema.ephemeralAttachment.durableAttachmentId, schema.durableAttachment.id),
+      )
       .where(eq(schema.confession.internalId, confessionInternalId))
       .limit(1)
       .then(assertOptional);
@@ -310,19 +490,7 @@ export async function fetchConfessionForDispatch(db: Interface, confessionIntern
       return null;
     }
 
-    let attachment: SerializedAttachment | null = null;
-    if (result.attachmentId !== null) {
-      assert(result.attachmentFilename !== null);
-      assert(result.attachmentUrl !== null);
-      assert(result.attachmentProxyUrl !== null);
-      attachment = {
-        id: result.attachmentId.toString(),
-        filename: result.attachmentFilename,
-        contentType: result.attachmentContentType,
-        url: result.attachmentUrl,
-        proxyUrl: result.attachmentProxyUrl,
-      };
-    }
+    if (result.ephemeralAttachmentId !== null) assert(result.attachmentId !== null);
 
     logger.debug('confession fetched for dispatch', {
       'confession.id': result.confessionId.toString(),
@@ -339,79 +507,8 @@ export async function fetchConfessionForDispatch(db: Interface, confessionIntern
         label: result.channelLabel,
         color: result.channelColor,
       },
-      attachment,
+      attachment: serializeAttachment(result),
     } satisfies SerializedConfessionForDispatch;
-  });
-}
-
-/** Fetch confession for log operations (log-confession) */
-export async function fetchConfessionForLog(db: Interface, confessionInternalId: bigint) {
-  return await tracer.asyncSpan('fetch-confession-for-log', async span => {
-    span.setAttribute('confession.internal.id', confessionInternalId.toString());
-
-    const result = await db
-      .select({
-        internalId: schema.confession.internalId,
-        confessionId: schema.confession.confessionId,
-        channelId: schema.confession.channelId,
-        authorId: schema.confession.authorId,
-        content: schema.confession.content,
-        createdAt: schema.confession.createdAt,
-        approvedAt: schema.confession.approvedAt,
-        channelLabel: schema.channel.label,
-        channelLogChannelId: schema.channel.logChannelId,
-        channelIsApprovalRequired: schema.channel.isApprovalRequired,
-        attachmentId: schema.attachment.id,
-        attachmentFilename: schema.attachment.filename,
-        attachmentContentType: schema.attachment.contentType,
-        attachmentUrl: schema.attachment.url,
-        attachmentProxyUrl: schema.attachment.proxyUrl,
-      })
-      .from(schema.confession)
-      .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-      .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
-      .where(eq(schema.confession.internalId, confessionInternalId))
-      .limit(1)
-      .then(assertOptional);
-
-    if (typeof result === 'undefined') {
-      logger.warn('confession not found for log');
-      return null;
-    }
-
-    let attachment: SerializedAttachment | null = null;
-    if (result.attachmentId !== null) {
-      assert(result.attachmentFilename !== null);
-      assert(result.attachmentUrl !== null);
-      assert(result.attachmentProxyUrl !== null);
-      attachment = {
-        id: result.attachmentId.toString(),
-        filename: result.attachmentFilename,
-        contentType: result.attachmentContentType,
-        url: result.attachmentUrl,
-        proxyUrl: result.attachmentProxyUrl,
-      };
-    }
-
-    logger.debug('confession fetched for log', {
-      'confession.id': result.confessionId.toString(),
-    });
-
-    return {
-      internalId: result.internalId.toString(),
-      confessionId: result.confessionId.toString(),
-      channelId: result.channelId.toString(),
-      authorId: result.authorId.toString(),
-      content: result.content,
-      createdAt: result.createdAt.toISOString(),
-      approvedAt: result.approvedAt?.toISOString() ?? null,
-      channel: {
-        label: result.channelLabel,
-        logChannelId: result.channelLogChannelId?.toString() ?? null,
-        isApprovalRequired: result.channelIsApprovalRequired,
-      },
-      attachment,
-    } satisfies SerializedConfessionForLog;
   });
 }
 
@@ -432,15 +529,25 @@ export async function fetchConfessionForResend(db: Interface, confessionInternal
         channelLabel: schema.channel.label,
         channelColor: schema.channel.color,
         channelLogChannelId: schema.channel.logChannelId,
-        attachmentId: schema.attachment.id,
-        attachmentFilename: schema.attachment.filename,
-        attachmentContentType: schema.attachment.contentType,
-        attachmentUrl: schema.attachment.url,
-        attachmentProxyUrl: schema.attachment.proxyUrl,
+        ephemeralAttachmentId: schema.ephemeralAttachment.id,
+        attachmentId: schema.durableAttachment.id,
+        attachmentFilename: schema.durableAttachment.filename,
+        attachmentContentType: schema.durableAttachment.contentType,
+        attachmentUrl: schema.durableAttachment.url,
+        attachmentProxyUrl: schema.durableAttachment.proxyUrl,
+        attachmentHeight: schema.durableAttachment.height,
+        attachmentWidth: schema.durableAttachment.width,
       })
       .from(schema.confession)
       .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-      .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+      .leftJoin(
+        schema.ephemeralAttachment,
+        eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+      )
+      .leftJoin(
+        schema.durableAttachment,
+        eq(schema.ephemeralAttachment.durableAttachmentId, schema.durableAttachment.id),
+      )
       .where(eq(schema.confession.internalId, confessionInternalId))
       .limit(1)
       .then(assertOptional);
@@ -450,19 +557,7 @@ export async function fetchConfessionForResend(db: Interface, confessionInternal
       return null;
     }
 
-    let attachment: SerializedAttachment | null = null;
-    if (result.attachmentId !== null) {
-      assert(result.attachmentFilename !== null);
-      assert(result.attachmentUrl !== null);
-      assert(result.attachmentProxyUrl !== null);
-      attachment = {
-        id: result.attachmentId.toString(),
-        filename: result.attachmentFilename,
-        contentType: result.attachmentContentType,
-        url: result.attachmentUrl,
-        proxyUrl: result.attachmentProxyUrl,
-      };
-    }
+    if (result.ephemeralAttachmentId !== null) assert(result.attachmentId !== null);
 
     logger.debug('confession fetched for resend', {
       'confession.id': result.confessionId.toString(),
@@ -481,7 +576,7 @@ export async function fetchConfessionForResend(db: Interface, confessionInternal
         color: result.channelColor,
         logChannelId: result.channelLogChannelId?.toString() ?? null,
       },
-      attachment,
+      attachment: serializeAttachment(result),
     } satisfies SerializedConfessionForResend;
   });
 }

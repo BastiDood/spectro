@@ -6,7 +6,7 @@
 
 <div class="not-prose alert alert-info">
   <Icon icon={BaselineInfo} width={24} />
-  <span>Last updated on <time datetime="2026-01-16">January 16, 2026</time>.</span>
+  <span>Last updated on <time datetime="2026-04-12">April 12, 2026</time>.</span>
 </div>
 
 <br />
@@ -122,7 +122,10 @@
 <ul>
   <li>Time of submission.</li>
   <li>User-generated text in the confession.</li>
-  <li>User-generated URLs to uploaded attachments via the Discord platform.</li>
+  <li>
+    Metadata and Discord-hosted URLs for uploaded attachments, including moderator-log-backed
+    durable attachment records when applicable.
+  </li>
   <li>Discord user ID of the confessor.</li>
   <li>Discord channel ID in which the confession was submitted.</li>
 </ul>
