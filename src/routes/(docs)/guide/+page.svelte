@@ -42,6 +42,11 @@
     simply overwrite the non-empty arguments of the command invocation.
   </p>
   <p>
+    The configured log <strong>channel</strong> is also where Spectro persists uploaded attachment artifacts
+    before public rendering. If attachment-bearing confession logs are deleted later, those files may
+    stop being reliably recoverable.
+  </p>
+  <p>
     In summary, the following is a minimum checklist of required permissions and configurations for
     Spectro to properly publish confessions.
   </p>
@@ -76,6 +81,11 @@
     images or files to your confession. If you choose to attach a file, you must have the
     <span class="badge badge-accent">Attach Files</span> permission.
   </p>
+  <p>
+    For newer confessions, Spectro durably persists the uploaded file through the moderator log
+    before publishing the confession. This avoids depending on Discord's temporary modal-upload URLs
+    for later approval, resend, and public rendering.
+  </p>
   <div class="alert alert-warning">
     <Icon icon={BaselineAnnouncement} width={24} />
     <span>All confessions are logged for moderation purposes.</span>
@@ -96,6 +106,11 @@
   <p>
     Whenever a pending confession is published/deleted, Spectro logs the timestamp of the
     interaction and the user who triggered the action.
+  </p>
+  <p>
+    For attachment-bearing confessions, approval operates on the durable attachment already stored
+    in the moderator log. Older legacy confessions that only relied on Discord's expired temporary
+    upload URLs may no longer be approvable.
   </p>
   <div class="alert alert-warning">
     <Icon icon={BaselineAnnouncement} width={24} />
@@ -130,6 +145,11 @@
     >
     permission can {@render command('resend')} an already approved and published confession. The invoking
     user must be in the same channel that the confession was originally sent.
+  </p>
+  <p>
+    Resends reuse the durable attachment stored from the original moderator log flow. Legacy
+    attachment-bearing confessions created before this durability upgrade may fail with a
+    recoverable error if the original Discord CDN upload is no longer available.
   </p>
 </section>
 <section>

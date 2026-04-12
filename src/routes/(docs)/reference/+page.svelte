@@ -71,6 +71,11 @@
       field where you can upload images or files. If you attach a file, you must have the
       <span class="badge badge-accent">Attach Files</span> permission.
     </p>
+    <p class="mb-10">
+      <strong>Attachment Durability.</strong> Uploaded attachments are first persisted through the configured
+      moderator log channel before Spectro renders them publicly. This keeps newer attachment-bearing
+      confessions and replies resendable even after Discord's temporary modal-upload URLs expire.
+    </p>
   </section>
   <section>
     <div
@@ -94,6 +99,10 @@
       <strong>Optional Attachments.</strong> The reply modal also includes an optional attachment
       field for uploading images or files with your anonymous reply. The
       <span class="badge badge-accent">Attach Files</span> permission is required when attaching files.
+    </p>
+    <p class="mb-10">
+      Replies follow the same attachment flow as standard confessions: Spectro persists the uploaded
+      file through the moderator log before using it in later message renders.
     </p>
   </section>
 </section>
@@ -125,6 +134,11 @@
       or rejected in the logs
       <code>channel</code>. Running this command again will simply overwrite the affected previous
       settings.
+    </p>
+    <p>
+      For attachment-bearing confessions, this log <code>channel</code> also serves as the durable storage
+      anchor for the uploaded file artifact. Moderators should avoid deleting these log messages unless
+      they are intentionally discarding the corresponding attachment record.
     </p>
     <p class="mb-10">
       <strong>Customization.</strong>
@@ -160,6 +174,12 @@
       <strong>Resend an existing confession by its <code>id</code>.</strong> This is useful for times
       when a confession message has been accidentally deleted. Note that the current channel settings
       are still enforced.
+    </p>
+    <p class="mb-10">
+      Legacy confessions with attachments created before the durable attachment upgrade may no
+      longer be resendable if the original Discord CDN upload has already expired. In that case,
+      Spectro will return a recoverable moderator-facing error instead of silently posting a broken
+      attachment.
     </p>
   </section>
 </section>
