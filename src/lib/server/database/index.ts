@@ -93,16 +93,16 @@ export interface PersistableDurableAttachment {
   width: number | null;
 }
 
-async function insertAttachmentData(db: Interface, attachment: InsertableAttachment) {
+async function insertAttachmentData(db: Interface, ephemeralAttachment: InsertableAttachment) {
   return await tracer.asyncSpan('insert-attachment', async span => {
-    span.setAttribute('attachment.id', attachment.id);
+    span.setAttribute('attachment.id', ephemeralAttachment.id);
 
     const { rowCount } = await db.insert(schema.ephemeralAttachment).values({
-      id: BigInt(attachment.id),
-      filename: attachment.filename,
-      contentType: attachment.content_type,
-      url: attachment.url,
-      proxyUrl: attachment.proxy_url,
+      id: BigInt(ephemeralAttachment.id),
+      filename: ephemeralAttachment.filename,
+      contentType: ephemeralAttachment.content_type,
+      url: ephemeralAttachment.url,
+      proxyUrl: ephemeralAttachment.proxy_url,
     });
 
     switch (rowCount) {
@@ -126,12 +126,12 @@ function normalizeAttachmentUrl(url: string) {
 
 export async function upsertDurableAttachmentData(
   db: Interface,
-  attachmentId: bigint,
+  ephemeralAttachmentId: bigint,
   durableAttachment: PersistableDurableAttachment,
 ) {
   return await tracer.asyncSpan('upsert-durable-attachment', async span => {
     span.setAttributes({
-      'attachment.id': attachmentId.toString(),
+      'attachment.id': ephemeralAttachmentId.toString(),
       'durable.attachment.id': durableAttachment.id,
       'durable.message.id': durableAttachment.messageId,
       'durable.channel.id': durableAttachment.channelId,
@@ -167,19 +167,19 @@ export async function upsertDurableAttachmentData(
 
 export async function linkDurableAttachmentData(
   db: Interface,
-  attachmentId: bigint,
+  ephemeralAttachmentId: bigint,
   durableAttachmentId: bigint,
 ) {
   return await tracer.asyncSpan('link-durable-attachment', async span => {
     span.setAttributes({
-      'attachment.id': attachmentId.toString(),
+      'attachment.id': ephemeralAttachmentId.toString(),
       'durable.attachment.id': durableAttachmentId.toString(),
     });
 
     const { rowCount } = await db
       .update(schema.ephemeralAttachment)
       .set({ durableAttachmentId })
-      .where(eq(schema.ephemeralAttachment.id, attachmentId));
+      .where(eq(schema.ephemeralAttachment.id, ephemeralAttachmentId));
 
     switch (rowCount) {
       case null:
