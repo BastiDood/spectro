@@ -7,7 +7,6 @@ import {
   ConfessionChannel,
   createConfessionPayload,
   createLogPayload,
-  createLogUploadPayload,
   getConfessionErrorMessage,
   LogPayloadType,
 } from '$lib/server/confession';
@@ -277,7 +276,7 @@ export const processConfession = inngest.createFunction(
                 const data = await downloadAttachment(uploadedAttachment.url);
                 const message = await DiscordClient.ENV.createMessage(
                   confession.channel.logChannelId,
-                  createLogUploadPayload(confession, mode),
+                  createLogPayload(confession, mode),
                   `${event.id}:log`,
                   [
                     {
