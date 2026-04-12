@@ -61,7 +61,7 @@ async function enableConfessions(
           color: color?.toString(2).padStart(24, '0'),
           disabledAt: null,
         })
-        .onConflictDoUpdate({ target: [channel.guildId, channel.id], set })
+        .onConflictDoUpdate({ target: channel.id, set })
         .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired });
       strictEqual(otherRows.length, 0);
       assert(typeof row !== 'undefined');
