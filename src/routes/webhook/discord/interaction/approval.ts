@@ -86,10 +86,28 @@ class AlreadyApprovedApprovalError extends ApprovalError {
   }
 }
 
+class MissingDurableAttachmentApprovalError extends ApprovalError {
+  constructor() {
+    super(
+      'This legacy confession includes an attachment that is no longer available in the Discord CDN, so it cannot be approved or rejected.',
+    );
+    this.name = 'MissingDurableAttachmentApprovalError';
+  }
+
+  static throwNew(confessionInternalId: bigint): never {
+    const error = new MissingDurableAttachmentApprovalError();
+    logger.error('missing durable attachment for approval', error, {
+      'confession.internal.id': confessionInternalId.toString(),
+    });
+    throw error;
+  }
+}
+
 /**
  * @throws {InsufficientPermissionsApprovalError}
  * @throws {DisabledChannelConfessError}
  * @throws {AlreadyApprovedApprovalError}
+ * @throws {MissingDurableAttachmentApprovalError}
  */
 async function submitVerdict(
   timestamp: Date,
@@ -167,7 +185,8 @@ async function submitVerdict(
             .where(eq(ephemeralAttachment.id, attachmentId))
             .then(assertSingle);
 
-          assert(retrieved.durableAttachmentId !== null);
+          if (retrieved.durableAttachmentId === null)
+            MissingDurableAttachmentApprovalError.throwNew(internalId);
           assert(retrieved.filename !== null);
           assert(retrieved.url !== null);
           logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });

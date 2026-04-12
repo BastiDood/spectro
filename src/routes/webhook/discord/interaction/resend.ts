@@ -1,4 +1,4 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import { strictEqual } from 'node:assert/strict';
 
 import { and, eq } from 'drizzle-orm';
 import { waitUntil } from '@vercel/functions';
@@ -93,11 +93,29 @@ class MissingLogChannelResendError extends ResendError {
   }
 }
 
+class MissingDurableAttachmentResendError extends ResendError {
+  constructor(public confessionId: bigint) {
+    super(
+      `Confession #${confessionId} includes a legacy attachment that is no longer available in the Discord CDN, so it cannot be resent.`,
+    );
+    this.name = 'MissingDurableAttachmentResendError';
+  }
+
+  static throwNew(confessionId: bigint): never {
+    const error = new MissingDurableAttachmentResendError(confessionId);
+    logger.error('missing durable attachment for resend', error, {
+      'confession.id': confessionId.toString(),
+    });
+    throw error;
+  }
+}
+
 /**
  * @throws {ConfessionNotFoundResendError}
  * @throws {InsufficientPermissionsResendError}
  * @throws {PendingApprovalResendError}
  * @throws {MissingLogChannelResendError}
+ * @throws {MissingDurableAttachmentResendError}
  */
 async function resendConfession(
   applicationId: Snowflake,
@@ -164,7 +182,7 @@ async function resendConfession(
     if (logChannelId === null) MissingLogChannelResendError.throwNew();
 
     if (attachmentId !== null) {
-      assert(durableAttachmentId !== null);
+      if (durableAttachmentId === null) MissingDurableAttachmentResendError.throwNew(confessionId);
       if (!hasAllPermissions(permission, ATTACH_FILES))
         InsufficientPermissionsResendError.throwNew(permission);
     }
