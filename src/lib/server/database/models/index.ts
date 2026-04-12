@@ -15,22 +15,18 @@ export const guild = app.table('guild', {
 export type Guild = typeof guild.$inferSelect;
 export type NewGuild = typeof guild.$inferInsert;
 
-export const channel = app.table(
-  'channel',
-  {
-    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-    guildId: bigint('guild_id', { mode: 'bigint' })
-      .notNull()
-      .references(() => guild.id, { onDelete: 'cascade' }),
-    // TODO: Eventually add the `notNull` constraint once all guilds have transitioned.
-    logChannelId: bigint('log_channel_id', { mode: 'bigint' }),
-    disabledAt: timestamp('disabled_at', { withTimezone: true }),
-    color: bit('color', { dimensions: 24 }),
-    isApprovalRequired: boolean('is_approval_required').notNull().default(false),
-    label: text('label').notNull().default('Confession'),
-  },
-  ({ guildId, id }) => [uniqueIndex('guild_to_channel_unique_idx').on(guildId, id)],
-);
+export const channel = app.table('channel', {
+  id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+  guildId: bigint('guild_id', { mode: 'bigint' })
+    .notNull()
+    .references(() => guild.id, { onDelete: 'cascade' }),
+  // TODO: Eventually add the `notNull` constraint once all guilds have transitioned.
+  logChannelId: bigint('log_channel_id', { mode: 'bigint' }),
+  disabledAt: timestamp('disabled_at', { withTimezone: true }),
+  color: bit('color', { dimensions: 24 }),
+  isApprovalRequired: boolean('is_approval_required').notNull().default(false),
+  label: text('label').notNull().default('Confession'),
+});
 
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
