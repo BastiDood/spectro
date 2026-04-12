@@ -98,190 +98,172 @@ export const processConfession = inngest.createFunction(
   },
   async ({ event, step }) =>
     await tracer.asyncSpan('process-confession-function', async span => {
+      const { id: eventId } = event;
+      const { applicationId, interactionToken, internalId } = event.data;
+
       span.setAttributes({
-        'inngest.event.id': event.id,
+        'inngest.event.id': eventId,
         'inngest.event.name': event.name,
         'inngest.event.ts': event.ts,
-        'inngest.event.data.internalId': event.data.internalId,
-        'inngest.event.data.applicationId': event.data.applicationId,
+        'inngest.event.data.internalId': internalId,
+        'inngest.event.data.applicationId': applicationId,
         'inngest.event.data.interactionId': event.data.interactionId,
         'inngest.event.data.moderatorId': event.data.moderatorId,
       });
 
-      async function sendFailureFollowUp(content: string) {
-        await step.run(
-          { id: 'send-failure-follow-up', name: 'Send Failure Follow-up' },
-          async () =>
-            await tracer.asyncSpan('send-failure-follow-up-step', async () => {
-              const message = await DiscordClient.createFollowupMessage(
-                event.data.applicationId,
-                event.data.interactionToken,
-                {
-                  content,
-                  flags: MessageFlags.Ephemeral,
-                },
-              );
-              logger.info('failure follow-up sent', {
-                'discord.message.id': message.id,
-                'discord.message.channel.id': message.channel_id,
-                'discord.message.timestamp': message.timestamp,
-              });
-            }),
-        );
+      async function sendFollowUp(
+        applicationId: string,
+        interactionToken: string,
+        content: string,
+      ) {
+        await tracer.asyncSpan('send-failure-follow-up-step', async () => {
+          const message = await DiscordClient.createFollowupMessage(
+            applicationId,
+            interactionToken,
+            {
+              content,
+              flags: MessageFlags.Ephemeral,
+            },
+          );
+          logger.info('failure follow-up sent', {
+            'discord.message.id': message.id,
+            'discord.message.channel.id': message.channel_id,
+            'discord.message.timestamp': message.timestamp,
+          });
+        });
       }
 
-      async function postSubmittedConfession() {
-        const result = await step.run(
-          { id: 'post-confession', name: 'Post Confession' },
-          async () =>
-            await tracer.asyncSpan('post-confession-step', async () => {
-              const confession = await fetchConfessionForDispatch(
-                db,
-                BigInt(event.data.internalId),
-              );
-              if (confession === null) {
-                const error = new NonRetriableError('confession not found');
-                logger.error('confession not found for post', error, {
-                  'confession.internal.id': event.data.internalId,
-                });
-                throw error;
-              }
+      async function postSubmittedConfession(internalId: string, eventId: string) {
+        return await tracer.asyncSpan('post-confession-step', async () => {
+          const confession = await fetchConfessionForDispatch(db, BigInt(internalId));
+          if (confession === null) {
+            const error = new NonRetriableError('confession not found');
+            logger.error('confession not found for post', error, {
+              'confession.internal.id': internalId,
+            });
+            throw error;
+          }
 
-              if (confession.approvedAt === null) return null;
+          if (confession.approvedAt === null) return null;
 
-              try {
-                const message = await DiscordClient.ENV.createMessage(
-                  confession.channelId,
-                  createConfessionPayload(confession),
-                  `${event.id}:post`,
-                );
-                logger.info('confession published', {
-                  'discord.message.id': message.id,
-                  'discord.message.channel.id': message.channel_id,
-                  'discord.message.timestamp': message.timestamp,
-                });
-                return null;
-              } catch (error) {
-                if (error instanceof DiscordError)
-                  switch (error.code) {
-                    case DiscordErrorCode.InvalidFormBody: {
-                      const wrapped = new NonRetriableError(
-                        'discord rejected createMessage nonce payload',
-                        { cause: error },
-                      );
-                      logger.error(
-                        'discord nonce validation failed in process-confession',
-                        wrapped,
-                        {
-                          'inngest.event.id': event.id,
-                          'discord.error.code': error.code,
-                          'discord.error.message': error.message,
-                        },
-                      );
-                      throw wrapped;
-                    }
-                    case DiscordErrorCode.UnknownChannel:
-                    case DiscordErrorCode.MissingAccess:
-                    case DiscordErrorCode.MissingPermissions:
-                      return getConfessionErrorMessage(error.code, {
-                        label: confession.channel.label,
-                        confessionId: confession.confessionId,
-                        channel: ConfessionChannel.Confession,
-                        status: 'submitted',
-                      });
-                    default:
-                      break;
-                  }
-                throw error;
+          try {
+            const message = await DiscordClient.ENV.createMessage(
+              confession.channelId,
+              createConfessionPayload(confession),
+              `${eventId}:post`,
+            );
+            logger.info('confession published', {
+              'discord.message.id': message.id,
+              'discord.message.channel.id': message.channel_id,
+              'discord.message.timestamp': message.timestamp,
+            });
+            return null;
+          } catch (error) {
+            if (error instanceof DiscordError)
+              switch (error.code) {
+                case DiscordErrorCode.InvalidFormBody: {
+                  const wrapped = new NonRetriableError(
+                    'discord rejected createMessage nonce payload',
+                    { cause: error },
+                  );
+                  logger.error('discord nonce validation failed in process-confession', wrapped, {
+                    'inngest.event.id': eventId,
+                    'discord.error.code': error.code,
+                    'discord.error.message': error.message,
+                  });
+                  throw wrapped;
+                }
+                case DiscordErrorCode.UnknownChannel:
+                case DiscordErrorCode.MissingAccess:
+                case DiscordErrorCode.MissingPermissions:
+                  return getConfessionErrorMessage(error.code, {
+                    label: confession.channel.label,
+                    confessionId: confession.confessionId,
+                    channel: ConfessionChannel.Confession,
+                    status: 'submitted',
+                  });
+                default:
+                  break;
               }
-            }),
-        );
-        if (result !== null) await sendFailureFollowUp(result);
+            throw error;
+          }
+        });
       }
 
-      async function postResentConfession() {
-        const result = await step.run(
-          { id: 'resend-confession', name: 'Resend Confession' },
-          async () =>
-            await tracer.asyncSpan('resend-confession-step', async () => {
-              const confession = await fetchConfessionForResend(db, BigInt(event.data.internalId));
-              if (confession === null) {
-                const error = new NonRetriableError('confession not found');
-                logger.error('confession not found for resend', error, {
-                  'confession.internal.id': event.data.internalId,
-                });
-                throw error;
-              }
+      async function postResentConfession(internalId: string, eventId: string) {
+        return await tracer.asyncSpan('resend-confession-step', async () => {
+          const confession = await fetchConfessionForResend(db, BigInt(internalId));
+          if (confession === null) {
+            const error = new NonRetriableError('confession not found');
+            logger.error('confession not found for resend', error, {
+              'confession.internal.id': internalId,
+            });
+            throw error;
+          }
 
-              if (confession.approvedAt === null) {
-                const error = new NonRetriableError('confession not approved');
-                logger.error('confession not approved for resend', error, {
-                  'confession.internal.id': event.data.internalId,
-                });
-                throw error;
-              }
+          if (confession.approvedAt === null) {
+            const error = new NonRetriableError('confession not approved');
+            logger.error('confession not approved for resend', error, {
+              'confession.internal.id': internalId,
+            });
+            throw error;
+          }
 
-              try {
-                const message = await DiscordClient.ENV.createMessage(
-                  confession.channelId,
-                  createConfessionPayload(confession),
-                  `${event.id}:post`,
-                );
-                logger.info('confession resent', {
-                  'discord.message.id': message.id,
-                  'discord.message.channel.id': message.channel_id,
-                  'discord.message.timestamp': message.timestamp,
-                });
-                return null;
-              } catch (error) {
-                if (error instanceof DiscordError)
-                  switch (error.code) {
-                    case DiscordErrorCode.InvalidFormBody: {
-                      const wrapped = new NonRetriableError(
-                        'discord rejected createMessage nonce payload',
-                        { cause: error },
-                      );
-                      logger.error(
-                        'discord nonce validation failed in process-confession',
-                        wrapped,
-                        {
-                          'inngest.event.id': event.id,
-                          'discord.error.code': error.code,
-                          'discord.error.message': error.message,
-                        },
-                      );
-                      throw wrapped;
-                    }
-                    case DiscordErrorCode.UnknownChannel:
-                    case DiscordErrorCode.MissingAccess:
-                    case DiscordErrorCode.MissingPermissions:
-                      return getConfessionErrorMessage(error.code, {
-                        label: confession.channel.label,
-                        confessionId: confession.confessionId,
-                        channel: ConfessionChannel.Confession,
-                        status: 'resent',
-                      });
-                    default:
-                      break;
-                  }
-                throw error;
+          try {
+            const message = await DiscordClient.ENV.createMessage(
+              confession.channelId,
+              createConfessionPayload(confession),
+              `${eventId}:post`,
+            );
+            logger.info('confession resent', {
+              'discord.message.id': message.id,
+              'discord.message.channel.id': message.channel_id,
+              'discord.message.timestamp': message.timestamp,
+            });
+            return null;
+          } catch (error) {
+            if (error instanceof DiscordError)
+              switch (error.code) {
+                case DiscordErrorCode.InvalidFormBody: {
+                  const wrapped = new NonRetriableError(
+                    'discord rejected createMessage nonce payload',
+                    { cause: error },
+                  );
+                  logger.error('discord nonce validation failed in process-confession', wrapped, {
+                    'inngest.event.id': eventId,
+                    'discord.error.code': error.code,
+                    'discord.error.message': error.message,
+                  });
+                  throw wrapped;
+                }
+                case DiscordErrorCode.UnknownChannel:
+                case DiscordErrorCode.MissingAccess:
+                case DiscordErrorCode.MissingPermissions:
+                  return getConfessionErrorMessage(error.code, {
+                    label: confession.channel.label,
+                    confessionId: confession.confessionId,
+                    channel: ConfessionChannel.Confession,
+                    status: 'resent',
+                  });
+                default:
+                  break;
               }
-            }),
-        );
-        if (result !== null) await sendFailureFollowUp(result);
+            throw error;
+          }
+        });
       }
 
       if (typeof event.data.moderatorId === 'undefined') {
         // Submit confession.
-        const result = await step.run(
+        const logResult = await step.run(
           { id: 'log-confession', name: 'Log Confession' },
           async () =>
             await tracer.asyncSpan('log-confession-step', async () => {
-              const confession = await fetchConfessionForProcess(db, BigInt(event.data.internalId));
+              const confession = await fetchConfessionForProcess(db, BigInt(internalId));
               if (confession === null) {
                 const error = new NonRetriableError('confession not found');
                 logger.error('confession not found for log', error, {
-                  'confession.internal.id': event.data.internalId,
+                  'confession.internal.id': internalId,
                 });
                 throw error;
               }
@@ -304,7 +286,7 @@ export const processConfession = inngest.createFunction(
                   const message = await DiscordClient.ENV.createMessage(
                     confession.channel.logChannelId,
                     createLogPayload(confession, mode),
-                    `${event.id}:log`,
+                    `${eventId}:log`,
                   );
                   logger.info('confession logged', {
                     'discord.message.id': message.id,
@@ -324,7 +306,7 @@ export const processConfession = inngest.createFunction(
                 const message = await DiscordClient.ENV.createMessage(
                   confession.channel.logChannelId,
                   createLogPayload(confession, mode, `attachment://${uploadedAttachment.filename}`),
-                  `${event.id}:log`,
+                  `${eventId}:log`,
                   [
                     {
                       contentType: uploadedAttachment.contentType ?? void 0,
@@ -359,7 +341,7 @@ export const processConfession = inngest.createFunction(
                         'discord nonce validation failed in process-confession',
                         wrapped,
                         {
-                          'inngest.event.id': event.id,
+                          'inngest.event.id': eventId,
                           'discord.error.code': error.code,
                           'discord.error.message': error.message,
                         },
@@ -391,9 +373,13 @@ export const processConfession = inngest.createFunction(
             }),
         );
 
-        switch (result.type) {
+        switch (logResult.type) {
           case ProcessLogResultType.Failure:
-            await sendFailureFollowUp(result.failureMessage);
+            await step.run(
+              { id: 'send-failure-follow-up', name: 'Send Failure Follow-up' },
+              async () =>
+                await sendFollowUp(applicationId, interactionToken, logResult.failureMessage),
+            );
             return;
           case ProcessLogResultType.Success:
             break;
@@ -401,36 +387,50 @@ export const processConfession = inngest.createFunction(
             UnreachableCodeError.throwNew();
         }
 
-        if (result.durableAttachment !== null) {
-          const { durableAttachment } = result;
+        if (logResult.durableAttachment !== null) {
+          const { durableAttachment } = logResult;
           await step.run(
             { id: 'upsert-durable-attachment', name: 'Upsert Durable Attachment' },
             async () =>
-              await upsertDurableAttachmentData(db, BigInt(result.attachmentId), durableAttachment),
+              await upsertDurableAttachmentData(
+                db,
+                BigInt(logResult.attachmentId),
+                durableAttachment,
+              ),
           );
           await step.run(
             { id: 'link-durable-attachment', name: 'Link Durable Attachment' },
             async () =>
               await linkDurableAttachmentData(
                 db,
-                BigInt(result.attachmentId),
+                BigInt(logResult.attachmentId),
                 BigInt(durableAttachment.id),
               ),
           );
         }
 
-        if (result.isApproved) await postSubmittedConfession();
+        if (logResult.isApproved) {
+          const postResult = await step.run(
+            { id: 'post-confession', name: 'Post Confession' },
+            async () => await postSubmittedConfession(internalId, eventId),
+          );
+          if (postResult !== null)
+            await step.run(
+              { id: 'send-failure-follow-up', name: 'Send Failure Follow-up' },
+              async () => await sendFollowUp(applicationId, interactionToken, postResult),
+            );
+        }
       } else {
         const { moderatorId } = event.data;
-        const result = await step.run(
+        const logResendResult = await step.run(
           { id: 'log-resent-confession', name: 'Log Resent Confession' },
           async () =>
             await tracer.asyncSpan('log-resent-confession-step', async () => {
-              const confession = await fetchConfessionForResend(db, BigInt(event.data.internalId));
+              const confession = await fetchConfessionForResend(db, BigInt(internalId));
               if (confession === null) {
                 const error = new NonRetriableError('confession not found');
                 logger.error('confession not found for log resend', error, {
-                  'confession.internal.id': event.data.internalId,
+                  'confession.internal.id': internalId,
                 });
                 throw error;
               }
@@ -438,7 +438,7 @@ export const processConfession = inngest.createFunction(
               if (confession.approvedAt === null) {
                 const error = new NonRetriableError('confession not approved');
                 logger.error('confession not approved for log resend', error, {
-                  'confession.internal.id': event.data.internalId,
+                  'confession.internal.id': internalId,
                 });
                 throw error;
               }
@@ -458,7 +458,7 @@ export const processConfession = inngest.createFunction(
                     type: LogPayloadType.Resent,
                     moderatorId: BigInt(moderatorId),
                   }),
-                  `${event.id}:log`,
+                  `${eventId}:log`,
                 );
                 logger.info('resent confession logged', {
                   'discord.message.id': message.id,
@@ -478,7 +478,7 @@ export const processConfession = inngest.createFunction(
                         'discord nonce validation failed in process-confession',
                         wrapped,
                         {
-                          'inngest.event.id': event.id,
+                          'inngest.event.id': eventId,
                           'discord.error.code': error.code,
                           'discord.error.message': error.message,
                         },
@@ -505,8 +505,22 @@ export const processConfession = inngest.createFunction(
             }),
         );
 
-        if (result === null) await postResentConfession();
-        else await sendFailureFollowUp(result);
+        if (logResendResult === null) {
+          const resendResult = await step.run(
+            { id: 'resend-confession', name: 'Resend Confession' },
+            async () => await postResentConfession(internalId, eventId),
+          );
+          if (resendResult !== null)
+            await step.run(
+              { id: 'send-failure-follow-up', name: 'Send Failure Follow-up' },
+              async () => await sendFollowUp(applicationId, interactionToken, resendResult),
+            );
+        } else {
+          await step.run(
+            { id: 'send-failure-follow-up', name: 'Send Failure Follow-up' },
+            async () => await sendFollowUp(applicationId, interactionToken, logResendResult),
+          );
+        }
       }
     }),
 );
