@@ -1,14 +1,19 @@
-import { strictEqual } from 'node:assert/strict';
+import assert, { strictEqual } from 'node:assert/strict';
 
 import { and, eq } from 'drizzle-orm';
 import { waitUntil } from '@vercel/functions';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { channel, confession, ephemeralAttachment } from '$lib/server/database/models';
+import {
+  channel,
+  confession,
+  durableAttachment,
+  ephemeralAttachment,
+} from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
-import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
+import { ConfessionProcessEvent } from '$lib/server/inngest/schema';
 
 import { assertOptional } from '$lib/assert';
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
@@ -122,11 +127,16 @@ async function resendConfession(
           logChannelId: channel.logChannelId,
           label: channel.label,
           approvedAt: confession.approvedAt,
-          retrievedAttachment: { attachmentUrl: ephemeralAttachment.url },
+          attachmentId: confession.attachmentId,
+          durableAttachmentId: durableAttachment.id,
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
         .leftJoin(ephemeralAttachment, eq(confession.attachmentId, ephemeralAttachment.id))
+        .leftJoin(
+          durableAttachment,
+          eq(ephemeralAttachment.durableAttachmentId, durableAttachment.id),
+        )
         .where(
           and(
             eq(confession.channelId, BigInt(confessionChannelId)),
@@ -147,21 +157,23 @@ async function resendConfession(
     });
 
     if (typeof result === 'undefined') ConfessionNotFoundResendError.throwNew(confessionId);
-    const { internalId, approvedAt, logChannelId, retrievedAttachment } = result;
+    const { internalId, approvedAt, logChannelId, attachmentId, durableAttachmentId } = result;
 
     if (approvedAt === null) PendingApprovalResendError.throwNew(confessionId);
 
     if (logChannelId === null) MissingLogChannelResendError.throwNew();
 
-    // Check permission if attachment exists
-    if (retrievedAttachment !== null && !hasAllPermissions(permission, ATTACH_FILES))
-      InsufficientPermissionsResendError.throwNew(permission);
+    if (attachmentId !== null) {
+      assert(durableAttachmentId !== null);
+      if (!hasAllPermissions(permission, ATTACH_FILES))
+        InsufficientPermissionsResendError.throwNew(permission);
+    }
 
-    // Emit Inngest event for async processing (fans out to post-confession + log-confession)
+    // Emit Inngest event for async processing
     waitUntil(
       inngest
         .send(
-          ConfessionSubmitEvent.create({
+          ConfessionProcessEvent.create({
             applicationId,
             interactionToken,
             interactionId,

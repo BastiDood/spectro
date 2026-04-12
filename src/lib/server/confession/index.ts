@@ -17,8 +17,8 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type {
   SerializedAttachment,
+  SerializedConfessionForProcess,
   SerializedConfessionForDispatch,
-  SerializedConfessionForLog,
   SerializedConfessionForResend,
 } from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -137,7 +137,10 @@ function deserializeAttachment(attachment: SerializedAttachment | null) {
 
 /** Create a confession message payload for the public confession channel */
 export function createConfessionPayload(
-  confession: SerializedConfessionForDispatch | SerializedConfessionForResend,
+  confession:
+    | SerializedConfessionForDispatch
+    | SerializedConfessionForProcess
+    | SerializedConfessionForResend,
   timestampOverride?: Date,
 ) {
   const attachment = deserializeAttachment(confession.attachment);
@@ -159,13 +162,13 @@ export function createConfessionPayload(
   };
 
   if (attachment !== null)
-    if (attachment.content_type?.includes('image') === true)
-      embed.image = {
-        url: attachment.url,
-        height: attachment.height ?? void 0,
-        width: attachment.width ?? void 0,
-      };
-    else embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
+    if (attachment.content_type?.includes('image') === true) {
+      embed.image = { url: attachment.url };
+      if (typeof attachment.height === 'number') embed.image.height = attachment.height;
+      if (typeof attachment.width === 'number') embed.image.width = attachment.width;
+    } else {
+      embed.fields = [{ name: 'Attachment', value: attachment.url, inline: true }];
+    }
 
   const params: CreateMessage = {
     allowed_mentions: { parse: [AllowedMentionType.Users] },
@@ -184,7 +187,7 @@ export function createConfessionPayload(
 
 /** Create a log message payload for the moderator log channel */
 export function createLogPayload(
-  confession: SerializedConfessionForLog | SerializedConfessionForResend,
+  confession: SerializedConfessionForProcess | SerializedConfessionForResend,
   mode: LogPayloadMode,
 ) {
   const attachment = deserializeAttachment(confession.attachment);
@@ -256,6 +259,102 @@ export function createLogPayload(
   };
 
   // Add approval buttons for pending mode
+  if (mode.type === LogPayloadType.Pending) {
+    const customId = mode.internalId.toString();
+    params.components = [
+      {
+        type: MessageComponentType.ActionRow,
+        components: [
+          {
+            type: MessageComponentType.Button,
+            style: MessageComponentButtonStyle.Success,
+            label: 'Publish',
+            emoji: { name: '✒️' },
+            custom_id: `publish:${customId}`,
+          },
+          {
+            type: MessageComponentType.Button,
+            style: MessageComponentButtonStyle.Danger,
+            label: 'Delete',
+            emoji: { name: '🗑️' },
+            custom_id: `delete:${customId}`,
+          },
+        ],
+      },
+    ];
+  }
+
+  return params;
+}
+
+export function createLogUploadPayload(
+  confession: SerializedConfessionForProcess,
+  mode: LogPayloadMode,
+) {
+  const attachment = deserializeAttachment(confession.attachment);
+
+  const fields: EmbedField[] = [
+    { name: 'Authored by', value: `||<@${confession.authorId}>||`, inline: true },
+  ];
+
+  if (mode.type === LogPayloadType.Resent)
+    fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
+
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let image: EmbedImage | undefined;
+  if (attachment !== null && attachment.content_type?.startsWith('image/')) {
+    image = { url: `attachment://${attachment.filename}` };
+    if (typeof attachment.height === 'number') image.height = attachment.height;
+    if (typeof attachment.width === 'number') image.width = attachment.width;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let color: Color;
+  switch (mode.type) {
+    case LogPayloadType.Pending:
+      color = Color.Pending;
+      break;
+    case LogPayloadType.Approved:
+      color = Color.Success;
+      break;
+    case LogPayloadType.Resent:
+      color = Color.Replay;
+      break;
+    default:
+      UnreachableCodeError.throwNew();
+  }
+
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let timestamp: string;
+  switch (mode.type) {
+    case LogPayloadType.Resent:
+      timestamp = new Date().toISOString();
+      break;
+    case LogPayloadType.Approved:
+    case LogPayloadType.Pending:
+      timestamp = confession.createdAt;
+      break;
+    default:
+      UnreachableCodeError.throwNew();
+  }
+
+  const params: CreateMessage = {
+    flags: MessageFlags.SuppressNotifications,
+    allowed_mentions: { parse: [AllowedMentionType.Users] },
+    embeds: [
+      {
+        type: EmbedType.Rich,
+        title: `${confession.channel.label} #${confession.confessionId}`,
+        color,
+        timestamp,
+        description: confession.content,
+        footer: { text: 'Spectro Logs', icon_url: APP_ICON_URL },
+        fields,
+        image,
+      },
+    ],
+  };
+
   if (mode.type === LogPayloadType.Pending) {
     const customId = mode.internalId.toString();
     params.components = [

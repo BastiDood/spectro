@@ -14,13 +14,19 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { channel, confession, ephemeralAttachment } from '$lib/server/database/models';
+import {
+  channel,
+  confession,
+  durableAttachment,
+  ephemeralAttachment,
+} from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/schema';
 
 import { hasAllPermissions } from './util';
 import { MalformedCustomIdFormat } from './errors';
+import { assertSingle } from '$lib/assert';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
 const logger = Logger.byName(SERVICE_NAME);
@@ -144,26 +150,33 @@ async function submitVerdict(
         embedAttachment = await tracer.asyncSpan('select-attachment', async span => {
           span.setAttribute('attachment.id', attachmentId.toString());
 
-          const [retrieved, ...others] = await tx
+          const retrieved = await tx
             .select({
-              filename: ephemeralAttachment.filename,
-              contentType: ephemeralAttachment.contentType,
-              url: ephemeralAttachment.url,
+              durableAttachmentId: durableAttachment.id,
+              filename: durableAttachment.filename,
+              contentType: durableAttachment.contentType,
+              url: durableAttachment.url,
+              height: durableAttachment.height,
+              width: durableAttachment.width,
             })
             .from(ephemeralAttachment)
-            .where(eq(ephemeralAttachment.id, attachmentId));
-          strictEqual(others.length, 0);
-          assert(typeof retrieved !== 'undefined');
+            .leftJoin(
+              durableAttachment,
+              eq(ephemeralAttachment.durableAttachmentId, durableAttachment.id),
+            )
+            .where(eq(ephemeralAttachment.id, attachmentId))
+            .then(assertSingle);
 
-          logger.debug('attachment fetched', {
-            'attachment.filename': retrieved.filename,
-          });
+          assert(retrieved.durableAttachmentId !== null);
+          assert(retrieved.filename !== null);
+          assert(retrieved.url !== null);
+          logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });
 
-          return {
-            filename: retrieved.filename,
-            url: retrieved.url,
-            content_type: retrieved.contentType ?? void 0,
-          };
+          const embed: EmbedAttachment = { filename: retrieved.filename, url: retrieved.url };
+          if (retrieved.contentType !== null) embed.content_type = retrieved.contentType;
+          if (retrieved.height !== null) embed.height = retrieved.height;
+          if (retrieved.width !== null) embed.width = retrieved.width;
+          return embed;
         });
 
       if (disabledAt !== null && disabledAt <= timestamp)
