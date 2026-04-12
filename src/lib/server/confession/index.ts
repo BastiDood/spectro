@@ -2,7 +2,12 @@ import { AllowedMentionType } from '$lib/server/models/discord/allowed-mentions'
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import type { CreateMessage } from '$lib/server/models/discord/message';
 import { DiscordErrorCode } from '$lib/server/models/discord/errors';
-import { type Embed, type EmbedField, EmbedType } from '$lib/server/models/discord/embed';
+import {
+  type Embed,
+  type EmbedField,
+  type EmbedImage,
+  EmbedType,
+} from '$lib/server/models/discord/embed';
 import type { InteractionResponseModal } from '$lib/server/models/discord/interaction-response/modal';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
@@ -184,8 +189,9 @@ export function createConfessionPayload(
 export function createLogPayload(
   confession: SerializedConfessionForProcess | SerializedConfessionForResend,
   mode: LogPayloadMode,
+  durableAttachmentUrl?: string,
 ) {
-  const attachment = deserializeAttachment(confession.attachment);
+  const ephemeralAttachment = deserializeAttachment(confession.attachment);
 
   const fields: EmbedField[] = [
     { name: 'Authored by', value: `||<@${confession.authorId}>||`, inline: true },
@@ -194,7 +200,20 @@ export function createLogPayload(
   if (mode.type === LogPayloadType.Resent)
     fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
 
-  if (attachment !== null) fields.push({ name: 'Attachment', value: attachment.url, inline: true });
+  // eslint-disable-next-line @typescript-eslint/init-declarations
+  let image: EmbedImage | undefined;
+  if (
+    ephemeralAttachment !== null &&
+    typeof durableAttachmentUrl !== 'undefined' &&
+    ephemeralAttachment.content_type?.startsWith('image/')
+  ) {
+    image = { url: durableAttachmentUrl };
+    if (typeof ephemeralAttachment.height === 'number') image.height = ephemeralAttachment.height;
+    if (typeof ephemeralAttachment.width === 'number') image.width = ephemeralAttachment.width;
+  }
+
+  // Regular non-image attachments will be attached literally above the embed.
+  // There is no need to duplicate the attachment reference here.
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
   let color: Color;
@@ -238,6 +257,7 @@ export function createLogPayload(
         description: confession.content,
         footer: { text: 'Spectro Logs', icon_url: APP_ICON_URL },
         fields,
+        image,
       },
     ],
   };

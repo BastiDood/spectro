@@ -1,8 +1,8 @@
-import assert from 'node:assert/strict';
+import assert, { strictEqual } from 'node:assert/strict';
 
 import { NonRetriableError } from 'inngest';
 
-import { assertSingle, UnreachableCodeError } from '$lib/assert';
+import { assertOptional, UnreachableCodeError } from '$lib/assert';
 import {
   ConfessionChannel,
   createConfessionPayload,
@@ -23,6 +23,7 @@ import {
 import { inngest } from '$lib/server/inngest/client';
 import { ConfessionProcessEvent } from '$lib/server/inngest/schema';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
+import type { Message } from '$lib/server/models/discord/message';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -40,6 +41,52 @@ async function downloadAttachment(url: string) {
   const response = await fetch(url);
   if (!response.ok) throw new Error('failed to download attachment');
   return await response.arrayBuffer();
+}
+
+/** Tries to extract from the attachments first, and then falls back to the embed image. */
+function extractDurableAttachmentFromMessage(message: Message) {
+  const attachment = assertOptional(message.attachments ?? []);
+  if (typeof attachment !== 'undefined')
+    return {
+      id: attachment.id,
+      messageId: message.id,
+      channelId: message.channel_id,
+      filename: attachment.filename,
+      contentType: attachment.content_type ?? null,
+      url: attachment.url,
+      proxyUrl: attachment.proxy_url,
+      height: attachment.height ?? null,
+      width: attachment.width ?? null,
+    };
+
+  // Fall back to parsing from the embed image.
+  const embed = assertOptional(message.embeds ?? []);
+  if (typeof embed === 'undefined') return null;
+
+  assert(typeof embed.image !== 'undefined');
+  assert(typeof embed.image.proxy_url !== 'undefined');
+
+  // => /attachments/CHANNEL_ID/ATTACHMENT_ID/FILENAME.ext
+  const url = new URL(embed.image.url);
+  const [root, namespace, channelId, attachmentId, filename, ...rest] = url.pathname.split('/');
+  strictEqual(rest.length, 0);
+  strictEqual(root, '');
+  assert(typeof filename !== 'undefined');
+  assert(typeof attachmentId !== 'undefined');
+  strictEqual(channelId, message.channel_id);
+  strictEqual(namespace, 'attachments');
+
+  return {
+    id: attachmentId,
+    messageId: message.id,
+    channelId: message.channel_id,
+    filename,
+    url: embed.image.url,
+    proxyUrl: embed.image.proxy_url,
+    contentType: embed.image.content_type ?? null,
+    height: embed.image.height ?? null,
+    width: embed.image.width ?? null,
+  };
 }
 
 export const processConfession = inngest.createFunction(
@@ -276,7 +323,7 @@ export const processConfession = inngest.createFunction(
                 const data = await downloadAttachment(uploadedAttachment.url);
                 const message = await DiscordClient.ENV.createMessage(
                   confession.channel.logChannelId,
-                  createLogPayload(confession, mode),
+                  createLogPayload(confession, mode, `attachment://${uploadedAttachment.filename}`),
                   `${event.id}:log`,
                   [
                     {
@@ -286,7 +333,7 @@ export const processConfession = inngest.createFunction(
                     },
                   ],
                 );
-                const durableAttachment = assertSingle(message.attachments ?? []);
+                const durableAttachment = extractDurableAttachmentFromMessage(message);
 
                 logger.info('confession logged', {
                   'discord.message.id': message.id,
@@ -297,17 +344,7 @@ export const processConfession = inngest.createFunction(
                 return {
                   type: ProcessLogResultType.Success,
                   attachmentId: uploadedAttachment.id,
-                  durableAttachment: {
-                    id: durableAttachment.id,
-                    messageId: message.id,
-                    channelId: message.channel_id,
-                    filename: durableAttachment.filename,
-                    contentType: durableAttachment.content_type ?? null,
-                    url: durableAttachment.url,
-                    proxyUrl: durableAttachment.proxy_url,
-                    height: durableAttachment.height ?? null,
-                    width: durableAttachment.width ?? null,
-                  },
+                  durableAttachment,
                   isApproved: confession.approvedAt !== null,
                 } as const;
               } catch (error) {
@@ -365,15 +402,11 @@ export const processConfession = inngest.createFunction(
         }
 
         if (result.durableAttachment !== null) {
-          assert(result.attachmentId !== null);
+          const { durableAttachment } = result;
           await step.run(
             { id: 'upsert-durable-attachment', name: 'Upsert Durable Attachment' },
             async () =>
-              await upsertDurableAttachmentData(
-                db,
-                BigInt(result.attachmentId),
-                result.durableAttachment,
-              ),
+              await upsertDurableAttachmentData(db, BigInt(result.attachmentId), durableAttachment),
           );
           await step.run(
             { id: 'link-durable-attachment', name: 'Link Durable Attachment' },
@@ -381,7 +414,7 @@ export const processConfession = inngest.createFunction(
               await linkDurableAttachmentData(
                 db,
                 BigInt(result.attachmentId),
-                BigInt(result.durableAttachment.id),
+                BigInt(durableAttachment.id),
               ),
           );
         }
