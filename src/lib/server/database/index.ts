@@ -1,4 +1,4 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import process from 'node:process';
 
 import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
@@ -7,7 +7,7 @@ import { Pool as NeonPool } from '@neondatabase/serverless';
 import { Pool as PgPool } from 'pg';
 import { eq, sql } from 'drizzle-orm';
 
-import { assertOptional, UnreachableCodeError } from '$lib/assert';
+import { assertOptional, assertSingle, UnreachableCodeError } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { Logger } from '$lib/server/telemetry/logger';
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
@@ -56,25 +56,6 @@ export const db = init();
 export type Database = typeof db;
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type Interface = Database | Transaction;
-
-const CONFESSION_CREATED_AT = sql.raw(schema.confession.createdAt.name);
-const CONFESSION_CHANNEL_ID = sql.raw(schema.confession.channelId.name);
-const CONFESSION_AUTHOR_ID = sql.raw(schema.confession.authorId.name);
-const CONFESSION_CONFESSION_ID = sql.raw(schema.confession.confessionId.name);
-const CONFESSION_CONTENT = sql.raw(schema.confession.content.name);
-const CONFESSION_APPROVED_AT = sql.raw(schema.confession.approvedAt.name);
-const CONFESSION_PARENT_MESSAGE_ID = sql.raw(schema.confession.parentMessageId.name);
-const CONFESSION_ATTACHMENT_ID = sql.raw(schema.confession.attachmentId.name);
-
-const GUILD_LAST_CONFESSION_ID = sql.raw(schema.guild.lastConfessionId.name);
-
-function updateLastConfession(db: Interface, guildId: bigint) {
-  return db
-    .update(schema.guild)
-    .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
-    .where(eq(schema.guild.id, guildId))
-    .returning({ confessionId: schema.guild.lastConfessionId });
-}
 
 export type InsertableAttachment = Pick<
   Attachment,
@@ -194,11 +175,11 @@ export async function linkDurableAttachmentData(
 
 export async function insertConfession(
   db: Transaction,
-  timestamp: Date,
+  createdAt: Date,
   guildId: bigint,
   channelId: bigint,
   authorId: bigint,
-  description: string,
+  content: string,
   approvedAt: Date | null,
   parentMessageId: bigint | null,
   attachment: InsertableAttachment | null,
@@ -216,29 +197,34 @@ export async function insertConfession(
       await insertAttachmentData(db, attachment);
     }
 
-    const guild = updateLastConfession(db, guildId);
-    const {
-      rows: [result, ...otherResults],
-    } = await db.execute(
-      sql`WITH _guild AS ${guild} INSERT INTO ${schema.confession} (${CONFESSION_CREATED_AT}, ${CONFESSION_CHANNEL_ID}, ${CONFESSION_AUTHOR_ID}, ${CONFESSION_CONFESSION_ID}, ${CONFESSION_CONTENT}, ${CONFESSION_APPROVED_AT}, ${CONFESSION_PARENT_MESSAGE_ID}, ${CONFESSION_ATTACHMENT_ID}) SELECT ${timestamp}, ${channelId}, ${authorId}, _guild.${GUILD_LAST_CONFESSION_ID}, ${description}, ${approvedAt}, ${parentMessageId}, ${attachmentId} FROM _guild RETURNING ${schema.confession.internalId} _internal_id, ${schema.confession.confessionId} _confession_id`,
-    );
+    const { confessionId } = await db
+      .update(schema.guild)
+      .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
+      .where(eq(schema.guild.id, guildId))
+      .returning({ confessionId: schema.guild.lastConfessionId })
+      .then(assertSingle);
 
-    strictEqual(otherResults.length, 0);
-    assert(typeof result !== 'undefined');
-
-    const { _internal_id: internalId, _confession_id: confessionId } = result;
-    assert(typeof internalId === 'string');
-    assert(typeof confessionId === 'string');
+    const { internalId } = await db
+      .insert(schema.confession)
+      .values({
+        createdAt,
+        channelId,
+        authorId,
+        confessionId,
+        content,
+        approvedAt,
+        parentMessageId,
+        attachmentId,
+      })
+      .returning({ internalId: schema.confession.internalId })
+      .then(assertSingle);
 
     logger.debug('confession inserted', {
-      'internal.id': internalId,
-      'confession.id': confessionId,
+      'internal.id': internalId.toString(),
+      'confession.id': confessionId.toString(),
     });
 
-    return {
-      internalId: BigInt(internalId),
-      confessionId: BigInt(confessionId),
-    };
+    return { internalId, confessionId };
   });
 }
 
