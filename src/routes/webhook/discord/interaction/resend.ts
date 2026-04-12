@@ -5,7 +5,7 @@ import { waitUntil } from '@vercel/functions';
 
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { attachment, channel, confession } from '$lib/server/database/models';
+import { channel, confession, ephemeralAttachment } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 import { ConfessionSubmitEvent } from '$lib/server/inngest/schema';
@@ -122,11 +122,11 @@ async function resendConfession(
           logChannelId: channel.logChannelId,
           label: channel.label,
           approvedAt: confession.approvedAt,
-          retrievedAttachment: { attachmentUrl: attachment.url },
+          retrievedAttachment: { attachmentUrl: ephemeralAttachment.url },
         })
         .from(confession)
         .innerJoin(channel, eq(confession.channelId, channel.id))
-        .leftJoin(attachment, eq(confession.attachmentId, attachment.id))
+        .leftJoin(ephemeralAttachment, eq(confession.attachmentId, ephemeralAttachment.id))
         .where(
           and(
             eq(confession.channelId, BigInt(confessionChannelId)),

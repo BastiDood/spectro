@@ -84,7 +84,7 @@ async function insertAttachmentData(db: Interface, attachment: InsertableAttachm
   return await tracer.asyncSpan('insert-attachment', async span => {
     span.setAttribute('attachment.id', attachment.id);
 
-    const { rowCount } = await db.insert(schema.attachment).values({
+    const { rowCount } = await db.insert(schema.ephemeralAttachment).values({
       id: BigInt(attachment.id),
       filename: attachment.filename,
       contentType: attachment.content_type,
@@ -292,15 +292,18 @@ export async function fetchConfessionForDispatch(db: Interface, confessionIntern
         parentMessageId: schema.confession.parentMessageId,
         channelLabel: schema.channel.label,
         channelColor: schema.channel.color,
-        attachmentId: schema.attachment.id,
-        attachmentFilename: schema.attachment.filename,
-        attachmentContentType: schema.attachment.contentType,
-        attachmentUrl: schema.attachment.url,
-        attachmentProxyUrl: schema.attachment.proxyUrl,
+        attachmentId: schema.ephemeralAttachment.id,
+        attachmentFilename: schema.ephemeralAttachment.filename,
+        attachmentContentType: schema.ephemeralAttachment.contentType,
+        attachmentUrl: schema.ephemeralAttachment.url,
+        attachmentProxyUrl: schema.ephemeralAttachment.proxyUrl,
       })
       .from(schema.confession)
       .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-      .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+      .leftJoin(
+        schema.ephemeralAttachment,
+        eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+      )
       .where(eq(schema.confession.internalId, confessionInternalId))
       .limit(1)
       .then(assertOptional);
@@ -361,15 +364,18 @@ export async function fetchConfessionForLog(db: Interface, confessionInternalId:
         channelLabel: schema.channel.label,
         channelLogChannelId: schema.channel.logChannelId,
         channelIsApprovalRequired: schema.channel.isApprovalRequired,
-        attachmentId: schema.attachment.id,
-        attachmentFilename: schema.attachment.filename,
-        attachmentContentType: schema.attachment.contentType,
-        attachmentUrl: schema.attachment.url,
-        attachmentProxyUrl: schema.attachment.proxyUrl,
+        attachmentId: schema.ephemeralAttachment.id,
+        attachmentFilename: schema.ephemeralAttachment.filename,
+        attachmentContentType: schema.ephemeralAttachment.contentType,
+        attachmentUrl: schema.ephemeralAttachment.url,
+        attachmentProxyUrl: schema.ephemeralAttachment.proxyUrl,
       })
       .from(schema.confession)
       .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-      .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+      .leftJoin(
+        schema.ephemeralAttachment,
+        eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+      )
       .where(eq(schema.confession.internalId, confessionInternalId))
       .limit(1)
       .then(assertOptional);
@@ -432,15 +438,18 @@ export async function fetchConfessionForResend(db: Interface, confessionInternal
         channelLabel: schema.channel.label,
         channelColor: schema.channel.color,
         channelLogChannelId: schema.channel.logChannelId,
-        attachmentId: schema.attachment.id,
-        attachmentFilename: schema.attachment.filename,
-        attachmentContentType: schema.attachment.contentType,
-        attachmentUrl: schema.attachment.url,
-        attachmentProxyUrl: schema.attachment.proxyUrl,
+        attachmentId: schema.ephemeralAttachment.id,
+        attachmentFilename: schema.ephemeralAttachment.filename,
+        attachmentContentType: schema.ephemeralAttachment.contentType,
+        attachmentUrl: schema.ephemeralAttachment.url,
+        attachmentProxyUrl: schema.ephemeralAttachment.proxyUrl,
       })
       .from(schema.confession)
       .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-      .leftJoin(schema.attachment, eq(schema.confession.attachmentId, schema.attachment.id))
+      .leftJoin(
+        schema.ephemeralAttachment,
+        eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+      )
       .where(eq(schema.confession.internalId, confessionInternalId))
       .limit(1)
       .then(assertOptional);

@@ -14,7 +14,7 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { attachment, channel, confession } from '$lib/server/database/models';
+import { channel, confession, ephemeralAttachment } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/schema';
@@ -146,12 +146,12 @@ async function submitVerdict(
 
           const [retrieved, ...others] = await tx
             .select({
-              filename: attachment.filename,
-              contentType: attachment.contentType,
-              url: attachment.url,
+              filename: ephemeralAttachment.filename,
+              contentType: ephemeralAttachment.contentType,
+              url: ephemeralAttachment.url,
             })
-            .from(attachment)
-            .where(eq(attachment.id, attachmentId));
+            .from(ephemeralAttachment)
+            .where(eq(ephemeralAttachment.id, attachmentId));
           strictEqual(others.length, 0);
           assert(typeof retrieved !== 'undefined');
 

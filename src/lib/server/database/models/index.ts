@@ -31,7 +31,7 @@ export const channel = app.table('channel', {
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
-export const attachment = app.table('attachment_data', {
+export const ephemeralAttachment = app.table('ephemeral_attachment', {
   id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
   filename: text('filename').notNull(),
   contentType: text('content_type'),
@@ -39,8 +39,8 @@ export const attachment = app.table('attachment_data', {
   proxyUrl: text('proxy_url').notNull(),
 });
 
-export type AttachmentData = typeof attachment.$inferSelect;
-export type NewAttachmentData = typeof attachment.$inferInsert;
+export type EphemeralAttachmentData = typeof ephemeralAttachment.$inferSelect;
+export type NewEphemeralAttachmentData = typeof ephemeralAttachment.$inferInsert;
 
 export const confession = app.table(
   'confession',
@@ -61,7 +61,9 @@ export const confession = app.table(
     approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),
     authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
     content: text('content').notNull(),
-    attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(() => attachment.id),
+    attachmentId: bigint('attachment_id', { mode: 'bigint' }).references(
+      () => ephemeralAttachment.id,
+    ),
   },
   ({ confessionId, channelId, attachmentId }) => [
     uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId),
@@ -74,5 +76,8 @@ export type NewConfession = typeof confession.$inferInsert;
 
 export const confessionRelations = relations(confession, ({ one }) => ({
   channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
-  attachment: one(attachment, { fields: [confession.attachmentId], references: [attachment.id] }),
+  attachment: one(ephemeralAttachment, {
+    fields: [confession.attachmentId],
+    references: [ephemeralAttachment.id],
+  }),
 }));
