@@ -64,6 +64,13 @@
       "when": 1775986321952,
       "tag": "0008_ephemeral-attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775999713116,
+      "tag": "0009_durable-attachments",
+      "breakpoints": true
     }
   ]
 }
