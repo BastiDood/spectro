@@ -2,7 +2,7 @@ import { array, type InferOutput, object, optional } from 'valibot';
 
 import type { AllowedMentions } from '$lib/server/models/discord/allowed-mentions';
 import { Attachment } from '$lib/server/models/discord/attachment';
-import type { Embed } from '$lib/server/models/discord/embed';
+import { Embed } from '$lib/server/models/discord/embed';
 
 import { MessageBase, MessageFlags } from './base';
 import type { MessageComponent } from './component';
@@ -15,6 +15,7 @@ import type { MessageReference } from './reference';
 export const Message = object({
   ...MessageBase.entries,
   attachments: optional(array(Attachment)),
+  embeds: optional(array(Embed)),
 });
 
 export type Message = InferOutput<typeof Message>;

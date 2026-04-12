@@ -39,6 +39,7 @@ export const EmbedImage = object({
   proxy_url: optional(Url),
   width: optional(pipe(number(), safeInteger(), minValue(0))),
   height: optional(pipe(number(), safeInteger(), minValue(0))),
+  content_type: optional(string()),
 });
 
 export type EmbedImage = InferOutput<typeof EmbedImage>;
