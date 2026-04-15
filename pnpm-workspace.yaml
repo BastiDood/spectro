@@ -4,6 +4,9 @@ engineStrict: true
 
 minimumReleaseAge: 720 # 1 Day
 
+minimumReleaseAgeExclude:
+  - prettier@3.8.3
+
 onlyBuiltDependencies:
   - esbuild
   - protobufjs
