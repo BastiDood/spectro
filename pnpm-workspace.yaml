@@ -10,7 +10,6 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   '@inngest/ai': patches/@inngest__ai.patch
-  '@neondatabase/serverless': patches/@neondatabase__serverless.patch
 
 strictDepBuilds: true
 
