@@ -263,7 +263,7 @@ async function submitVerdict(
                   interactionId,
                   internalId: internalId.toString(),
                 },
-                { ts: timestamp.valueOf() },
+                { id: interactionId, ts: timestamp.valueOf() },
               ),
             )
             .then(({ ids }) => logger.debug('inngest event emitted', { 'inngest.events.id': ids })),

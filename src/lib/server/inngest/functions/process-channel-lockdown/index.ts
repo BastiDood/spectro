@@ -17,7 +17,6 @@ export const processChannelLockdown = inngest.createFunction(
   {
     id: 'discord/interaction.process-channel-lockdown',
     name: 'Process Channel Lockdown',
-    idempotency: 'event.data.interactionId',
     triggers: ChannelLockdownEvent,
   },
   async ({ event, step }) =>

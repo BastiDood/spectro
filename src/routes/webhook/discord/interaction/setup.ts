@@ -87,7 +87,7 @@ export async function handleSetup(
           color,
           isApprovalRequired,
         },
-        { ts: timestamp.valueOf() },
+        { id: interactionId, ts: timestamp.valueOf() },
       ),
     );
 

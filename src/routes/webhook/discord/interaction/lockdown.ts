@@ -33,7 +33,7 @@ export async function handleLockdown(
           interactionToken,
           channelId,
         },
-        { ts: timestamp.valueOf() },
+        { id: interactionId, ts: timestamp.valueOf() },
       ),
     );
     logger.debug('channel lockdown queued', { 'inngest.events.id': ids });

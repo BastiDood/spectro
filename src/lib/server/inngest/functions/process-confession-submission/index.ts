@@ -44,7 +44,6 @@ export const processConfessionSubmission = inngest.createFunction(
   {
     id: 'discord/interaction.process-confession-submission',
     name: 'Process Confession Submission',
-    idempotency: 'event.data.interactionId',
     triggers: ConfessionSubmitEvent,
   },
   async ({ event, step }) =>

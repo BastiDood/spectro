@@ -22,7 +22,6 @@ export const processChannelSetup = inngest.createFunction(
   {
     id: 'discord/interaction.process-channel-setup',
     name: 'Process Channel Setup',
-    idempotency: 'event.data.interactionId',
     triggers: ChannelSetupEvent,
   },
   async ({ event, step }) =>

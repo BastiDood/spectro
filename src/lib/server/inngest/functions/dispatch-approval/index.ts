@@ -23,7 +23,6 @@ export const dispatchApproval = inngest.createFunction(
   {
     id: 'discord/interaction.approve',
     name: 'Dispatch Approved Confession',
-    idempotency: 'event.data.interactionId',
     triggers: ConfessionApprovalEvent,
   },
   async ({ event, step }) =>

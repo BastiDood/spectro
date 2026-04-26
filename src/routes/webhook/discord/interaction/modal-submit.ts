@@ -86,7 +86,7 @@ export async function handleModalSubmit(
           parentMessageId,
           attachment,
         },
-        { ts: timestamp.valueOf() },
+        { id: interactionId, ts: timestamp.valueOf() },
       ),
     );
     logger.debug('confession submission queued', { 'inngest.events.id': ids });

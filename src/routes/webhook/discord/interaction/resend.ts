@@ -48,7 +48,7 @@ export async function handleResend(
           memberPermissions: permission.toString(),
           confessionId: confessionId.toString(),
         },
-        { ts: timestamp.valueOf() },
+        { id: interactionId, ts: timestamp.valueOf() },
       ),
     );
     logger.debug('confession resend queued', { 'inngest.events.id': ids });
