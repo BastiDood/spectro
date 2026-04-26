@@ -192,8 +192,16 @@ async function submitVerdict(
               .where(eq(ephemeralAttachment.id, attachmentId))
               .then(assertSingle);
 
-            if (retrieved.durableAttachmentId === null)
+            if (retrieved.durableAttachmentId === null) {
+              if (!isApproved) {
+                logger.warn('durable attachment missing for rejected confession', {
+                  'attachment.id': attachmentId.toString(),
+                });
+                return null;
+              }
               MissingDurableAttachmentApprovalError.throwNew();
+            }
+
             assert(retrieved.filename !== null);
             assert(retrieved.url !== null);
             logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });
@@ -291,7 +299,10 @@ async function submitVerdict(
 
           await tracer.asyncSpan('delete-confession', async span => {
             span.setAttribute('confession.internal.id', internalId.toString());
-            await tx.delete(confession).where(eq(confession.internalId, internalId));
+            const { rowCount } = await tx
+              .delete(confession)
+              .where(eq(confession.internalId, internalId));
+            strictEqual(rowCount, 1);
             logger.info('confession rejected', { 'confession.id': confessionId.toString() });
           });
 
