@@ -10,7 +10,7 @@ export class UnexpectedRowCountDatabaseError extends Error {
 
   static throwNew(count?: number): never {
     const error = new UnexpectedRowCountDatabaseError(count);
-    logger.error('unexpected row count', error, { count });
+    logger.fatal('unexpected row count', error, { 'error.count': count });
     throw error;
   }
 }

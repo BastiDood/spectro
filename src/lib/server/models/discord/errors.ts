@@ -2,8 +2,10 @@ import { type InferOutput, check, number, object, pipe, safeInteger, string } fr
 
 export const enum DiscordErrorCode {
   UnknownChannel = 10003,
+  UnknownWebhook = 10015,
   MissingAccess = 50001,
   MissingPermissions = 50013,
+  InvalidWebhookToken = 50027,
   InvalidFormBody = 50035,
 }
 

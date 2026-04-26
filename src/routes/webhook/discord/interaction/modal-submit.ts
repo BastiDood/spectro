@@ -1,25 +1,22 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
 import { assertOptional } from '$lib/assert';
-import type { InsertableAttachment } from '$lib/server/database';
+import { hasAllFlags } from '$lib/bits';
+import { inngest } from '$lib/server/inngest/client';
+import { ConfessionSubmitEvent } from '$lib/server/inngest/functions/process-confession-submission/schema';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { ModalComponents } from '$lib/server/models/discord/message/component/modal';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
-import { ATTACH_FILES } from '$lib/server/models/discord/permission';
+import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
-import {
-  submitConfession,
-  ConfessError,
-  InsufficientPermissionsConfessionError,
-} from './confession.util';
-import { hasAllPermissions } from './util';
-
 const SERVICE_NAME = 'webhook.interaction.confess-submit';
+const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 export async function handleModalSubmit(
@@ -38,11 +35,9 @@ export async function handleModalSubmit(
 
     strictEqual(otherComponents.length, 0);
 
-    // Validate disclaimer TextDisplay (read-only, no action needed)
     assert(typeof disclaimerDisplay !== 'undefined');
     strictEqual(disclaimerDisplay.type, MessageComponentType.TextDisplay);
 
-    // Parse content from text input
     assert(typeof contentLabel !== 'undefined');
     strictEqual(contentLabel.type, MessageComponentType.Label);
 
@@ -50,11 +45,9 @@ export async function handleModalSubmit(
     strictEqual(contentComponent.type, MessageComponentType.TextInput);
     assert(typeof contentComponent.value !== 'undefined');
 
-    // Determine if this is a reply (custom_id is the parent message ID) or new confession
     const parentMessageId =
       contentComponent.custom_id === 'content' ? null : contentComponent.custom_id;
 
-    // Parse optional attachment from file upload
     assert(typeof attachmentLabel !== 'undefined');
     strictEqual(attachmentLabel.type, MessageComponentType.Label);
 
@@ -62,55 +55,45 @@ export async function handleModalSubmit(
     strictEqual(attachmentComponent.type, MessageComponentType.FileUpload);
     strictEqual(attachmentComponent.custom_id, 'attachment');
 
+    assert(hasAllFlags(permissions, SEND_MESSAGES));
+
     const attachmentId = assertOptional(attachmentComponent.values ?? []);
-    let attachment: InsertableAttachment | null = null;
+    let attachment = null;
     if (typeof attachmentId !== 'undefined') {
+      assert(hasAllFlags(permissions, ATTACH_FILES));
       assert(typeof resolved?.attachments !== 'undefined');
       const attachmentData = resolved.attachments[attachmentId];
       assert(typeof attachmentData !== 'undefined');
 
-      // Lazy permission check: only validate `ATTACH_FILES` when attachment is present
-      if (!hasAllPermissions(permissions, ATTACH_FILES))
-        InsufficientPermissionsConfessionError.throwNew(permissions);
-
       attachment = {
         id: attachmentData.id,
         filename: attachmentData.filename,
-        content_type: attachmentData.content_type,
+        contentType: attachmentData.content_type ?? null,
         url: attachmentData.url,
-        proxy_url: attachmentData.proxy_url,
+        proxyUrl: attachmentData.proxy_url,
       };
     }
 
-    try {
-      const isApprovalRequired = await submitConfession(
-        timestamp,
-        applicationId,
-        interactionToken,
-        interactionId,
-        permissions,
-        channelId,
-        authorId,
-        contentComponent.value,
-        attachment,
-        parentMessageId,
-      );
-      return {
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          flags: MessageFlags.Ephemeral,
-          content: isApprovalRequired
-            ? 'Your confession has been received and is pending moderator approval.'
-            : 'Your confession has been received.',
+    const { ids } = await inngest.send(
+      ConfessionSubmitEvent.create(
+        {
+          applicationId,
+          interactionId,
+          interactionToken,
+          channelId,
+          authorId,
+          content: contentComponent.value,
+          parentMessageId,
+          attachment,
         },
-      };
-    } catch (error) {
-      if (error instanceof ConfessError)
-        return {
-          type: InteractionResponseType.ChannelMessageWithSource,
-          data: { flags: MessageFlags.Ephemeral, content: error.message },
-        };
-      throw error;
-    }
+        { ts: timestamp.valueOf() },
+      ),
+    );
+    logger.debug('confession submission queued', { 'inngest.events.id': ids });
+
+    return {
+      type: InteractionResponseType.DeferredChannelMessageWithSource,
+      data: { flags: MessageFlags.Ephemeral },
+    };
   });
 }

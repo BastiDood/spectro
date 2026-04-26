@@ -14,7 +14,7 @@ export class UnexpectedApplicationCommandChatInputNameError extends Error {
 
   static throwNew(commandName: string): never {
     const error = new UnexpectedApplicationCommandChatInputNameError(commandName);
-    logger.error('unexpected application command chat input name', error, {
+    logger.fatal('unexpected application command chat input name', error, {
       'error.command.name': commandName,
     });
     throw error;
@@ -29,7 +29,7 @@ export class UnexpectedApplicationCommandMessageNameError extends Error {
 
   static throwNew(commandName: string): never {
     const error = new UnexpectedApplicationCommandMessageNameError(commandName);
-    logger.error('unexpected interaction application command message name', error, {
+    logger.fatal('unexpected interaction application command message name', error, {
       'error.command.name': commandName,
     });
     throw error;
@@ -44,7 +44,7 @@ export class UnexpectedApplicationCommandTypeError extends Error {
 
   static throwNew(commandType: InteractionApplicationCommandType): never {
     const error = new UnexpectedApplicationCommandTypeError(commandType);
-    logger.error('unexpected interaction application command type', error, {
+    logger.fatal('unexpected interaction application command type', error, {
       'error.command.type': commandType,
     });
     throw error;
@@ -59,7 +59,7 @@ export class UnexpectedModalSubmitError extends Error {
 
   static throwNew(customId: string): never {
     const error = new UnexpectedModalSubmitError(customId);
-    logger.error('unexpected modal submit', error, {
+    logger.fatal('unexpected modal submit', error, {
       'error.custom.id': customId,
     });
     throw error;
@@ -74,7 +74,7 @@ export class UnexpectedSetupArgumentError extends Error {
 
   static throwNew(argumentName: string): never {
     const error = new UnexpectedSetupArgumentError(argumentName);
-    logger.error('unexpected setup argument', error, {
+    logger.fatal('unexpected setup argument', error, {
       'error.argument.name': argumentName,
     });
     throw error;
@@ -89,7 +89,7 @@ export class UnexpectedSetupOptionTypeError extends Error {
 
   static throwNew(optionType: InteractionApplicationCommandChatInputOptionType): never {
     const error = new UnexpectedSetupOptionTypeError(optionType);
-    logger.error('unexpected option type encountered', error, {
+    logger.fatal('unexpected option type encountered', error, {
       'error.option.type': optionType,
     });
     throw error;
@@ -104,7 +104,7 @@ export class UnexpectedDiscordErrorCode extends Error {
 
   static throwNew(code: number): never {
     const error = new UnexpectedDiscordErrorCode(code);
-    logger.error('unexpected discord error code', error, {
+    logger.fatal('unexpected discord error code', error, {
       'error.code': code,
     });
     throw error;
@@ -119,7 +119,7 @@ export class UnexpectedMessageComponentButtonStyle extends Error {
 
   static throwNew(style: MessageComponentButtonStyle): never {
     const error = new UnexpectedMessageComponentButtonStyle(style);
-    logger.error('unexpected message component button style', error, {
+    logger.fatal('unexpected message component button style', error, {
       'error.style': style,
     });
     throw error;
@@ -134,7 +134,7 @@ export class MalformedCustomIdFormat extends Error {
 
   static throwNew(key: string): never {
     const error = new MalformedCustomIdFormat(key);
-    logger.error('malformed custom id format', error, {
+    logger.fatal('malformed custom id format', error, {
       'error.key': key,
     });
     throw error;

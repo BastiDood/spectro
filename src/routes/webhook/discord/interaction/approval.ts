@@ -3,6 +3,7 @@ import assert, { strictEqual } from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 import { waitUntil } from '@vercel/functions';
 
+import { hasAllFlags } from '$lib/bits';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import { type Embed, EmbedField, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
@@ -20,11 +21,10 @@ import {
   durableAttachment,
   ephemeralAttachment,
 } from '$lib/server/database/models';
+import { ConfessionApprovalEvent } from '$lib/server/inngest/functions/dispatch-approval/schema';
 import { db } from '$lib/server/database';
 import { inngest } from '$lib/server/inngest/client';
-import { ConfessionApprovalEvent } from '$lib/server/inngest/schema';
 
-import { hasAllPermissions } from './util';
 import { MalformedCustomIdFormat } from './errors';
 import { assertSingle } from '$lib/assert';
 
@@ -45,11 +45,9 @@ class InsufficientPermissionsApprovalError extends ApprovalError {
     this.name = 'InsufficientPermissionsApprovalError';
   }
 
-  static throwNew(permissions: bigint): never {
+  static throwNew(): never {
     const error = new InsufficientPermissionsApprovalError();
-    logger.error('insufficient permissions for approval', error, {
-      'error.permissions': permissions.toString(),
-    });
+    logger.fatal('insufficient permissions for approval', error);
     throw error;
   }
 }
@@ -63,7 +61,7 @@ class DisabledChannelConfessError extends ApprovalError {
 
   static throwNew(disabledAt: Date): never {
     const error = new DisabledChannelConfessError(disabledAt);
-    logger.error('channel disabled for approval', error, {
+    logger.fatal('channel disabled for approval', error, {
       'error.disabled.at': disabledAt.toISOString(),
     });
     throw error;
@@ -79,7 +77,7 @@ class AlreadyApprovedApprovalError extends ApprovalError {
 
   static throwNew(approvedAt: Date): never {
     const error = new AlreadyApprovedApprovalError(approvedAt);
-    logger.error('confession already approved', error, {
+    logger.fatal('confession already approved', error, {
       'error.approved.at': approvedAt.toISOString(),
     });
     throw error;
@@ -94,11 +92,9 @@ class MissingDurableAttachmentApprovalError extends ApprovalError {
     this.name = 'MissingDurableAttachmentApprovalError';
   }
 
-  static throwNew(confessionInternalId: bigint): never {
+  static throwNew(): never {
     const error = new MissingDurableAttachmentApprovalError();
-    logger.error('missing durable attachment for approval', error, {
-      'confession.internal.id': confessionInternalId.toString(),
-    });
+    logger.fatal('missing durable attachment for approval', error);
     throw error;
   }
 }
@@ -128,8 +124,7 @@ async function submitVerdict(
       permissions: permissions.toString(),
     });
 
-    if (!hasAllPermissions(permissions, MANAGE_MESSAGES))
-      InsufficientPermissionsApprovalError.throwNew(permissions);
+    if (!hasAllFlags(permissions, MANAGE_MESSAGES)) InsufficientPermissionsApprovalError.throwNew();
 
     return await db.transaction(async tx => {
       const { approvedAt, disabledAt, authorId, confessionId, label, content, attachmentId } =
@@ -186,7 +181,7 @@ async function submitVerdict(
             .then(assertSingle);
 
           if (retrieved.durableAttachmentId === null)
-            MissingDurableAttachmentApprovalError.throwNew(internalId);
+            MissingDurableAttachmentApprovalError.throwNew();
           assert(retrieved.filename !== null);
           assert(retrieved.url !== null);
           logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });
@@ -261,12 +256,15 @@ async function submitVerdict(
         waitUntil(
           inngest
             .send(
-              ConfessionApprovalEvent.create({
-                applicationId,
-                interactionToken,
-                interactionId,
-                internalId: internalId.toString(),
-              }),
+              ConfessionApprovalEvent.create(
+                {
+                  applicationId,
+                  interactionToken,
+                  interactionId,
+                  internalId: internalId.toString(),
+                },
+                { ts: timestamp.valueOf() },
+              ),
             )
             .then(({ ids }) => logger.debug('inngest event emitted', { 'inngest.events.id': ids })),
         );

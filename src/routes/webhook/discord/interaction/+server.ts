@@ -5,6 +5,7 @@ import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
+import { hasAllFlags } from '$lib/bits';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
@@ -20,7 +21,6 @@ import type { InteractionResponse } from '$lib/server/models/discord/interaction
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { InteractionType } from '$lib/server/models/discord/interaction/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
 
 import { handleApproval } from './approval';
 import { handleConfess } from './confess-modal';
@@ -31,7 +31,6 @@ import { handleLockdown } from './lockdown';
 import { handleReplyModal } from './reply-modal';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
-import { hasAllPermissions } from './util';
 import {
   UnexpectedApplicationCommandChatInputNameError,
   UnexpectedApplicationCommandMessageNameError,
@@ -59,7 +58,7 @@ async function handleInteraction(
               assert(typeof interaction.channel_id !== 'undefined');
               assert(typeof interaction.member?.user !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
-              assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
+              assert(hasAllFlags(interaction.member.permissions, SEND_MESSAGES));
               return handleConfess(interaction.channel_id, interaction.member.user.id);
             case 'help':
               return {
@@ -70,37 +69,40 @@ async function handleInteraction(
               assert(typeof interaction.data.resolved?.channels !== 'undefined');
               assert(typeof interaction.guild_id !== 'undefined');
               assert(typeof interaction.channel_id !== 'undefined');
+              assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member?.permissions !== 'undefined');
-              assert(hasAllPermissions(interaction.member.permissions, MANAGE_CHANNELS));
-              return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                  flags: MessageFlags.Ephemeral,
-                  content: await handleSetup(
-                    interaction.data.resolved.channels,
-                    interaction.guild_id,
-                    interaction.channel_id,
-                    interaction.data.options ?? [],
-                  ),
-                },
-              };
+              assert(hasAllFlags(interaction.member.permissions, MANAGE_CHANNELS));
+              return await handleSetup(
+                timestamp,
+                interaction.application_id,
+                interaction.token,
+                interaction.id,
+                interaction.data.resolved.channels,
+                interaction.guild_id,
+                interaction.channel_id,
+                interaction.member.user.id,
+                interaction.data.options ?? [],
+              );
             case 'lockdown':
               assert(typeof interaction.channel_id !== 'undefined');
+              assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member?.permissions !== 'undefined');
-              assert(hasAllPermissions(interaction.member.permissions, MANAGE_CHANNELS));
-              return {
-                type: InteractionResponseType.ChannelMessageWithSource,
-                data: {
-                  flags: MessageFlags.Ephemeral,
-                  content: await handleLockdown(timestamp, interaction.channel_id),
-                },
-              };
+              assert(hasAllFlags(interaction.member.permissions, MANAGE_CHANNELS));
+              return await handleLockdown(
+                timestamp,
+                interaction.application_id,
+                interaction.token,
+                interaction.id,
+                interaction.channel_id,
+                interaction.member.user.id,
+              );
             case 'resend':
               assert(typeof interaction.channel_id !== 'undefined');
               assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
-              assert(hasAllPermissions(interaction.member.permissions, MANAGE_MESSAGES));
+              assert(hasAllFlags(interaction.member.permissions, MANAGE_MESSAGES));
               return await handleResend(
+                timestamp,
                 interaction.application_id,
                 interaction.token,
                 interaction.id,
@@ -123,7 +125,7 @@ async function handleInteraction(
             case 'Reply Anonymously':
               assert(typeof interaction.channel_id !== 'undefined');
               assert(typeof interaction.member?.permissions !== 'undefined');
-              assert(hasAllPermissions(interaction.member.permissions, SEND_MESSAGES));
+              assert(hasAllFlags(interaction.member.permissions, SEND_MESSAGES));
               return await handleReplyModal(
                 timestamp,
                 interaction.channel_id,

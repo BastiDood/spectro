@@ -11,7 +11,7 @@ export class UnreachableCodeError extends Error {
 
   static throwNew(): never {
     const error = new UnreachableCodeError();
-    logger.error(error.message, error);
+    logger.fatal(error.message, error);
     throw error;
   }
 }
@@ -24,7 +24,7 @@ export class AssertionError extends Error {
 
   static throwNew(message?: string): never {
     const error = new AssertionError(message);
-    logger.error(error.message, error);
+    logger.fatal(error.message, error);
     throw error;
   }
 }
