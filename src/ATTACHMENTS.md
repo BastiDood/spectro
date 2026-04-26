@@ -26,7 +26,7 @@ The active flow is:
 8. When durable metadata is found, it is persisted in `durable_attachment`.
 9. When a durable row was persisted, `ephemeral_attachment.durable_attachment_id` is updated to point at it.
 10. If the confession is already approved, `process-confession-submission` posts the public confession using the durable attachment URL.
-11. If approval is required, the approval interaction later reads the durable attachment synchronously, updates the moderator log message, and only then emits `discord/confession.approve` for the later public dispatch.
+11. If approval is required, the approval interaction later reads the durable attachment synchronously, queues `discord/confession.approve`, and returns an `UpdateMessage` response so Discord updates the moderator log message.
 12. Resend also reads from the durable attachment only; it does not redownload or reupload the file.
 
 The key design point is that the moderator log message is the persistence anchor for the file artifact.
@@ -163,9 +163,9 @@ In the current design, `process-confession-submission` attempts to extract a dur
 - `message.attachments[0]`, or
 - `message.embeds[0].image`
 
-If neither shape is present, the log step still completes, but no durable row is persisted or linked.
+If neither shape is present, the submission worker treats that as a fatal invariant failure and aborts the flow.
 
-Because of that, approval and resend treat a missing durable attachment on an attachment-bearing confession as an unsupported row shape, not as a normal modern-path outcome.
+Because of that, approval and resend treat a missing durable attachment on an attachment-bearing confession as a legacy or corrupted row shape, not as a normal modern-path outcome.
 
 ### Invariant 6: Durable extraction depends on Discord's returned message shape
 
@@ -173,12 +173,11 @@ The durable attachment is not always returned by Discord in the same field.
 
 Current observed behavior:
 
-- non-image uploads return the durable attachment in `message.attachments`
-- image uploads rendered through the moderator log embed may instead surface the durable URL in
-  `message.embeds[n].image`
+- Discord may return the durable attachment in `message.attachments`
+- Discord may instead surface the durable URL in `message.embeds[n].image`
 
-Because of that, the durable extraction step must branch on the attachment kind instead of assuming
-that `message.attachments` always contains the uploaded file.
+Because of that, the durable extraction step branches on the returned message shape instead of
+assuming that `message.attachments` always contains the uploaded file.
 
 ## URL Handling Rules
 
@@ -259,12 +258,12 @@ Public confession messages remain simpler:
 1. Emit `discord/confession.submit`.
 2. `process-confession-submission` inserts the confession.
 3. `process-confession-submission` inserts the original modal attachment into `ephemeral_attachment`.
-4. `process-confession-submission` fetches the confession and original attachment metadata.
+4. `process-confession-submission` carries forward the inserted confession and original attachment metadata in memory.
 5. `process-confession-submission` downloads the ephemeral file from the signed CDN URL.
 6. `process-confession-submission` uploads that file as part of the moderator log message.
 7. Discord returns the created moderator log message.
-8. `process-confession-submission` extracts the durable metadata from `message.attachments` for non-images or
-   `message.embeds[*].image` for images.
+8. `process-confession-submission` first tries `message.attachments[0]` and falls back to
+   `message.embeds[*].image` when the attachment array is empty or absent.
 9. `process-confession-submission` persists the durable row.
 10. `process-confession-submission` links `ephemeral_attachment.durable_attachment_id`.
 11. If approved, `process-confession-submission` posts the public confession using the durable URL.
@@ -274,7 +273,7 @@ Public confession messages remain simpler:
 1. The confession still goes through `process-confession-submission`.
 2. The durable upload still happens before the moderator review message exists.
 3. The approval interaction later reads `ephemeral_attachment -> durable_attachment`.
-4. The approval interaction updates the moderator log message from the durable attachment data and rejects the action if no durable row is linked.
+4. The approval interaction updates the moderator log message from the durable attachment data and rejects approval if no durable row is linked.
 5. The later public dispatch triggered by `discord/confession.approve` also reads the durable attachment.
 
 Approval does not redownload the original ephemeral attachment. That work is already complete by the time approval is possible.
@@ -285,11 +284,11 @@ Resend does not redownload or reupload the attachment.
 
 Instead, resend:
 
-1. validates that the confession exists
-2. validates that it was already approved
-3. validates that the log channel still exists
-4. validates that the moderator has `ATTACH_FILES` when the confession has an attachment
-5. emits `discord/confession.resend` so the resend path takes over
+1. emits `discord/confession.resend`
+2. the resend worker validates that the confession exists
+3. the resend worker validates that it was already approved
+4. the resend worker validates that a confession log channel is still configured
+5. the resend worker validates that the moderator has `ATTACH_FILES` when the confession has an attachment
 
 The resend path reads from the durable attachment only.
 
@@ -335,7 +334,7 @@ For resend:
 
 For approval:
 
-- the approval interaction synchronously reads durable attachment state and updates the moderator log message
+- the approval interaction synchronously reads durable attachment state, queues `discord/confession.approve`, and returns an `UpdateMessage` response that updates the moderator log message
 - event: `discord/confession.approve`
 - function: `dispatch-approval`
 
@@ -361,12 +360,13 @@ This remains fully supported.
 
 This is intentionally unsupported for resend and approval.
 
-The original file may already be gone from the Discord CDN, and the current system does not attempt to repair or rehydrate those rows. In practice, approval and resend reject any attachment-bearing confession whose `ephemeral_attachment` row does not have a linked `durable_attachment` row.
+The original file may already be gone from the Discord CDN, and the current system does not attempt to repair or rehydrate those rows. In practice, resend rejects any attachment-bearing confession whose `ephemeral_attachment` row does not have a linked `durable_attachment` row, and approval rejects only the approve path for those rows.
 
 Current moderator-facing behavior:
 
 - `/resend` returns a recoverable message explaining that the legacy attachment is no longer available in the Discord CDN
-- approval/rejection returns a recoverable message explaining the same limitation
+- approval returns a recoverable message explaining the same limitation
+- rejection logs a warning and proceeds without attachment metadata
 
 This is preferable to crashing on an assertion, but it is still a hard product limitation.
 
