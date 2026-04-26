@@ -85,7 +85,7 @@ class AlreadyApprovedApprovalError extends ApprovalError {
 class MissingDurableAttachmentApprovalError extends ApprovalError {
   constructor() {
     super(
-      'This legacy confession includes an attachment that is no longer available in the Discord CDN, so it cannot be approved or rejected.',
+      'This legacy confession includes an attachment that is no longer available in the Discord CDN, so it cannot be approved.',
     );
     this.name = 'MissingDurableAttachmentApprovalError';
   }
@@ -138,79 +138,73 @@ async function submitVerdict(
 
     return await db.transaction(
       async tx => {
-        const { approvedAt, disabledAt, authorId, confessionId, label, content, attachmentId } =
-          await tracer.asyncSpan('select-confession-details', async span => {
-            span.setAttribute('confession.internal.id', internalId.toString());
+        const result = await tracer.asyncSpan('select-confession-details', async span => {
+          span.setAttribute('confession.internal.id', internalId.toString());
 
-            const [result, ...rest] = await tx
-              .select({
-                disabledAt: channel.disabledAt,
-                label: channel.label,
-                authorId: confession.authorId,
-                approvedAt: confession.approvedAt,
-                content: confession.content,
-                confessionId: confession.confessionId,
-                attachmentId: confession.attachmentId,
-              })
-              .from(confession)
-              .innerJoin(channel, eq(confession.channelId, channel.id))
-              .where(eq(confession.internalId, internalId))
-              .limit(1)
-              .for('update');
-            strictEqual(rest.length, 0);
-            assert(typeof result !== 'undefined');
+          const result = await tx
+            .select({
+              disabledAt: channel.disabledAt,
+              label: channel.label,
+              authorId: confession.authorId,
+              approvedAt: confession.approvedAt,
+              content: confession.content,
+              confessionId: confession.confessionId,
+              ephemeralAttachmentId: ephemeralAttachment.id,
+              durableAttachmentId: durableAttachment.id,
+              attachmentFilename: durableAttachment.filename,
+              attachmentContentType: durableAttachment.contentType,
+              attachmentUrl: durableAttachment.url,
+              attachmentHeight: durableAttachment.height,
+              attachmentWidth: durableAttachment.width,
+            })
+            .from(confession)
+            .innerJoin(channel, eq(confession.channelId, channel.id))
+            .leftJoin(
+              ephemeralAttachment,
+              eq(confession.internalId, ephemeralAttachment.confessionInternalId),
+            )
+            .leftJoin(
+              durableAttachment,
+              eq(ephemeralAttachment.id, durableAttachment.ephemeralAttachmentId),
+            )
+            .where(eq(confession.internalId, internalId))
+            .limit(1)
+            .for('update', { of: confession })
+            .then(assertSingle);
 
-            logger.debug('confession details fetched', {
-              'confession.id': result.confessionId.toString(),
-              label: result.label,
+          logger.debug('confession details fetched', {
+            'confession.id': result.confessionId.toString(),
+            label: result.label,
+          });
+
+          return result;
+        });
+        const { approvedAt, disabledAt, authorId, confessionId, label, content } = result;
+
+        let embedAttachment: EmbedAttachment | null = null;
+        if (result.ephemeralAttachmentId !== null)
+          if (result.durableAttachmentId === null) {
+            if (isApproved) MissingDurableAttachmentApprovalError.throwNew();
+            else
+              logger.warn('durable attachment missing for rejected confession', {
+                'attachment.id': result.ephemeralAttachmentId.toString(),
+              });
+          } else {
+            assert(result.attachmentFilename !== null);
+            assert(result.attachmentUrl !== null);
+            logger.debug('attachment fetched', {
+              'attachment.filename': result.attachmentFilename,
             });
 
-            return result;
-          });
-
-        // TODO: Refactor to Relations API once the `bigint` bug is fixed.
-        let embedAttachment: EmbedAttachment | null = null;
-        if (attachmentId !== null)
-          embedAttachment = await tracer.asyncSpan('select-attachment', async span => {
-            span.setAttribute('attachment.id', attachmentId.toString());
-
-            const retrieved = await tx
-              .select({
-                durableAttachmentId: durableAttachment.id,
-                filename: durableAttachment.filename,
-                contentType: durableAttachment.contentType,
-                url: durableAttachment.url,
-                height: durableAttachment.height,
-                width: durableAttachment.width,
-              })
-              .from(ephemeralAttachment)
-              .leftJoin(
-                durableAttachment,
-                eq(ephemeralAttachment.durableAttachmentId, durableAttachment.id),
-              )
-              .where(eq(ephemeralAttachment.id, attachmentId))
-              .then(assertSingle);
-
-            if (retrieved.durableAttachmentId === null) {
-              if (!isApproved) {
-                logger.warn('durable attachment missing for rejected confession', {
-                  'attachment.id': attachmentId.toString(),
-                });
-                return null;
-              }
-              MissingDurableAttachmentApprovalError.throwNew();
-            }
-
-            assert(retrieved.filename !== null);
-            assert(retrieved.url !== null);
-            logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });
-
-            const embed: EmbedAttachment = { filename: retrieved.filename, url: retrieved.url };
-            if (retrieved.contentType !== null) embed.content_type = retrieved.contentType;
-            if (retrieved.height !== null) embed.height = retrieved.height;
-            if (retrieved.width !== null) embed.width = retrieved.width;
-            return embed;
-          });
+            embedAttachment = {
+              filename: result.attachmentFilename,
+              url: result.attachmentUrl,
+            };
+            if (result.attachmentContentType !== null)
+              embedAttachment.content_type = result.attachmentContentType;
+            if (result.attachmentHeight !== null) embedAttachment.height = result.attachmentHeight;
+            if (result.attachmentWidth !== null) embedAttachment.width = result.attachmentWidth;
+          }
 
         if (disabledAt !== null && disabledAt <= timestamp)
           DisabledChannelConfessError.throwNew(disabledAt);

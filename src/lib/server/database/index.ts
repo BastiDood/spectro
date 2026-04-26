@@ -73,12 +73,20 @@ export interface PersistableDurableAttachment {
   width: number | null;
 }
 
-async function insertAttachmentData(db: Interface, ephemeralAttachment: InsertableAttachment) {
+async function insertAttachmentData(
+  db: Interface,
+  confessionInternalId: bigint,
+  ephemeralAttachment: InsertableAttachment,
+) {
   return await tracer.asyncSpan('insert-attachment', async span => {
-    span.setAttribute('attachment.id', ephemeralAttachment.id);
+    span.setAttributes({
+      'attachment.id': ephemeralAttachment.id,
+      'confession.internal.id': confessionInternalId.toString(),
+    });
 
     const { rowCount } = await db.insert(schema.ephemeralAttachment).values({
       id: BigInt(ephemeralAttachment.id),
+      confessionInternalId,
       filename: ephemeralAttachment.filename,
       contentType: ephemeralAttachment.content_type,
       url: ephemeralAttachment.url,
@@ -120,6 +128,7 @@ export async function upsertDurableAttachmentData(
       .insert(schema.durableAttachment)
       .values({
         id: BigInt(durableAttachment.id),
+        ephemeralAttachmentId,
         messageId: BigInt(durableAttachment.messageId),
         channelId: BigInt(durableAttachment.channelId),
         filename: durableAttachment.filename,
@@ -130,8 +139,9 @@ export async function upsertDurableAttachmentData(
         width: durableAttachment.width,
       })
       .onConflictDoUpdate({
-        target: schema.durableAttachment.id,
+        target: schema.durableAttachment.ephemeralAttachmentId,
         set: {
+          id: sql`excluded.${sql.raw(schema.durableAttachment.id.name)}`,
           messageId: sql`excluded.${sql.raw(schema.durableAttachment.messageId.name)}`,
           channelId: sql`excluded.${sql.raw(schema.durableAttachment.channelId.name)}`,
           filename: sql`excluded.${sql.raw(schema.durableAttachment.filename.name)}`,
@@ -142,33 +152,6 @@ export async function upsertDurableAttachmentData(
           width: sql`excluded.${sql.raw(schema.durableAttachment.width.name)}`,
         },
       });
-  });
-}
-
-export async function linkDurableAttachmentData(
-  db: Interface,
-  ephemeralAttachmentId: bigint,
-  durableAttachmentId: bigint,
-) {
-  return await tracer.asyncSpan('link-durable-attachment', async span => {
-    span.setAttributes({
-      'attachment.id': ephemeralAttachmentId.toString(),
-      'durable.attachment.id': durableAttachmentId.toString(),
-    });
-
-    const { rowCount } = await db
-      .update(schema.ephemeralAttachment)
-      .set({ durableAttachmentId })
-      .where(eq(schema.ephemeralAttachment.id, ephemeralAttachmentId));
-
-    switch (rowCount) {
-      case null:
-        return UnexpectedRowCountDatabaseError.throwNew();
-      case 1:
-        return;
-      default:
-        return UnexpectedRowCountDatabaseError.throwNew(rowCount);
-    }
   });
 }
 
@@ -190,12 +173,6 @@ export async function insertConfession(
       'author.id': authorId.toString(),
     });
 
-    let attachmentId: bigint | null = null;
-    if (attachment !== null) {
-      attachmentId = BigInt(attachment.id);
-      await insertAttachmentData(db, attachment);
-    }
-
     const { confessionId } = await db
       .update(schema.guild)
       .set({ lastConfessionId: sql`${schema.guild.lastConfessionId} + 1` })
@@ -213,10 +190,11 @@ export async function insertConfession(
         content,
         approvedAt,
         parentMessageId,
-        attachmentId,
       })
       .returning({ internalId: schema.confession.internalId })
       .then(assertSingle);
+
+    if (attachment !== null) await insertAttachmentData(db, internalId, attachment);
 
     logger.debug('confession inserted', {
       'internal.id': internalId.toString(),
@@ -227,10 +205,7 @@ export async function insertConfession(
   });
 }
 
-/**
- * @throws {MissingRowCountDatabaseError}
- * @throws {UnexpectedRowCountDatabaseError}
- */
+/** @throws {UnexpectedRowCountDatabaseError} */
 export async function disableConfessionChannel(db: Interface, channelId: bigint, disabledAt: Date) {
   return await tracer.asyncSpan('disable-confession-channel', async span => {
     span.setAttributes({
@@ -258,10 +233,7 @@ export async function disableConfessionChannel(db: Interface, channelId: bigint,
   });
 }
 
-/**
- * @throws {MissingRowCountDatabaseError}
- * @throws {UnexpectedRowCountDatabaseError}
- */
+/** @throws {UnexpectedRowCountDatabaseError} */
 export async function resetLogChannel(db: Interface, channelId: bigint) {
   return await tracer.asyncSpan('reset-log-channel', async span => {
     span.setAttribute('channel.id', channelId.toString());

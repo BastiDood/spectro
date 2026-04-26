@@ -55,7 +55,7 @@ export const dispatchApproval = inngest.createFunction(
               channelLabel: schema.channel.label,
               channelColor: schema.channel.color,
               ephemeralAttachmentId: schema.ephemeralAttachment.id,
-              attachmentId: schema.durableAttachment.id,
+              durableAttachmentId: schema.durableAttachment.id,
               attachmentFilename: schema.durableAttachment.filename,
               attachmentContentType: schema.durableAttachment.contentType,
               attachmentUrl: schema.durableAttachment.url,
@@ -67,11 +67,11 @@ export const dispatchApproval = inngest.createFunction(
             .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
             .leftJoin(
               schema.ephemeralAttachment,
-              eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+              eq(schema.confession.internalId, schema.ephemeralAttachment.confessionInternalId),
             )
             .leftJoin(
               schema.durableAttachment,
-              eq(schema.ephemeralAttachment.durableAttachmentId, schema.durableAttachment.id),
+              eq(schema.ephemeralAttachment.id, schema.durableAttachment.ephemeralAttachmentId),
             )
             .where(eq(schema.confession.internalId, BigInt(event.data.internalId)))
             .limit(1)
@@ -91,12 +91,12 @@ export const dispatchApproval = inngest.createFunction(
 
           let attachment: SerializedConfessionForDispatch['attachment'] = null;
           if (result.ephemeralAttachmentId !== null) {
-            assert(result.attachmentId !== null);
+            assert(result.durableAttachmentId !== null);
             assert(result.attachmentFilename !== null);
             assert(result.attachmentUrl !== null);
             assert(result.attachmentProxyUrl !== null);
             attachment = {
-              id: result.attachmentId.toString(),
+              id: result.durableAttachmentId.toString(),
               filename: result.attachmentFilename,
               contentType: result.attachmentContentType,
               url: result.attachmentUrl,
