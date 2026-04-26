@@ -71,6 +71,13 @@
       "when": 1775999713116,
       "tag": "0009_durable-attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777240842795,
+      "tag": "0010_add-attachment-owner-columns",
+      "breakpoints": true
     }
   ]
 }
