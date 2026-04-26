@@ -1,9 +1,10 @@
+import assert from 'node:assert/strict';
+
 import { and, eq } from 'drizzle-orm';
 import { NonRetriableError } from 'inngest';
 
 import { assertOptional } from '$lib/assert';
 import { hasAllFlags } from '$lib/bits';
-import type { Result } from '$lib/result';
 import { DiscordClient } from '$lib/server/api/discord';
 import {
   ConfessionChannel,
@@ -12,7 +13,7 @@ import {
   getConfessionErrorMessage,
   LogPayloadType,
 } from '$lib/server/confession';
-import { db, fetchConfessionForResend, resetLogChannel } from '$lib/server/database';
+import { db, type SerializedConfessionForResend, resetLogChannel } from '$lib/server/database';
 import * as schema from '$lib/server/database/models';
 import { inngest } from '$lib/server/inngest/client';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
@@ -26,6 +27,11 @@ import { ConfessionResendEvent } from './schema';
 const SERVICE_NAME = 'inngest.process-confession-resend';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
+
+interface LogFailure {
+  content: string;
+  resetLogChannelId: string | null;
+}
 
 export const processConfessionResend = inngest.createFunction(
   {
@@ -49,19 +55,30 @@ export const processConfessionResend = inngest.createFunction(
         'confession.id': data.confessionId,
       });
 
-      const prepared = await step.run(
-        { id: 'prepare-resend', name: 'Prepare Resend' },
-        async (): Promise<Result<string, string>> => {
-          const permission = BigInt(data.memberPermissions);
-          const confessionId = BigInt(data.confessionId);
-
+      const confessionId = BigInt(data.confessionId);
+      const confession = await step.run(
+        { id: 'load-resend-confession', name: 'Load Resend Confession' },
+        async (): Promise<string | SerializedConfessionForResend> => {
           const result = await db
             .select({
-              internalId: schema.confession.internalId,
-              logChannelId: schema.channel.logChannelId,
+              confessionId: schema.confession.confessionId,
+              channelId: schema.confession.channelId,
+              authorId: schema.confession.authorId,
+              content: schema.confession.content,
+              createdAt: schema.confession.createdAt,
               approvedAt: schema.confession.approvedAt,
-              attachmentId: schema.confession.attachmentId,
-              durableAttachmentId: schema.durableAttachment.id,
+              parentMessageId: schema.confession.parentMessageId,
+              channelLabel: schema.channel.label,
+              channelColor: schema.channel.color,
+              channelLogChannelId: schema.channel.logChannelId,
+              ephemeralAttachmentId: schema.ephemeralAttachment.id,
+              attachmentId: schema.durableAttachment.id,
+              attachmentFilename: schema.durableAttachment.filename,
+              attachmentContentType: schema.durableAttachment.contentType,
+              attachmentUrl: schema.durableAttachment.url,
+              attachmentProxyUrl: schema.durableAttachment.proxyUrl,
+              attachmentHeight: schema.durableAttachment.height,
+              attachmentWidth: schema.durableAttachment.width,
             })
             .from(schema.confession)
             .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
@@ -83,44 +100,59 @@ export const processConfessionResend = inngest.createFunction(
             .then(assertOptional);
 
           if (typeof result === 'undefined')
-            return {
-              ok: false,
-              error: `Confession #${confessionId} does not exist in this channel.`,
-            };
+            return `Confession #${confessionId} does not exist in this channel.`;
 
           if (result.approvedAt === null)
-            return {
-              ok: false,
-              error: `Confession #${confessionId} has not yet been approved for publication in this channel.`,
-            };
+            return `Confession #${confessionId} has not yet been approved for publication in this channel.`;
 
-          if (result.logChannelId === null)
-            return {
-              ok: false,
-              error:
-                'You cannot resend confessions until a valid confession log channel has been configured.',
-            };
+          if (result.channelLogChannelId === null)
+            return 'You cannot resend confessions until a valid confession log channel has been configured.';
 
-          if (result.attachmentId !== null) {
-            if (result.durableAttachmentId === null)
-              return {
-                ok: false,
-                error: `Confession #${confessionId} includes a legacy attachment that is no longer available in the Discord CDN, so it cannot be resent.`,
-              };
+          if (result.ephemeralAttachmentId !== null) {
+            if (result.attachmentId === null)
+              return `Confession #${confessionId} includes a legacy attachment that is no longer available in the Discord CDN, so it cannot be resent.`;
 
+            const permission = BigInt(data.memberPermissions);
             if (!hasAllFlags(permission, ATTACH_FILES))
-              return {
-                ok: false,
-                error:
-                  'You do not have the permission to resend confessions with attachments in this channel.',
-              };
+              return 'You do not have the permission to resend confessions with attachments in this channel.';
           }
 
-          return { ok: true, data: result.internalId.toString() };
+          let attachment: SerializedConfessionForResend['attachment'] = null;
+          if (result.ephemeralAttachmentId !== null) {
+            assert(result.attachmentId !== null);
+            assert(result.attachmentFilename !== null);
+            assert(result.attachmentUrl !== null);
+            assert(result.attachmentProxyUrl !== null);
+            attachment = {
+              id: result.attachmentId.toString(),
+              filename: result.attachmentFilename,
+              contentType: result.attachmentContentType,
+              url: result.attachmentUrl,
+              proxyUrl: result.attachmentProxyUrl,
+              height: result.attachmentHeight,
+              width: result.attachmentWidth,
+            };
+          }
+
+          return {
+            confessionId: result.confessionId.toString(),
+            channelId: result.channelId.toString(),
+            authorId: result.authorId.toString(),
+            content: result.content,
+            createdAt: result.createdAt.toISOString(),
+            approvedAt: result.approvedAt.toISOString(),
+            parentMessageId: result.parentMessageId?.toString() ?? null,
+            channel: {
+              label: result.channelLabel,
+              color: result.channelColor,
+              logChannelId: result.channelLogChannelId.toString(),
+            },
+            attachment,
+          } satisfies SerializedConfessionForResend;
         },
       );
 
-      if (!prepared.ok) {
+      if (typeof confession === 'string') {
         await step.run(
           {
             id: 'edit-original-interaction-response-after-prepare',
@@ -129,7 +161,7 @@ export const processConfessionResend = inngest.createFunction(
           async () => {
             try {
               await DiscordClient.editOriginalInteractionResponse(applicationId, interactionToken, {
-                content: prepared.error,
+                content: confession,
               });
             } catch (cause) {
               if (cause instanceof DiscordError)
@@ -156,34 +188,25 @@ export const processConfessionResend = inngest.createFunction(
         return;
       }
 
-      const internalId = prepared.data;
       const logResult = await step.run(
         { id: 'log-resent-confession', name: 'Log Resent Confession' },
-        async () => {
-          const confession = await fetchConfessionForResend(db, BigInt(internalId));
-          if (confession === null) {
-            const error = new NonRetriableError('confession not found');
-            logger.fatal('confession not found for log resend', error, {
-              'confession.internal.id': internalId,
-            });
-            throw error;
-          }
-
+        async (): Promise<LogFailure | null> => {
           if (confession.approvedAt === null) {
             const error = new NonRetriableError('confession not approved');
-            logger.fatal('confession not approved for log resend', error, {
-              'confession.internal.id': internalId,
-            });
+            logger.fatal('confession not approved for log resend', error);
             throw error;
           }
 
           if (confession.channel.logChannelId === null)
-            return getConfessionErrorMessage(DiscordErrorCode.UnknownChannel, {
-              label: confession.channel.label,
-              confessionId: confession.confessionId,
-              channel: ConfessionChannel.Log,
-              status: 'resent',
-            });
+            return {
+              content: getConfessionErrorMessage(DiscordErrorCode.UnknownChannel, {
+                label: confession.channel.label,
+                confessionId: confession.confessionId,
+                channel: ConfessionChannel.Log,
+                status: 'resent',
+              }),
+              resetLogChannelId: null,
+            };
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
@@ -217,22 +240,26 @@ export const processConfessionResend = inngest.createFunction(
                   throw wrapped;
                 }
                 case DiscordErrorCode.UnknownChannel:
-                  await resetLogChannel(db, BigInt(confession.channelId));
-                  logger.warn('log channel reset');
-                  return getConfessionErrorMessage(error.code, {
-                    label: confession.channel.label,
-                    confessionId: confession.confessionId,
-                    channel: ConfessionChannel.Log,
-                    status: 'resent',
-                  });
+                  return {
+                    content: getConfessionErrorMessage(error.code, {
+                      label: confession.channel.label,
+                      confessionId: confession.confessionId,
+                      channel: ConfessionChannel.Log,
+                      status: 'resent',
+                    }),
+                    resetLogChannelId: confession.channelId,
+                  };
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
-                  return getConfessionErrorMessage(error.code, {
-                    label: confession.channel.label,
-                    confessionId: confession.confessionId,
-                    channel: ConfessionChannel.Log,
-                    status: 'resent',
-                  });
+                  return {
+                    content: getConfessionErrorMessage(error.code, {
+                      label: confession.channel.label,
+                      confessionId: confession.confessionId,
+                      channel: ConfessionChannel.Log,
+                      status: 'resent',
+                    }),
+                    resetLogChannelId: null,
+                  };
                 default:
                   break;
               }
@@ -249,6 +276,17 @@ export const processConfessionResend = inngest.createFunction(
       );
 
       if (logResult !== null) {
+        if (logResult.resetLogChannelId !== null) {
+          const { resetLogChannelId } = logResult;
+          await step.run(
+            { id: 'reset-log-channel-after-log-failure', name: 'Reset Log Channel' },
+            async () => {
+              await resetLogChannel(db, BigInt(resetLogChannelId));
+              logger.warn('log channel reset');
+            },
+          );
+        }
+
         await step.run(
           {
             id: 'edit-original-interaction-response-after-log',
@@ -257,7 +295,7 @@ export const processConfessionResend = inngest.createFunction(
           async () => {
             try {
               await DiscordClient.editOriginalInteractionResponse(applicationId, interactionToken, {
-                content: logResult,
+                content: logResult.content,
               });
             } catch (cause) {
               if (cause instanceof DiscordError)
@@ -287,20 +325,9 @@ export const processConfessionResend = inngest.createFunction(
       const resendResult = await step.run(
         { id: 'resend-confession', name: 'Resend Confession' },
         async () => {
-          const confession = await fetchConfessionForResend(db, BigInt(internalId));
-          if (confession === null) {
-            const error = new NonRetriableError('confession not found');
-            logger.fatal('confession not found for resend', error, {
-              'confession.internal.id': internalId,
-            });
-            throw error;
-          }
-
           if (confession.approvedAt === null) {
             const error = new NonRetriableError('confession not approved');
-            logger.fatal('confession not approved for resend', error, {
-              'confession.internal.id': internalId,
-            });
+            logger.fatal('confession not approved for resend', error);
             throw error;
           }
 

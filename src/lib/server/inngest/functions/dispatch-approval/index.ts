@@ -1,12 +1,17 @@
+import assert from 'node:assert/strict';
+
+import { eq } from 'drizzle-orm';
 import { NonRetriableError } from 'inngest';
 
+import { assertOptional } from '$lib/assert';
 import {
   ConfessionChannel,
   createConfessionPayload,
   getConfessionErrorMessage,
 } from '$lib/server/confession';
 import { DiscordClient } from '$lib/server/api/discord';
-import { db, fetchConfessionForDispatch } from '$lib/server/database';
+import { db, type SerializedConfessionForDispatch } from '$lib/server/database';
+import * as schema from '$lib/server/database/models';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
@@ -36,31 +41,101 @@ export const dispatchApproval = inngest.createFunction(
         'inngest.event.data.interactionId': event.data.interactionId,
       });
 
+      const confession = await step.run(
+        { id: 'load-approved-confession', name: 'Load Approved Confession' },
+        async (): Promise<SerializedConfessionForDispatch> => {
+          const result = await db
+            .select({
+              confessionId: schema.confession.confessionId,
+              channelId: schema.confession.channelId,
+              content: schema.confession.content,
+              createdAt: schema.confession.createdAt,
+              approvedAt: schema.confession.approvedAt,
+              parentMessageId: schema.confession.parentMessageId,
+              channelLabel: schema.channel.label,
+              channelColor: schema.channel.color,
+              ephemeralAttachmentId: schema.ephemeralAttachment.id,
+              attachmentId: schema.durableAttachment.id,
+              attachmentFilename: schema.durableAttachment.filename,
+              attachmentContentType: schema.durableAttachment.contentType,
+              attachmentUrl: schema.durableAttachment.url,
+              attachmentProxyUrl: schema.durableAttachment.proxyUrl,
+              attachmentHeight: schema.durableAttachment.height,
+              attachmentWidth: schema.durableAttachment.width,
+            })
+            .from(schema.confession)
+            .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+            .leftJoin(
+              schema.ephemeralAttachment,
+              eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+            )
+            .leftJoin(
+              schema.durableAttachment,
+              eq(schema.ephemeralAttachment.durableAttachmentId, schema.durableAttachment.id),
+            )
+            .where(eq(schema.confession.internalId, BigInt(event.data.internalId)))
+            .limit(1)
+            .then(assertOptional);
+
+          if (typeof result === 'undefined') {
+            const error = new NonRetriableError('confession not found');
+            logger.fatal('confession not found for dispatch', error);
+            throw error;
+          }
+
+          if (result.approvedAt === null) {
+            const error = new NonRetriableError('confession not approved');
+            logger.fatal('confession not approved for dispatch', error);
+            throw error;
+          }
+
+          let attachment: SerializedConfessionForDispatch['attachment'] = null;
+          if (result.ephemeralAttachmentId !== null) {
+            assert(result.attachmentId !== null);
+            assert(result.attachmentFilename !== null);
+            assert(result.attachmentUrl !== null);
+            assert(result.attachmentProxyUrl !== null);
+            attachment = {
+              id: result.attachmentId.toString(),
+              filename: result.attachmentFilename,
+              contentType: result.attachmentContentType,
+              url: result.attachmentUrl,
+              proxyUrl: result.attachmentProxyUrl,
+              height: result.attachmentHeight,
+              width: result.attachmentWidth,
+            };
+          }
+
+          const confession = {
+            confessionId: result.confessionId.toString(),
+            channelId: result.channelId.toString(),
+            content: result.content,
+            createdAt: result.createdAt.toISOString(),
+            approvedAt: result.approvedAt.toISOString(),
+            parentMessageId: result.parentMessageId?.toString() ?? null,
+            channel: {
+              label: result.channelLabel,
+              color: result.channelColor,
+            },
+            attachment,
+          } satisfies SerializedConfessionForDispatch;
+
+          logger.debug('fetched confession', {
+            'confession.created': confession.createdAt,
+            'confession.approved': confession.approvedAt,
+            'confession.id': confession.confessionId,
+            'confession.channel.id': confession.channelId,
+            'confession.parent.message.id': confession.parentMessageId,
+          });
+
+          return confession;
+        },
+      );
+
       const result = await step.run(
         { id: 'dispatch-approval', name: 'Dispatch Approved Confession' },
         async () =>
           await tracer.asyncSpan('dispatch-approval-step', async () => {
-            const confession = await fetchConfessionForDispatch(db, BigInt(event.data.internalId));
-            if (confession === null) {
-              const error = new NonRetriableError('confession not found');
-              logger.fatal('confession not found for dispatch', error);
-              throw error;
-            }
-
-            if (confession.approvedAt === null) {
-              const error = new NonRetriableError('confession not approved');
-              logger.fatal('confession not approved for dispatch', error);
-              throw error;
-            }
-
-            logger.debug('fetched confession', {
-              'confession.created': confession.createdAt,
-              'confession.approved': confession.approvedAt,
-              'confession.id': confession.confessionId,
-              'confession.channel.id': confession.channelId,
-              'confession.parent.message.id': confession.parentMessageId,
-            });
-
             try {
               const message = await DiscordClient.ENV.createMessage(
                 confession.channelId,
