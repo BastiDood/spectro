@@ -35,7 +35,6 @@
     "@opentelemetry/sdk-logs": "^0.215.0",
     "@opentelemetry/sdk-trace-base": "^2.7.0",
     "@sveltejs/kit": "^2.57.1",
-    "@vercel/functions": "^3.4.4",
     "@vercel/otel": "^2.1.2",
     "drizzle-orm": "^0.45.2",
     "inngest": "^4.2.4",
