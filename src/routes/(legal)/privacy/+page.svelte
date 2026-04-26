@@ -6,7 +6,7 @@
 
 <div class="not-prose alert alert-info">
   <Icon icon={BaselineInfo} width={24} />
-  <span>Last updated on <time datetime="2026-04-12">April 12, 2026</time>.</span>
+  <span>Last updated on <time datetime="2026-04-26">April 26, 2026</time>.</span>
 </div>
 
 <br />
@@ -162,7 +162,13 @@
 <ul>
   <li>
     <a rel="external" target="_blank" href="https://www.inngest.com/privacy">Inngest</a>
-    — manages background job orchestration for processing confessions asynchronously.
+    — manages background job orchestration for processing confessions asynchronously. This includes receiving
+    raw confession text, attachment metadata, and routing context needed to validate, persist, and dispatch
+    confession workflows. According to
+    <a rel="external" target="_blank" href="https://www.inngest.com/security"
+      >Inngest's security documentation</a
+    >, its databases are encrypted at rest and its applications encrypt data in transit with
+    TLS/SSL.
   </li>
   <li>
     <a rel="external" target="_blank" href="https://pydantic.dev/legal/privacy-policy">Logfire</a>
@@ -172,13 +178,12 @@
 
 <h3>Data Isolation</h3>
 <p>
-  User-generated confession content is <strong>strictly isolated</strong> between the application
-  (hosted on Vercel) and the database (hosted on Neon). External services used for orchestration
-  (Inngest) and observability (Logfire) only receive internal identifiers and operational metadata
-  (e.g., timestamps, channel IDs) for correlation and monitoring purposes.
-  <strong
-    >No confession text or user-submitted content is ever transmitted to these services.</strong
-  >
+  User-generated confession content is processed by the application (hosted on Vercel), stored in
+  the database (hosted on Neon), and passed to Inngest when asynchronous confession workflows are
+  processed. Inngest receives the raw confession payload and related metadata so the service can
+  validate the submission, persist it, and dispatch the resulting Discord messages. Within the
+  Service, plaintext confession content remains accessible only to the server moderators and Spectro
+  developers described above. Logfire remains limited to operational telemetry and monitoring data.
 </p>
 
 <h2>International Data Transfers</h2>
