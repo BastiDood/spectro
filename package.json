@@ -15,8 +15,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "fmt": "prettier . --experimental-cli --check",
-    "fmt:fix": "prettier . --experimental-cli --write",
+    "fmt": "prettier . --experimental-cli --check --cache-location .prettiercache",
+    "fmt:fix": "prettier . --experimental-cli --write --cache-location .prettiercache",
     "lint": "pnpm --workspace-root run --parallel /lint:/",
     "lint:eslint": "eslint --cache --concurrency auto",
     "lint:svelte": "svelte-check --tsconfig ./tsconfig.json"
