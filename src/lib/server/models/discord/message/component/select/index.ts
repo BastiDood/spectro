@@ -1,10 +1,10 @@
 import { type InferOutput, variant } from 'valibot';
 
+import { MessageComponentChannelSelect } from './channel';
+import { MessageComponentMentionableSelect } from './mentionable';
+import { MessageComponentRoleSelect } from './role';
 import { MessageComponentStringSelect } from './string';
 import { MessageComponentUserSelect } from './user';
-import { MessageComponentRoleSelect } from './role';
-import { MessageComponentMentionableSelect } from './mentionable';
-import { MessageComponentChannelSelect } from './channel';
 
 export { MessageComponentSelectBase } from './base';
 export { MessageComponentStringSelect, StringSelectOption } from './string';

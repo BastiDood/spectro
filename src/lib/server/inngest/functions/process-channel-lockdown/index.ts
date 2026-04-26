@@ -1,9 +1,9 @@
 import { NonRetriableError } from 'inngest';
 
-import { DiscordClient } from '$lib/server/api/discord';
 import { db, disableConfessionChannel } from '$lib/server/database';
-import { inngest } from '$lib/server/inngest/client';
+import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
+import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 

@@ -2,18 +2,8 @@ import assert, { strictEqual } from 'node:assert/strict';
 
 import { eq } from 'drizzle-orm';
 
-import { hasAllFlags } from '$lib/bits';
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
-import { type Embed, EmbedField, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
-import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
-import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
-import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-
 import { APP_ICON_URL, Color } from '$lib/server/constants';
+import { assertSingle } from '$lib/assert';
 import {
   channel,
   confession,
@@ -22,10 +12,19 @@ import {
 } from '$lib/server/database/models';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/functions/dispatch-approval/schema';
 import { db } from '$lib/server/database';
+import { type Embed, EmbedField, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
+import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
+import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { Logger } from '$lib/server/telemetry/logger';
+import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { MalformedCustomIdFormat } from './errors';
-import { assertSingle } from '$lib/assert';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
 const logger = Logger.byName(SERVICE_NAME);

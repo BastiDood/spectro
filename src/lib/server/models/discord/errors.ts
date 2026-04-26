@@ -1,4 +1,4 @@
-import { type InferOutput, check, number, object, pipe, safeInteger, string } from 'valibot';
+import { check, type InferOutput, number, object, pipe, safeInteger, string } from 'valibot';
 
 export const enum DiscordErrorCode {
   UnknownChannel = 10003,

@@ -5,29 +5,29 @@ import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
-import { hasAllFlags } from '$lib/bits';
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
-
+import { hasAllFlags } from '$lib/bits';
 import { Interaction } from '$lib/server/models/discord/interaction';
+import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { InteractionType } from '$lib/server/models/discord/interaction/base';
+import { Logger } from '$lib/server/telemetry/logger';
 import {
   MANAGE_CHANNELS,
   MANAGE_MESSAGES,
   SEND_MESSAGES,
 } from '$lib/server/models/discord/permission';
-import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
-import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
-import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { InteractionType } from '$lib/server/models/discord/interaction/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import { Tracer } from '$lib/server/telemetry/tracer';
+import { UnreachableCodeError } from '$lib/assert';
 
 import { handleApproval } from './approval';
 import { handleConfess } from './confess-modal';
-import { handleModalSubmit } from './modal-submit';
 import { handleHelp } from './help';
 import { handleInfo } from './info';
 import { handleLockdown } from './lockdown';
+import { handleModalSubmit } from './modal-submit';
 import { handleReplyModal } from './reply-modal';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
@@ -37,7 +37,6 @@ import {
   UnexpectedApplicationCommandTypeError,
   UnexpectedModalSubmitError,
 } from './errors';
-import { UnreachableCodeError } from '$lib/assert';
 
 const SERVICE_NAME = 'webhook.interaction';
 const logger = Logger.byName(SERVICE_NAME);

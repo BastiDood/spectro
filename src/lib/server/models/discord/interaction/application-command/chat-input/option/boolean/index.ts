@@ -1,4 +1,4 @@
-import { type InferOutput, boolean, literal, object } from 'valibot';
+import { boolean, type InferOutput, literal, object } from 'valibot';
 
 import {
   InteractionApplicationCommandChatInputOptionBase,

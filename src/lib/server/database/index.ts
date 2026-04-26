@@ -2,9 +2,9 @@ import process from 'node:process';
 
 import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
 import { drizzle as pgDrizzle } from 'drizzle-orm/node-postgres';
+import { eq, sql } from 'drizzle-orm';
 import { Pool as NeonPool } from '@neondatabase/serverless';
 import { Pool as PgPool } from 'pg';
-import { eq, sql } from 'drizzle-orm';
 
 import { assertSingle, UnreachableCodeError } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';

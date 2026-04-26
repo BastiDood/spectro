@@ -1,4 +1,4 @@
-import { type InferOutput, array, literal, object, optional, string } from 'valibot';
+import { array, type InferOutput, literal, object, optional, string } from 'valibot';
 
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { Snowflake } from '$lib/server/models/discord/snowflake';

@@ -1,5 +1,5 @@
-import { eventType } from 'inngest';
 import { boolean, nullable, object, string } from 'valibot';
+import { eventType } from 'inngest';
 
 const ChannelSetupEventData = object({
   applicationId: string(),

@@ -1,17 +1,17 @@
+import { NonRetriableError } from 'inngest';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { NonRetriableError } from 'inngest';
 
-import { DiscordClient } from '$lib/server/api/discord';
-import { db } from '$lib/server/database';
+import { assertSingle } from '$lib/assert';
 import { channel, type NewChannel } from '$lib/server/database/models';
-import { inngest } from '$lib/server/inngest/client';
+import { db } from '$lib/server/database';
+import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
+import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { ChannelSetupEvent } from './schema';
-import { assertSingle } from '$lib/assert';
 
 const SERVICE_NAME = 'inngest.process-channel-setup';
 const logger = Logger.byName(SERVICE_NAME);

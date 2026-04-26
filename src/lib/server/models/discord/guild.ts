@@ -1,4 +1,5 @@
 import { type InferOutput, nullable, object, string } from 'valibot';
+
 import { Snowflake } from './snowflake';
 
 export const Guild = object({

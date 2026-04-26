@@ -1,12 +1,12 @@
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { InngestSpanProcessor } from 'inngest/experimental';
 import { type InstrumentationOptionOrName, registerOTel } from '@vercel/otel';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
-import { InngestSpanProcessor } from 'inngest/experimental';
 
-import { SPECTRO_DATABASE_DRIVER } from '$lib/server/env/spectro';
 import { inngest } from '$lib/server/inngest/client';
+import { SPECTRO_DATABASE_DRIVER } from '$lib/server/env/spectro';
 
 const instrumentations: InstrumentationOptionOrName[] = [];
 if (SPECTRO_DATABASE_DRIVER === 'pg') {

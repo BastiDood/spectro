@@ -1,4 +1,4 @@
-import { type InferOutput, array, literal, object, string } from 'valibot';
+import { array, type InferOutput, literal, object, string } from 'valibot';
 
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 

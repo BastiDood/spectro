@@ -1,7 +1,6 @@
 <script lang="ts">
-  import Icon from '@iconify/svelte';
-
   import BaselineInfo from '@iconify-icons/ic/baseline-info';
+  import Icon from '@iconify/svelte';
 </script>
 
 <div class="not-prose alert alert-info">

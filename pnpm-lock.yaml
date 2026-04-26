@@ -71,6 +71,9 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1(typescript@5.9.3)
     devDependencies:
+      '@bastidood/eslint-plugin-imsort':
+        specifier: ^0.12.0
+        version: 0.12.0
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.2.1(jiti@2.6.1))
@@ -142,6 +145,9 @@ importers:
         version: 8.0.10(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
 packages:
+
+  '@bastidood/eslint-plugin-imsort@0.12.0':
+    resolution: {integrity: sha512-y0HmqXzXO0Jnc2pxqX8FLWZAaN1hc/RUFPc984i3w/CHUjiPVuSanCOly2jQtRDzoJHlkfEy1H2T6ctheqUaVg==}
 
   '@bufbuild/protobuf@2.12.0':
     resolution: {integrity: sha512-B/XlCaFIP8LOwzo+bz5uFzATYokcwCKQcghqnlfwSmM5eX/qTkvDBnDPs+gXtX/RyjxJ4DRikECcPJbyALA8FA==}
@@ -2378,6 +2384,9 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
+  itertools@2.6.0:
+    resolution: {integrity: sha512-nCqtnZTEGq8Bcs+W3kqdYL77tV6sGuQCA1WvKeA8L5Bx+BUMWcyHfJTCY38yNf51EE0/uB9UQHB84AM1j+djIw==}
+
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
@@ -3121,6 +3130,10 @@ packages:
     resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
 
 snapshots:
+
+  '@bastidood/eslint-plugin-imsort@0.12.0':
+    dependencies:
+      itertools: 2.6.0
 
   '@bufbuild/protobuf@2.12.0': {}
 
@@ -5265,6 +5278,8 @@ snapshots:
       '@types/estree': 1.0.8
 
   isexe@2.0.0: {}
+
+  itertools@2.6.0: {}
 
   jiti@2.6.1: {}
 

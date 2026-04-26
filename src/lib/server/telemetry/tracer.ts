@@ -1,4 +1,4 @@
-import { type Tracer as OTelTracer, type Span, trace } from '@opentelemetry/api';
+import { type Span, type Tracer as OTelTracer, trace } from '@opentelemetry/api';
 
 import { Logger } from './logger';
 

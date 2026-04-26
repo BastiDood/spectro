@@ -1,4 +1,4 @@
-import { type InferOutput, array, boolean, object, picklist } from 'valibot';
+import { array, boolean, type InferOutput, object, picklist } from 'valibot';
 
 import { Snowflake } from './snowflake';
 

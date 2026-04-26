@@ -1,6 +1,6 @@
 import {
-  type InferOutput,
   array,
+  type InferOutput,
   literal,
   number,
   object,
@@ -9,8 +9,8 @@ import {
   safeInteger,
 } from 'valibot';
 
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageComponentSelectBase } from '$lib/server/models/discord/message/component/select/base';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 /**

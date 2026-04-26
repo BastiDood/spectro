@@ -3,19 +3,19 @@ import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 import { NonRetriableError } from 'inngest';
 
+import * as schema from '$lib/server/database/models';
 import { assertOptional } from '$lib/assert';
 import {
   ConfessionChannel,
   createConfessionPayload,
   getConfessionErrorMessage,
 } from '$lib/server/confession';
-import { DiscordClient } from '$lib/server/api/discord';
 import { db, type SerializedConfessionForDispatch } from '$lib/server/database';
-import * as schema from '$lib/server/database/models';
+import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { Logger } from '$lib/server/telemetry/logger';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { ConfessionApprovalEvent } from './schema';

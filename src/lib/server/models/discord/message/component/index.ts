@@ -37,12 +37,12 @@ export {
 
 // Import types for aggregate type definition
 import type { MessageComponentActionRowButtons } from './action-row';
-import type { MessageComponentTextDisplay } from './text-display';
-import type { MessageComponentMediaGallery } from './media-gallery';
-import type { MessageComponentFile } from './file';
-import type { MessageComponentSeparator } from './separator';
-import type { MessageComponentSection } from './section';
 import type { MessageComponentContainer } from './container';
+import type { MessageComponentFile } from './file';
+import type { MessageComponentMediaGallery } from './media-gallery';
+import type { MessageComponentSection } from './section';
+import type { MessageComponentSeparator } from './separator';
+import type { MessageComponentTextDisplay } from './text-display';
 
 /**
  * Outbound type for top-level message components in Components V2.

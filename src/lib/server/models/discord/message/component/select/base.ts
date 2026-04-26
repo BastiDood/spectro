@@ -1,6 +1,6 @@
 import {
-  type InferOutput,
   boolean,
+  type InferOutput,
   maxValue,
   minValue,
   number,

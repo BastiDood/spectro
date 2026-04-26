@@ -1,18 +1,18 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
 import { assertOptional } from '$lib/assert';
+import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
+import { ConfessionSubmitEvent } from '$lib/server/inngest/functions/process-confession-submission/schema';
 import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
-import { ConfessionSubmitEvent } from '$lib/server/inngest/functions/process-confession-submission/schema';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { Logger } from '$lib/server/telemetry/logger';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import type { ModalComponents } from '$lib/server/models/discord/message/component/modal';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
-import { ATTACH_FILES, SEND_MESSAGES } from '$lib/server/models/discord/permission';
+import type { ModalComponents } from '$lib/server/models/discord/message/component/modal';
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'webhook.interaction.confess-submit';

@@ -43,6 +43,7 @@
     "valibot": "^1.3.1"
   },
   "devDependencies": {
+    "@bastidood/eslint-plugin-imsort": "^0.12.0",
     "@eslint/js": "^10.0.1",
     "@html-eslint/eslint-plugin": "^0.59.0",
     "@sveltejs/adapter-vercel": "^6.3.3",

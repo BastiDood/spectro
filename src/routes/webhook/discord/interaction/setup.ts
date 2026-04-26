@@ -1,16 +1,16 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { inngest } from '$lib/server/inngest/client';
 import { ChannelSetupEvent } from '$lib/server/inngest/functions/process-channel-setup/schema';
 import { ChannelType } from '$lib/server/models/discord/channel';
+import { inngest } from '$lib/server/inngest/client';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { UnexpectedSetupArgumentError, UnexpectedSetupOptionTypeError } from './errors';

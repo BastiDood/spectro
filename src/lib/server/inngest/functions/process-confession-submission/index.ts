@@ -3,7 +3,6 @@ import assert, { strictEqual } from 'node:assert/strict';
 import { NonRetriableError } from 'inngest';
 
 import { assertOptional } from '$lib/assert';
-import { DiscordClient } from '$lib/server/api/discord';
 import {
   ConfessionChannel,
   createConfessionPayload,
@@ -12,21 +11,22 @@ import {
   LogPayloadType,
 } from '$lib/server/confession';
 import {
+  db,
   type InsertableAttachment,
+  insertConfession,
+  linkDurableAttachmentData,
   type PersistableDurableAttachment,
+  resetLogChannel,
   type SerializedAttachment,
   type SerializedConfessionForDispatch,
   type SerializedConfessionForProcess,
-  db,
-  insertConfession,
-  linkDurableAttachmentData,
-  resetLogChannel,
   upsertDurableAttachmentData,
 } from '$lib/server/database';
-import { inngest } from '$lib/server/inngest/client';
+import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
-import type { Message } from '$lib/server/models/discord/message';
+import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
+import type { Message } from '$lib/server/models/discord/message';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { ConfessionSubmitEvent } from './schema';

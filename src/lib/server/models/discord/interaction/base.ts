@@ -1,8 +1,8 @@
+import { type InferOutput, literal, object, optional, string } from 'valibot';
+
 import { GuildMember } from '$lib/server/models/discord/guild-member';
 import { Message } from '$lib/server/models/discord/message';
 import { Snowflake } from '$lib/server/models/discord/snowflake';
-
-import { type InferOutput, literal, object, optional, string } from 'valibot';
 
 export const enum InteractionType {
   Ping = 1,

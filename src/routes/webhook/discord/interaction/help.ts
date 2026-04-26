@@ -1,15 +1,14 @@
 import { strictEqual } from 'node:assert/strict';
 
 import { APP_WEBSITE } from '$lib/server/constants';
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
-
-import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import type { CreateMessage } from '$lib/server/models/discord/message';
+import { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
+import { Logger } from '$lib/server/telemetry/logger';
+import type { MessageComponent } from '$lib/server/models/discord/message/component';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
-import type { MessageComponent } from '$lib/server/models/discord/message/component';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { parsePublic } from './util';
 

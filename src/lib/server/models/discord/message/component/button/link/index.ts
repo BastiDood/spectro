@@ -1,6 +1,6 @@
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import type { Emoji } from '$lib/server/models/discord/emoji';
+import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 
 /**
  * Outbound interface for a link button.

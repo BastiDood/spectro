@@ -1,12 +1,11 @@
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
-import { db } from '$lib/server/database';
-
 import { createConfessionModal } from '$lib/server/confession';
+import { db } from '$lib/server/database';
 import type { InteractionResponseMessage } from '$lib/server/models/discord/interaction-response/message';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'webhook.interaction.reply-modal';
 const logger = Logger.byName(SERVICE_NAME);

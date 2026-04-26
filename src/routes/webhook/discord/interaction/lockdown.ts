@@ -2,9 +2,9 @@ import { ChannelLockdownEvent } from '$lib/server/inngest/functions/process-chan
 import { inngest } from '$lib/server/inngest/client';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'webhook.interaction.lockdown';

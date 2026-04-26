@@ -1,6 +1,6 @@
 import {
-  type InferOutput,
   array,
+  type InferOutput,
   nullish,
   object,
   optional,
@@ -8,6 +8,7 @@ import {
   string,
   transform,
 } from 'valibot';
+
 import { Snowflake } from './snowflake';
 import { User } from './user';
 

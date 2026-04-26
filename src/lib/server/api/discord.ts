@@ -2,9 +2,8 @@ import { Buffer } from 'node:buffer';
 
 import { parse } from 'valibot';
 
-import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
-
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
 import { Logger } from '$lib/server/telemetry/logger';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';

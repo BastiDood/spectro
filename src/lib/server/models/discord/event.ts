@@ -1,9 +1,10 @@
-import { type InferOutput, array, literal, object, string, variant } from 'valibot';
+import { array, type InferOutput, literal, object, string, variant } from 'valibot';
+
+import { Timestamp } from '$lib/server/models/timestamp';
+
 import { Guild } from './guild';
 import { Snowflake } from './snowflake';
 import { User } from './user';
-
-import { Timestamp } from '$lib/server/models/timestamp';
 
 const BaseWebhook = object({
   version: literal(1),

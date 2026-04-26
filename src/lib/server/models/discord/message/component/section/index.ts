@@ -1,7 +1,7 @@
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import type { MessageComponentButton } from '$lib/server/models/discord/message/component/button';
 import type { MessageComponentTextDisplay } from '$lib/server/models/discord/message/component/text-display';
 import type { MessageComponentThumbnail } from '$lib/server/models/discord/message/component/thumbnail';
+import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 
 /**
  * Outbound type for section accessory.

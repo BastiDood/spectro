@@ -1,4 +1,4 @@
-import { type InferOutput, array, literal, object, optional } from 'valibot';
+import { array, type InferOutput, literal, object, optional } from 'valibot';
 
 import {
   InteractionApplicationCommandBase,

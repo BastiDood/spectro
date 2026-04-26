@@ -1,4 +1,4 @@
-import { type InferOutput, array, maxLength, pipe, variant } from 'valibot';
+import { array, type InferOutput, maxLength, pipe, variant } from 'valibot';
 
 import {
   type CreateMessageComponentLabel,

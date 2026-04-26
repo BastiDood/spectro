@@ -1,4 +1,4 @@
-import { type InferOutput, boolean, object, optional } from 'valibot';
+import { boolean, type InferOutput, object, optional } from 'valibot';
 
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
