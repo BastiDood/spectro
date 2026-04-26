@@ -85,6 +85,13 @@
       "when": 1777240891401,
       "tag": "0011_backfill-attachment-foreign-keys",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1777243866727,
+      "tag": "0012_migrate-attachment-ownership-model",
+      "breakpoints": true
     }
   ]
 }
