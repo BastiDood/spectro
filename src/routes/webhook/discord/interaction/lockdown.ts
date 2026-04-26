@@ -1,52 +1,46 @@
+import { ChannelLockdownEvent } from '$lib/server/inngest/functions/process-channel-lockdown/schema';
+import { inngest } from '$lib/server/inngest/client';
+import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
+import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { MessageFlags } from '$lib/server/models/discord/message/base';
+import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { db, disableConfessionChannel } from '$lib/server/database';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
 
 const SERVICE_NAME = 'webhook.interaction.lockdown';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
-abstract class LockdownError extends Error {
-  constructor(message?: string) {
-    super(message);
-    this.name = 'LockdownError';
-  }
-}
+export async function handleLockdown(
+  timestamp: Date,
+  applicationId: Snowflake,
+  interactionToken: string,
+  interactionId: Snowflake,
+  channelId: Snowflake,
+  moderatorId: Snowflake,
+): Promise<InteractionResponse> {
+  return await tracer.asyncSpan('handle-lockdown', async span => {
+    span.setAttributes({
+      'channel.id': channelId,
+      'moderator.id': moderatorId,
+    });
 
-class ChannelNotSetupLockdownError extends LockdownError {
-  constructor() {
-    super('This has not yet been set up for confessions.');
-    this.name = 'ChannelNotSetupLockdownError';
-  }
+    const { ids } = await inngest.send(
+      ChannelLockdownEvent.create(
+        {
+          applicationId,
+          interactionId,
+          interactionToken,
+          channelId,
+        },
+        { id: interactionId, ts: timestamp.valueOf() },
+      ),
+    );
+    logger.debug('channel lockdown queued', { 'inngest.events.id': ids });
 
-  static throwNew(): never {
-    const error = new ChannelNotSetupLockdownError();
-    logger.error('channel not setup for lockdown', error);
-    throw error;
-  }
-}
-
-/** @throws {ChannelNotSetupLockdownError} */
-async function disableConfessions(disabledAt: Date, channelId: Snowflake) {
-  return await tracer.asyncSpan('disable-confessions', async span => {
-    span.setAttribute('channel.id', channelId);
-
-    if (await disableConfessionChannel(db, BigInt(channelId), disabledAt)) {
-      logger.info('confessions disabled', { 'channel.id': channelId });
-      return;
-    }
-
-    ChannelNotSetupLockdownError.throwNew();
+    return {
+      type: InteractionResponseType.DeferredChannelMessageWithSource,
+      data: { flags: MessageFlags.Ephemeral },
+    };
   });
-}
-
-export async function handleLockdown(disabledAt: Date, channelId: Snowflake) {
-  try {
-    await disableConfessions(disabledAt, channelId);
-    return 'Confessions have been temporarily disabled for this channel.';
-  } catch (error) {
-    if (error instanceof LockdownError) return error.message;
-    throw error;
-  }
 }

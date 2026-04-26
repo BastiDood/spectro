@@ -16,17 +16,18 @@ The current design fixes that by upgrading the modal attachment into a durable D
 
 The active flow is:
 
-1. A confession is created and, if present, the original modal attachment is persisted in `ephemeral_attachment`.
-2. The submission emits the `discord/confession.process` Inngest event.
-3. The singleton `process-confession` function fetches the confession.
-4. If the confession has an attachment, the function downloads the original ephemeral CDN URL.
-5. The function creates the moderator log message and uploads the file directly into that message.
+1. The modal submit handler resolves the optional upload from `resolved.attachments`, performs cheap synchronous permission checks, and emits the `discord/confession.submit` Inngest event.
+2. `process-confession-submission` validates channel state and persists the confession.
+3. If present, the original modal attachment is persisted in `ephemeral_attachment`.
+4. If the confession has an attachment, `process-confession-submission` downloads the original ephemeral CDN URL.
+5. `process-confession-submission` creates the moderator log message and uploads the file directly into that message.
 6. Discord returns a `Message` payload for the moderator log message.
-7. The durable attachment metadata is extracted from that returned message.
-8. That durable attachment metadata is persisted in `durable_attachment`.
-9. `ephemeral_attachment.durable_attachment_id` is updated to point at the durable row.
-10. If the confession is already approved, the public confession message is dispatched using the durable attachment URL.
-11. If approval is required, later approval and resend paths also read from the durable attachment only.
+7. `process-confession-submission` attempts to extract durable attachment metadata from that returned message.
+8. When durable metadata is found, it is persisted in `durable_attachment`.
+9. When a durable row was persisted, `ephemeral_attachment.durable_attachment_id` is updated to point at it.
+10. If the confession is already approved, `process-confession-submission` posts the public confession using the durable attachment URL.
+11. If approval is required, the approval interaction later reads the durable attachment synchronously, queues `discord/confession.approve`, and returns an `UpdateMessage` response so Discord updates the moderator log message.
+12. Resend also reads from the durable attachment only; it does not redownload or reupload the file.
 
 The key design point is that the moderator log message is the persistence anchor for the file artifact.
 
@@ -111,7 +112,7 @@ These invariants are fundamental to the current design.
 
 ### Invariant 1: Ephemeral URLs are process-time only
 
-The original modal attachment URL must only be used while `process-confession` is performing the one-time durable upgrade.
+The original modal attachment URL must only be used while `process-confession-submission` is performing the one-time durable upgrade.
 
 It must not be used later for:
 
@@ -135,7 +136,10 @@ This includes:
 
 The current confession system assumes exactly one attachment per confession.
 
-This assumption is enforced by using `assertSingle` when Discord returns attachment arrays that should contain one item.
+This assumption is enforced by using `assertOptional` for:
+
+- the modal upload values
+- the returned `message.attachments` array from the moderator log upload
 
 If multi-file support is ever introduced, this document becomes partially invalid and the schema, payload builders, and moderation UI will all need to change.
 
@@ -154,9 +158,14 @@ This ordering ensures the public message never renders an attachment URL that wa
 
 For confessions that contain attachments, approval and resend assume that a moderator log message was already created successfully.
 
-In the current design, that means the durable upload step should have succeeded as part of the sequential `process-confession` workflow.
+In the current design, `process-confession-submission` attempts to extract a durable attachment from either:
 
-Because of that, approval and resend treat a missing durable attachment on an attachment-bearing confession as a legacy-data problem, not as a normal modern-path outcome.
+- `message.attachments[0]`, or
+- `message.embeds[0].image`
+
+If neither shape is present, the submission worker treats that as a fatal invariant failure and aborts the flow.
+
+Because of that, approval and resend treat a missing durable attachment on an attachment-bearing confession as a legacy or corrupted row shape, not as a normal modern-path outcome.
 
 ### Invariant 6: Durable extraction depends on Discord's returned message shape
 
@@ -164,12 +173,11 @@ The durable attachment is not always returned by Discord in the same field.
 
 Current observed behavior:
 
-- non-image uploads return the durable attachment in `message.attachments`
-- image uploads rendered through the moderator log embed may instead surface the durable URL in
-  `message.embeds[n].image`
+- Discord may return the durable attachment in `message.attachments`
+- Discord may instead surface the durable URL in `message.embeds[n].image`
 
-Because of that, the durable extraction step must branch on the attachment kind instead of assuming
-that `message.attachments` always contains the uploaded file.
+Because of that, the durable extraction step branches on the returned message shape instead of
+assuming that `message.attachments` always contains the uploaded file.
 
 ## URL Handling Rules
 
@@ -239,33 +247,34 @@ Public confession messages remain simpler:
 
 ### Fresh confession without Attachment
 
-1. Insert confession.
-2. Emit `discord/confession.process`.
-3. `process-confession` creates the moderator log message.
-4. If already approved, `process-confession` posts the public confession.
+1. Emit `discord/confession.submit`.
+2. `process-confession-submission` inserts the confession.
+3. `process-confession-submission` creates the moderator log message.
+4. If already approved, `process-confession-submission` posts the public confession.
 5. No durable attachment row is involved.
 
 ### Fresh confession with Attachment
 
-1. Insert confession.
-2. Insert the original modal attachment into `ephemeral_attachment`.
-3. Emit `discord/confession.process`.
-4. `process-confession` fetches the confession and original attachment metadata.
-5. `process-confession` downloads the ephemeral file from the signed CDN URL.
-6. `process-confession` uploads that file as part of the moderator log message.
+1. Emit `discord/confession.submit`.
+2. `process-confession-submission` inserts the confession.
+3. `process-confession-submission` inserts the original modal attachment into `ephemeral_attachment`.
+4. `process-confession-submission` carries forward the inserted confession and original attachment metadata in memory.
+5. `process-confession-submission` downloads the ephemeral file from the signed CDN URL.
+6. `process-confession-submission` uploads that file as part of the moderator log message.
 7. Discord returns the created moderator log message.
-8. `process-confession` extracts the durable metadata from `message.attachments` for non-images or
-   `message.embeds[*].image` for images.
-9. `process-confession` persists the durable row.
-10. `process-confession` links `ephemeral_attachment.durable_attachment_id`.
-11. If approved, `process-confession` posts the public confession using the durable URL.
+8. `process-confession-submission` first tries `message.attachments[0]` and falls back to
+   `message.embeds[*].image` when the attachment array is empty or absent.
+9. `process-confession-submission` persists the durable row.
+10. `process-confession-submission` links `ephemeral_attachment.durable_attachment_id`.
+11. If approved, `process-confession-submission` posts the public confession using the durable URL.
 
 ### Approval-required Confession with Attachment
 
-1. The confession still goes through `process-confession`.
+1. The confession still goes through `process-confession-submission`.
 2. The durable upload still happens before the moderator review message exists.
-3. The approval UI later reads the durable attachment.
-4. The public dispatch triggered by approval also reads the durable attachment.
+3. The approval interaction later reads `ephemeral_attachment -> durable_attachment`.
+4. The approval interaction updates the moderator log message from the durable attachment data and rejects approval if no durable row is linked.
+5. The later public dispatch triggered by `discord/confession.approve` also reads the durable attachment.
 
 Approval does not redownload the original ephemeral attachment. That work is already complete by the time approval is possible.
 
@@ -275,11 +284,11 @@ Resend does not redownload or reupload the attachment.
 
 Instead, resend:
 
-1. validates that the confession exists
-2. validates that it was already approved
-3. validates that the log channel still exists
-4. validates that the moderator has `ATTACH_FILES` when the confession has an attachment
-5. emits `discord/confession.process` with a moderator ID so the workflow takes the resend path
+1. emits `discord/confession.resend`
+2. the resend worker validates that the confession exists
+3. the resend worker validates that it was already approved
+4. the resend worker validates that a confession log channel is still configured
+5. the resend worker validates that the moderator has `ATTACH_FILES` when the confession has an attachment
 
 The resend path reads from the durable attachment only.
 
@@ -311,23 +320,27 @@ If a moderator log message containing the file is deleted later, the durable att
 
 ## Inngest Design Decisions
 
-The active function is the singleton `process-confession` workflow.
+The attachment architecture spans both interaction ingress and Inngest workers.
 
 Important choices:
 
-- event: `discord/confession.process`
-- function: `process-confession`
-- singleton key: `event.data.internalId`
-- singleton mode: skip
+- modal submit resolves the optional upload and emits `discord/confession.submit`
+- function: `process-confession-submission`
 
-This keeps the modern flow sequential and prevents concurrent duplicate runs for the same confession.
+For resend:
 
-The function intentionally handles both:
+- event: `discord/confession.resend`
+- function: `process-confession-resend`
 
-- fresh submit
-- resend
+For approval:
 
-It distinguishes them by whether `moderatorId` is present on the event.
+- the approval interaction synchronously reads durable attachment state, queues `discord/confession.approve`, and returns an `UpdateMessage` response that updates the moderator log message
+- event: `discord/confession.approve`
+- function: `dispatch-approval`
+
+The transport layer is intentionally thin for submit and resend. Approval remains a synchronous exception path with an async post-dispatch worker.
+
+All Discord-originated attachment-related events are deduplicated at ingest with `event.id = interactionId`, and they also preserve the original Discord interaction time through the overridden Inngest event timestamp.
 
 ## Legacy Data Behavior
 
@@ -347,12 +360,13 @@ This remains fully supported.
 
 This is intentionally unsupported for resend and approval.
 
-The original file may already be gone from the Discord CDN, and the current system does not attempt to repair or rehydrate those rows.
+The original file may already be gone from the Discord CDN, and the current system does not attempt to repair or rehydrate those rows. In practice, resend rejects any attachment-bearing confession whose `ephemeral_attachment` row does not have a linked `durable_attachment` row, and approval rejects only the approve path for those rows.
 
 Current moderator-facing behavior:
 
 - `/resend` returns a recoverable message explaining that the legacy attachment is no longer available in the Discord CDN
-- approval/rejection returns a recoverable message explaining the same limitation
+- approval returns a recoverable message explaining the same limitation
+- rejection logs a warning and proceeds without attachment metadata
 
 This is preferable to crashing on an assertion, but it is still a hard product limitation.
 
@@ -368,6 +382,7 @@ This was a deliberate choice made during the durable-attachment migration.
 - returns moderator-friendly recoverable errors for known legacy-data edge cases in interaction handlers
 - lets Inngest retry ordinary background failures
 - allows durable upload failures to land in the Inngest DLQ
+- sends an ephemeral approval follow-up if the approval transaction succeeds but the later public dispatch fails with Discord channel/access/permission errors
 
 ### What the System Does Not Do
 
@@ -387,7 +402,7 @@ The current design assumes all of the following are true:
 - a confession has at most one attachment
 - the moderator log channel exists for active attachment-bearing flows
 - the moderator log message is a sufficiently durable storage anchor in practice
-- duplicate `internalId` processing is not a real operational concern beyond singleton protection
+- duplicate Discord interaction delivery is handled by producer-side event deduplication on `interactionId`
 - missing durable attachments on modern attachment-bearing confessions should be exceptional
 - moderators can use the log message as the canonical reference for attachment-bearing confessions
 
@@ -411,9 +426,10 @@ If you touch attachment-related code, preserve the following mental model:
 
 - `ephemeral_attachment` is the original upload record
 - `durable_attachment` is the stable render record
-- `process-confession` is the only place where ephemeral download and durable upgrade should happen
+- `process-confession-submission` is the only place where ephemeral download and durable upgrade should happen
 - post-log rendering should read durable attachment data only
 - resend and approval are not reupload paths
+- approval is a split flow: synchronous durable-attachment lookup and moderator-log update in the interaction handler, followed by async public dispatch in `dispatch-approval`
 
 When evaluating a proposed change, ask:
 

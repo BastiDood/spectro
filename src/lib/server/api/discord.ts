@@ -149,4 +149,73 @@ export class DiscordClient {
       throw error;
     });
   }
+
+  static async editOriginalInteractionResponse(
+    applicationId: Snowflake,
+    interactionToken: string,
+    data: Partial<CreateMessage>,
+  ) {
+    return await tracer.asyncSpan('edit-original-interaction-response', async span => {
+      // Interaction token is too sensitive to log.
+      span.setAttribute('discord.application.id', applicationId);
+
+      const response = await fetch(
+        `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+        {
+          body: JSON.stringify(data),
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+
+      if (response.status === 200) {
+        const json = await response.json();
+        const parsed = parse(Message, json);
+        logger.debug('original interaction response edited', { 'message.id': parsed.id });
+        return parsed;
+      }
+
+      const json = await response.json();
+      const { code, message } = parse(DiscordErrorResponse, json);
+      const error = new DiscordError(code, message);
+      logger.error('discord api error in editOriginalInteractionResponse', error, {
+        'discord.error.code': code,
+        'discord.error.message': message,
+        'discord.application.id': applicationId,
+      });
+      throw error;
+    });
+  }
+
+  static async deleteOriginalInteractionResponse(
+    applicationId: Snowflake,
+    interactionToken: string,
+  ) {
+    return await tracer.asyncSpan('delete-original-interaction-response', async span => {
+      // Interaction token is too sensitive to log.
+      span.setAttribute('discord.application.id', applicationId);
+
+      const response = await fetch(
+        `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+        { method: 'DELETE' },
+      );
+
+      if (response.status === 204) {
+        logger.debug('original interaction response deleted', {
+          'discord.application.id': applicationId,
+        });
+        return;
+      }
+
+      const json = await response.json();
+      const { code, message } = parse(DiscordErrorResponse, json);
+      const error = new DiscordError(code, message);
+      logger.error('discord api error in deleteOriginalInteractionResponse', error, {
+        'discord.error.code': code,
+        'discord.error.message': message,
+        'discord.application.id': applicationId,
+      });
+      throw error;
+    });
+  }
 }

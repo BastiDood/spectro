@@ -27,7 +27,7 @@ class UnknownChannelReplyModalError extends ReplyModalError {
 
   static throwNew(): never {
     const error = new UnknownChannelReplyModalError();
-    logger.error('unknown channel for reply modal', error);
+    logger.fatal('unknown channel for reply modal', error);
     throw error;
   }
 }
@@ -43,7 +43,7 @@ class DisabledChannelReplyModalError extends ReplyModalError {
 
   static throwNew(disabledAt: Date): never {
     const error = new DisabledChannelReplyModalError(disabledAt);
-    logger.error('channel disabled for reply modal', error, {
+    logger.fatal('channel disabled for reply modal', error, {
       'error.disabled.at': disabledAt.toISOString(),
     });
     throw error;
@@ -58,7 +58,7 @@ class ApprovalRequiredReplyModalError extends ReplyModalError {
 
   static throwNew(): never {
     const error = new ApprovalRequiredReplyModalError();
-    logger.error('approval required for reply modal', error);
+    logger.fatal('approval required for reply modal', error);
     throw error;
   }
 }

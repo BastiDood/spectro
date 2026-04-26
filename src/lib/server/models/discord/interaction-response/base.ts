@@ -3,6 +3,8 @@ export const enum InteractionResponseType {
   Pong = 1,
   /** Respond to an interaction with a message. */
   ChannelMessageWithSource = 4,
+  /** Acknowledge the interaction and edit the response later. User sees a loading state. */
+  DeferredChannelMessageWithSource = 5,
   /** Acknowledge the interaction, but edit the response later. User does not see loading state. */
   DeferredUpdateMessage = 6,
   /** For components, edit the message the component was attached to. */
