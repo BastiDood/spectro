@@ -24,7 +24,7 @@ The active flow is:
 6. Discord returns a `Message` payload for the moderator log message.
 7. `process-confession-submission` attempts to extract durable attachment metadata from that returned message.
 8. When durable metadata is found, it is persisted in `durable_attachment`.
-9. When a durable row was persisted, `ephemeral_attachment.durable_attachment_id` is updated to point at it.
+9. The durable row points back to its source row through `durable_attachment.ephemeral_attachment_id`.
 10. If the confession is already approved, `process-confession-submission` posts the public confession using the durable attachment URL.
 11. If approval is required, the approval interaction later reads the durable attachment synchronously, queues `discord/confession.approve`, and returns an `UpdateMessage` response so Discord updates the moderator log message.
 12. Resend also reads from the durable attachment only; it does not redownload or reupload the file.
@@ -78,7 +78,7 @@ That separation exists for a reason:
 
 - `ephemeral_attachment` preserves the original modal-upload metadata exactly as received from Discord
 - `durable_attachment` records the later moderator-log-backed artifact that was created from it
-- `ephemeral_attachment.durable_attachment_id` explicitly encodes the lifecycle transition from
+- `durable_attachment.ephemeral_attachment_id` explicitly encodes the lifecycle transition from
   temporary upload to durable upload
 
 If the durable values were written back into `ephemeral_attachment` in place, the system would lose
@@ -95,16 +95,18 @@ invariants much easier to reason about.
 
 The relationship is:
 
-`ephemeral_attachment -> zero-or-one durable_attachment`
+```
+durable_attachment -> exactly-one ephemeral_attachment
+```
 
-This is encoded via `ephemeral_attachment.durable_attachment_id`.
+This is encoded via `durable_attachment.ephemeral_attachment_id`.
 
 Interpretation:
 
-- `NULL` means the modal upload has not been durably upgraded.
-- non-`NULL` means the modal upload has been upgraded and all later reads must use the durable row.
+- no durable row means the modal upload has not been durably upgraded.
+- a durable row means the modal upload has been upgraded and all later reads must use the durable row.
 
-This relationship is intentionally one-directional. The system models the fact that a modal upload is the original artifact and may later be upgraded to a durable artifact.
+This relationship is intentionally one-directional. The system models the fact that a durable artifact is created from one original modal upload.
 
 ## Workflow Invariants
 
@@ -149,7 +151,7 @@ The order of operations matters:
 
 1. create the moderator log message
 2. extract and persist the durable attachment
-3. link the durable attachment from the ephemeral row
+3. associate the durable row with the ephemeral row
 4. dispatch the public confession message
 
 This ordering ensures the public message never renders an attachment URL that was not durably persisted first.
@@ -264,9 +266,8 @@ Public confession messages remain simpler:
 7. Discord returns the created moderator log message.
 8. `process-confession-submission` first tries `message.attachments[0]` and falls back to
    `message.embeds[*].image` when the attachment array is empty or absent.
-9. `process-confession-submission` persists the durable row.
-10. `process-confession-submission` links `ephemeral_attachment.durable_attachment_id`.
-11. If approved, `process-confession-submission` posts the public confession using the durable URL.
+9. `process-confession-submission` persists the durable row linked by `durable_attachment.ephemeral_attachment_id`.
+10. If approved, `process-confession-submission` posts the public confession using the durable URL.
 
 ### Approval-required Confession with Attachment
 

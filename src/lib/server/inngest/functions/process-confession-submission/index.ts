@@ -14,7 +14,6 @@ import {
   db,
   type InsertableAttachment,
   insertConfession,
-  linkDurableAttachmentData,
   type PersistableDurableAttachment,
   resetLogChannel,
   type SerializedAttachment,
@@ -241,6 +240,7 @@ export const processConfessionSubmission = inngest.createFunction(
                 data.parentMessageId === null ? null : BigInt(data.parentMessageId),
                 attachment,
               ),
+            { isolationLevel: 'read committed' },
           );
 
           return {
@@ -577,14 +577,7 @@ export const processConfessionSubmission = inngest.createFunction(
             name: 'Persist Durable Attachment',
           },
           async () =>
-            await db.transaction(async tx => {
-              await upsertDurableAttachmentData(tx, BigInt(attachment.id), durableAttachment);
-              await linkDurableAttachmentData(
-                tx,
-                BigInt(attachment.id),
-                BigInt(durableAttachment.id),
-              );
-            }),
+            await upsertDurableAttachmentData(db, BigInt(attachment.id), durableAttachment),
         );
       }
 
