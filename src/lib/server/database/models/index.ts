@@ -42,6 +42,7 @@ export type NewChannel = typeof channel.$inferInsert;
 
 export const durableAttachment = app.table('durable_attachment', {
   id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+  ephemeralAttachmentId: bigint('ephemeral_attachment_id', { mode: 'bigint' }).unique(),
   messageId: bigint('message_id', { mode: 'bigint' }).notNull(),
   channelId: bigint('channel_id', { mode: 'bigint' }).notNull(),
   filename: text('filename').notNull(),
@@ -57,6 +58,7 @@ export type NewDurableAttachmentData = typeof durableAttachment.$inferInsert;
 
 export const ephemeralAttachment = app.table('ephemeral_attachment', {
   id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+  confessionInternalId: bigint('confession_internal_id', { mode: 'bigint' }).unique(),
   filename: text('filename').notNull(),
   contentType: text('content_type'),
   url: text('url').notNull(),
@@ -110,8 +112,19 @@ export const confessionRelations = relations(confession, ({ one }) => ({
 }));
 
 export const ephemeralAttachmentRelations = relations(ephemeralAttachment, ({ one }) => ({
+  confession: one(confession, {
+    fields: [ephemeralAttachment.confessionInternalId],
+    references: [confession.internalId],
+  }),
   durableAttachment: one(durableAttachment, {
     fields: [ephemeralAttachment.durableAttachmentId],
     references: [durableAttachment.id],
+  }),
+}));
+
+export const durableAttachmentRelations = relations(durableAttachment, ({ one }) => ({
+  ephemeralAttachment: one(ephemeralAttachment, {
+    fields: [durableAttachment.ephemeralAttachmentId],
+    references: [ephemeralAttachment.id],
   }),
 }));
