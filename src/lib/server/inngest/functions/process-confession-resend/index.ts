@@ -3,6 +3,7 @@ import { NonRetriableError } from 'inngest';
 
 import { assertOptional } from '$lib/assert';
 import { hasAllFlags } from '$lib/bits';
+import type { Result } from '$lib/result';
 import { DiscordClient } from '$lib/server/api/discord';
 import {
   ConfessionChannel,
@@ -26,13 +27,6 @@ const SERVICE_NAME = 'inngest.process-confession-resend';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
-class RecoverableResendError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'RecoverableResendError';
-  }
-}
-
 export const processConfessionResend = inngest.createFunction(
   {
     id: 'discord/interaction.process-confession-resend',
@@ -55,72 +49,117 @@ export const processConfessionResend = inngest.createFunction(
         'confession.id': data.confessionId,
       });
 
-      try {
-        const internalId = await step.run(
-          { id: 'prepare-resend', name: 'Prepare Resend' },
-          async () => {
-            const permission = BigInt(data.memberPermissions);
-            const confessionId = BigInt(data.confessionId);
+      const prepared = await step.run(
+        { id: 'prepare-resend', name: 'Prepare Resend' },
+        async (): Promise<Result<string, string>> => {
+          const permission = BigInt(data.memberPermissions);
+          const confessionId = BigInt(data.confessionId);
 
-            const result = await db
-              .select({
-                internalId: schema.confession.internalId,
-                logChannelId: schema.channel.logChannelId,
-                approvedAt: schema.confession.approvedAt,
-                attachmentId: schema.confession.attachmentId,
-                durableAttachmentId: schema.durableAttachment.id,
-              })
-              .from(schema.confession)
-              .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-              .leftJoin(
-                schema.ephemeralAttachment,
-                eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
-              )
-              .leftJoin(
-                schema.durableAttachment,
-                eq(schema.ephemeralAttachment.durableAttachmentId, schema.durableAttachment.id),
-              )
-              .where(
-                and(
-                  eq(schema.confession.channelId, BigInt(data.channelId)),
-                  eq(schema.confession.confessionId, confessionId),
-                ),
-              )
-              .limit(1)
-              .then(assertOptional);
+          const result = await db
+            .select({
+              internalId: schema.confession.internalId,
+              logChannelId: schema.channel.logChannelId,
+              approvedAt: schema.confession.approvedAt,
+              attachmentId: schema.confession.attachmentId,
+              durableAttachmentId: schema.durableAttachment.id,
+            })
+            .from(schema.confession)
+            .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+            .leftJoin(
+              schema.ephemeralAttachment,
+              eq(schema.confession.attachmentId, schema.ephemeralAttachment.id),
+            )
+            .leftJoin(
+              schema.durableAttachment,
+              eq(schema.ephemeralAttachment.durableAttachmentId, schema.durableAttachment.id),
+            )
+            .where(
+              and(
+                eq(schema.confession.channelId, BigInt(data.channelId)),
+                eq(schema.confession.confessionId, confessionId),
+              ),
+            )
+            .limit(1)
+            .then(assertOptional);
 
-            if (typeof result === 'undefined')
-              throw new RecoverableResendError(
-                `Confession #${confessionId} does not exist in this channel.`,
-              );
+          if (typeof result === 'undefined')
+            return {
+              ok: false,
+              error: `Confession #${confessionId} does not exist in this channel.`,
+            };
 
-            if (result.approvedAt === null)
-              throw new RecoverableResendError(
-                `Confession #${confessionId} has not yet been approved for publication in this channel.`,
-              );
+          if (result.approvedAt === null)
+            return {
+              ok: false,
+              error: `Confession #${confessionId} has not yet been approved for publication in this channel.`,
+            };
 
-            if (result.logChannelId === null)
-              throw new RecoverableResendError(
+          if (result.logChannelId === null)
+            return {
+              ok: false,
+              error:
                 'You cannot resend confessions until a valid confession log channel has been configured.',
-              );
+            };
 
-            if (result.attachmentId !== null) {
-              if (result.durableAttachmentId === null)
-                throw new RecoverableResendError(
-                  `Confession #${confessionId} includes a legacy attachment that is no longer available in the Discord CDN, so it cannot be resent.`,
-                );
+          if (result.attachmentId !== null) {
+            if (result.durableAttachmentId === null)
+              return {
+                ok: false,
+                error: `Confession #${confessionId} includes a legacy attachment that is no longer available in the Discord CDN, so it cannot be resent.`,
+              };
 
-              if (!hasAllFlags(permission, ATTACH_FILES))
-                throw new RecoverableResendError(
+            if (!hasAllFlags(permission, ATTACH_FILES))
+              return {
+                ok: false,
+                error:
                   'You do not have the permission to resend confessions with attachments in this channel.',
-                );
-            }
+              };
+          }
 
-            return result.internalId.toString();
+          return { ok: true, data: result.internalId.toString() };
+        },
+      );
+
+      if (!prepared.ok) {
+        await step.run(
+          {
+            id: 'edit-original-interaction-response-after-prepare',
+            name: 'Edit Original Interaction Response',
+          },
+          async () => {
+            try {
+              await DiscordClient.editOriginalInteractionResponse(applicationId, interactionToken, {
+                content: prepared.error,
+              });
+            } catch (cause) {
+              if (cause instanceof DiscordError)
+                switch (cause.code) {
+                  case DiscordErrorCode.UnknownWebhook:
+                  case DiscordErrorCode.InvalidWebhookToken: {
+                    const wrapped = new NonRetriableError(
+                      'discord rejected original interaction response edit',
+                      { cause },
+                    );
+                    logger.error('discord rejected original interaction response edit', wrapped, {
+                      'discord.error.code': cause.code,
+                      'discord.error.message': cause.message,
+                    });
+                    throw wrapped;
+                  }
+                  default:
+                    break;
+                }
+              throw cause;
+            }
           },
         );
+        return;
+      }
 
-        await step.run({ id: 'log-resent-confession', name: 'Log Resent Confession' }, async () => {
+      const internalId = prepared.data;
+      const logResult = await step.run(
+        { id: 'log-resent-confession', name: 'Log Resent Confession' },
+        async () => {
           const confession = await fetchConfessionForResend(db, BigInt(internalId));
           if (confession === null) {
             const error = new NonRetriableError('confession not found');
@@ -139,14 +178,12 @@ export const processConfessionResend = inngest.createFunction(
           }
 
           if (confession.channel.logChannelId === null)
-            throw new RecoverableResendError(
-              getConfessionErrorMessage(DiscordErrorCode.UnknownChannel, {
-                label: confession.channel.label,
-                confessionId: confession.confessionId,
-                channel: ConfessionChannel.Log,
-                status: 'resent',
-              }),
-            );
+            return getConfessionErrorMessage(DiscordErrorCode.UnknownChannel, {
+              label: confession.channel.label,
+              confessionId: confession.confessionId,
+              channel: ConfessionChannel.Log,
+              status: 'resent',
+            });
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
@@ -182,24 +219,20 @@ export const processConfessionResend = inngest.createFunction(
                 case DiscordErrorCode.UnknownChannel:
                   await resetLogChannel(db, BigInt(confession.channelId));
                   logger.warn('log channel reset');
-                  throw new RecoverableResendError(
-                    getConfessionErrorMessage(error.code, {
-                      label: confession.channel.label,
-                      confessionId: confession.confessionId,
-                      channel: ConfessionChannel.Log,
-                      status: 'resent',
-                    }),
-                  );
+                  return getConfessionErrorMessage(error.code, {
+                    label: confession.channel.label,
+                    confessionId: confession.confessionId,
+                    channel: ConfessionChannel.Log,
+                    status: 'resent',
+                  });
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
-                  throw new RecoverableResendError(
-                    getConfessionErrorMessage(error.code, {
-                      label: confession.channel.label,
-                      confessionId: confession.confessionId,
-                      channel: ConfessionChannel.Log,
-                      status: 'resent',
-                    }),
-                  );
+                  return getConfessionErrorMessage(error.code, {
+                    label: confession.channel.label,
+                    confessionId: confession.confessionId,
+                    channel: ConfessionChannel.Log,
+                    status: 'resent',
+                  });
                 default:
                   break;
               }
@@ -211,9 +244,49 @@ export const processConfessionResend = inngest.createFunction(
             'discord.channel.id': message.channel_id,
             'discord.message.timestamp': message.timestamp,
           });
-        });
+          return null;
+        },
+      );
 
-        await step.run({ id: 'resend-confession', name: 'Resend Confession' }, async () => {
+      if (logResult !== null) {
+        await step.run(
+          {
+            id: 'edit-original-interaction-response-after-log',
+            name: 'Edit Original Interaction Response',
+          },
+          async () => {
+            try {
+              await DiscordClient.editOriginalInteractionResponse(applicationId, interactionToken, {
+                content: logResult,
+              });
+            } catch (cause) {
+              if (cause instanceof DiscordError)
+                switch (cause.code) {
+                  case DiscordErrorCode.UnknownWebhook:
+                  case DiscordErrorCode.InvalidWebhookToken: {
+                    const wrapped = new NonRetriableError(
+                      'discord rejected original interaction response edit',
+                      { cause },
+                    );
+                    logger.error('discord rejected original interaction response edit', wrapped, {
+                      'discord.error.code': cause.code,
+                      'discord.error.message': cause.message,
+                    });
+                    throw wrapped;
+                  }
+                  default:
+                    break;
+                }
+              throw cause;
+            }
+          },
+        );
+        return;
+      }
+
+      const resendResult = await step.run(
+        { id: 'resend-confession', name: 'Resend Confession' },
+        async () => {
           const confession = await fetchConfessionForResend(db, BigInt(internalId));
           if (confession === null) {
             const error = new NonRetriableError('confession not found');
@@ -262,14 +335,12 @@ export const processConfessionResend = inngest.createFunction(
                 case DiscordErrorCode.UnknownChannel:
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
-                  throw new RecoverableResendError(
-                    getConfessionErrorMessage(error.code, {
-                      label: confession.channel.label,
-                      confessionId: confession.confessionId,
-                      channel: ConfessionChannel.Confession,
-                      status: 'resent',
-                    }),
-                  );
+                  return getConfessionErrorMessage(error.code, {
+                    label: confession.channel.label,
+                    confessionId: confession.confessionId,
+                    channel: ConfessionChannel.Confession,
+                    status: 'resent',
+                  });
                 default:
                   break;
               }
@@ -281,46 +352,44 @@ export const processConfessionResend = inngest.createFunction(
             'discord.message.channel.id': message.channel_id,
             'discord.message.timestamp': message.timestamp,
           });
-        });
-      } catch (error) {
-        if (error instanceof RecoverableResendError) {
-          await step.run(
-            {
-              id: 'edit-original-interaction-response',
-              name: 'Edit Original Interaction Response',
-            },
-            async () => {
-              try {
-                await DiscordClient.editOriginalInteractionResponse(
-                  applicationId,
-                  interactionToken,
-                  { content: error.message },
-                );
-              } catch (cause) {
-                if (cause instanceof DiscordError)
-                  switch (cause.code) {
-                    case DiscordErrorCode.UnknownWebhook:
-                    case DiscordErrorCode.InvalidWebhookToken: {
-                      const wrapped = new NonRetriableError(
-                        'discord rejected original interaction response edit',
-                        { cause },
-                      );
-                      logger.error('discord rejected original interaction response edit', wrapped, {
-                        'discord.error.code': cause.code,
-                        'discord.error.message': cause.message,
-                      });
-                      throw wrapped;
-                    }
-                    default:
-                      break;
+          return null;
+        },
+      );
+
+      if (resendResult !== null) {
+        await step.run(
+          {
+            id: 'edit-original-interaction-response-after-post',
+            name: 'Edit Original Interaction Response',
+          },
+          async () => {
+            try {
+              await DiscordClient.editOriginalInteractionResponse(applicationId, interactionToken, {
+                content: resendResult,
+              });
+            } catch (cause) {
+              if (cause instanceof DiscordError)
+                switch (cause.code) {
+                  case DiscordErrorCode.UnknownWebhook:
+                  case DiscordErrorCode.InvalidWebhookToken: {
+                    const wrapped = new NonRetriableError(
+                      'discord rejected original interaction response edit',
+                      { cause },
+                    );
+                    logger.error('discord rejected original interaction response edit', wrapped, {
+                      'discord.error.code': cause.code,
+                      'discord.error.message': cause.message,
+                    });
+                    throw wrapped;
                   }
-                throw cause;
-              }
-            },
-          );
-          return;
-        }
-        throw error;
+                  default:
+                    break;
+                }
+              throw cause;
+            }
+          },
+        );
+        return;
       }
 
       await step.run(
