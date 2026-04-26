@@ -98,6 +98,18 @@ class MissingDurableAttachmentApprovalError extends ApprovalError {
   }
 }
 
+interface ApprovalDispatch {
+  applicationId: Snowflake;
+  interactionToken: string;
+  interactionId: Snowflake;
+  internalId: string;
+}
+
+interface SubmitVerdictResult {
+  embed: Embed;
+  dispatch: ApprovalDispatch | null;
+}
+
 /**
  * @throws {InsufficientPermissionsApprovalError}
  * @throws {DisabledChannelConfessError}
@@ -125,187 +137,183 @@ async function submitVerdict(
 
     if (!hasAllFlags(permissions, MANAGE_MESSAGES)) InsufficientPermissionsApprovalError.throwNew();
 
-    return await db.transaction(async tx => {
-      const { approvedAt, disabledAt, authorId, confessionId, label, content, attachmentId } =
-        await tracer.asyncSpan('select-confession-details', async span => {
-          span.setAttribute('confession.internal.id', internalId.toString());
+    return await db.transaction(
+      async tx => {
+        const { approvedAt, disabledAt, authorId, confessionId, label, content, attachmentId } =
+          await tracer.asyncSpan('select-confession-details', async span => {
+            span.setAttribute('confession.internal.id', internalId.toString());
 
-          const [result, ...rest] = await tx
-            .select({
-              disabledAt: channel.disabledAt,
-              label: channel.label,
-              authorId: confession.authorId,
-              approvedAt: confession.approvedAt,
-              content: confession.content,
-              confessionId: confession.confessionId,
-              attachmentId: confession.attachmentId,
-            })
-            .from(confession)
-            .innerJoin(channel, eq(confession.channelId, channel.id))
-            .where(eq(confession.internalId, internalId))
-            .limit(1)
-            .for('update');
-          strictEqual(rest.length, 0);
-          assert(typeof result !== 'undefined');
+            const [result, ...rest] = await tx
+              .select({
+                disabledAt: channel.disabledAt,
+                label: channel.label,
+                authorId: confession.authorId,
+                approvedAt: confession.approvedAt,
+                content: confession.content,
+                confessionId: confession.confessionId,
+                attachmentId: confession.attachmentId,
+              })
+              .from(confession)
+              .innerJoin(channel, eq(confession.channelId, channel.id))
+              .where(eq(confession.internalId, internalId))
+              .limit(1)
+              .for('update');
+            strictEqual(rest.length, 0);
+            assert(typeof result !== 'undefined');
 
-          logger.debug('confession details fetched', {
-            'confession.id': result.confessionId.toString(),
-            label: result.label,
+            logger.debug('confession details fetched', {
+              'confession.id': result.confessionId.toString(),
+              label: result.label,
+            });
+
+            return result;
           });
 
-          return result;
-        });
+        // TODO: Refactor to Relations API once the `bigint` bug is fixed.
+        let embedAttachment: EmbedAttachment | null = null;
+        if (attachmentId !== null)
+          embedAttachment = await tracer.asyncSpan('select-attachment', async span => {
+            span.setAttribute('attachment.id', attachmentId.toString());
 
-      // TODO: Refactor to Relations API once the `bigint` bug is fixed.
-      let embedAttachment: EmbedAttachment | null = null;
-      if (attachmentId !== null)
-        embedAttachment = await tracer.asyncSpan('select-attachment', async span => {
-          span.setAttribute('attachment.id', attachmentId.toString());
+            const retrieved = await tx
+              .select({
+                durableAttachmentId: durableAttachment.id,
+                filename: durableAttachment.filename,
+                contentType: durableAttachment.contentType,
+                url: durableAttachment.url,
+                height: durableAttachment.height,
+                width: durableAttachment.width,
+              })
+              .from(ephemeralAttachment)
+              .leftJoin(
+                durableAttachment,
+                eq(ephemeralAttachment.durableAttachmentId, durableAttachment.id),
+              )
+              .where(eq(ephemeralAttachment.id, attachmentId))
+              .then(assertSingle);
 
-          const retrieved = await tx
-            .select({
-              durableAttachmentId: durableAttachment.id,
-              filename: durableAttachment.filename,
-              contentType: durableAttachment.contentType,
-              url: durableAttachment.url,
-              height: durableAttachment.height,
-              width: durableAttachment.width,
-            })
-            .from(ephemeralAttachment)
-            .leftJoin(
-              durableAttachment,
-              eq(ephemeralAttachment.durableAttachmentId, durableAttachment.id),
-            )
-            .where(eq(ephemeralAttachment.id, attachmentId))
-            .then(assertSingle);
+            if (retrieved.durableAttachmentId === null)
+              MissingDurableAttachmentApprovalError.throwNew();
+            assert(retrieved.filename !== null);
+            assert(retrieved.url !== null);
+            logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });
 
-          if (retrieved.durableAttachmentId === null)
-            MissingDurableAttachmentApprovalError.throwNew();
-          assert(retrieved.filename !== null);
-          assert(retrieved.url !== null);
-          logger.debug('attachment fetched', { 'attachment.filename': retrieved.filename });
+            const embed: EmbedAttachment = { filename: retrieved.filename, url: retrieved.url };
+            if (retrieved.contentType !== null) embed.content_type = retrieved.contentType;
+            if (retrieved.height !== null) embed.height = retrieved.height;
+            if (retrieved.width !== null) embed.width = retrieved.width;
+            return embed;
+          });
 
-          const embed: EmbedAttachment = { filename: retrieved.filename, url: retrieved.url };
-          if (retrieved.contentType !== null) embed.content_type = retrieved.contentType;
-          if (retrieved.height !== null) embed.height = retrieved.height;
-          if (retrieved.width !== null) embed.width = retrieved.width;
-          return embed;
-        });
+        if (disabledAt !== null && disabledAt <= timestamp)
+          DisabledChannelConfessError.throwNew(disabledAt);
 
-      if (disabledAt !== null && disabledAt <= timestamp)
-        DisabledChannelConfessError.throwNew(disabledAt);
+        if (approvedAt !== null) AlreadyApprovedApprovalError.throwNew(approvedAt);
 
-      if (approvedAt !== null) AlreadyApprovedApprovalError.throwNew(approvedAt);
-
-      const fields: EmbedField[] = [
-        {
-          name: 'Authored by',
-          value: `||<@${authorId}>||`,
-          inline: true,
-        },
-      ];
-
-      // eslint-disable-next-line @typescript-eslint/init-declarations
-      let embed: Embed;
-      if (isApproved) {
-        await tracer.asyncSpan('update-confession-approved-at', async span => {
-          span.setAttribute('confession.internal.id', internalId.toString());
-          const { rowCount } = await tx
-            .update(confession)
-            .set({ approvedAt: timestamp })
-            .where(eq(confession.internalId, internalId));
-          strictEqual(rowCount, 1);
-          logger.debug('confession approved_at updated');
-        });
-
-        fields.push({
-          name: 'Approved by',
-          value: `<@${moderatorId}>`,
-          inline: true,
-        });
+        const fields: EmbedField[] = [
+          {
+            name: 'Authored by',
+            value: `||<@${authorId}>||`,
+            inline: true,
+          },
+        ];
 
         // eslint-disable-next-line @typescript-eslint/init-declarations
-        let image: EmbedImage | undefined;
-        if (embedAttachment !== null) {
-          fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
-          if (embedAttachment.content_type?.startsWith('image/'))
-            image = {
-              url: embedAttachment.url,
-              height: embedAttachment.height ?? void 0,
-              width: embedAttachment.width ?? void 0,
-            };
-        }
+        let embed: Embed;
+        let dispatch: ApprovalDispatch | null = null;
+        if (isApproved) {
+          await tracer.asyncSpan('update-confession-approved-at', async span => {
+            span.setAttribute('confession.internal.id', internalId.toString());
+            const { rowCount } = await tx
+              .update(confession)
+              .set({ approvedAt: timestamp })
+              .where(eq(confession.internalId, internalId));
+            strictEqual(rowCount, 1);
+            logger.debug('confession approved_at updated');
+          });
 
-        logger.info('confession approved', { 'confession.id': confessionId.toString() });
-        embed = {
-          type: EmbedType.Rich,
-          title: `${label} #${confessionId}`,
-          color: Color.Success,
-          timestamp: timestamp.toISOString(),
-          description: content,
-          footer: {
-            text: 'Spectro Logs',
-            icon_url: APP_ICON_URL,
-          },
-          fields,
-          image,
-        };
+          fields.push({
+            name: 'Approved by',
+            value: `<@${moderatorId}>`,
+            inline: true,
+          });
 
-        // Emit Inngest event for async dispatch (will send follow-up on failure)
-        const { ids } = await inngest.send(
-          ConfessionApprovalEvent.create(
-            {
-              applicationId,
-              interactionToken,
-              interactionId,
-              internalId: internalId.toString(),
+          // eslint-disable-next-line @typescript-eslint/init-declarations
+          let image: EmbedImage | undefined;
+          if (embedAttachment !== null) {
+            fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+            if (embedAttachment.content_type?.startsWith('image/'))
+              image = {
+                url: embedAttachment.url,
+                height: embedAttachment.height ?? void 0,
+                width: embedAttachment.width ?? void 0,
+              };
+          }
+
+          logger.info('confession approved', { 'confession.id': confessionId.toString() });
+          embed = {
+            type: EmbedType.Rich,
+            title: `${label} #${confessionId}`,
+            color: Color.Success,
+            timestamp: timestamp.toISOString(),
+            description: content,
+            footer: {
+              text: 'Spectro Logs',
+              icon_url: APP_ICON_URL,
             },
-            { id: interactionId, ts: timestamp.valueOf() },
-          ),
-        );
-        logger.debug('inngest event emitted', { 'inngest.events.id': ids });
-      } else {
-        fields.push({
-          name: 'Deleted by',
-          value: `<@${moderatorId}>`,
-          inline: true,
-        });
+            fields,
+            image,
+          };
+          dispatch = {
+            applicationId,
+            interactionToken,
+            interactionId,
+            internalId: internalId.toString(),
+          };
+        } else {
+          fields.push({
+            name: 'Deleted by',
+            value: `<@${moderatorId}>`,
+            inline: true,
+          });
 
-        // eslint-disable-next-line @typescript-eslint/init-declarations
-        let image: EmbedImage | undefined;
-        if (embedAttachment !== null) {
-          fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
-          if (embedAttachment.content_type?.startsWith('image/'))
-            image = {
-              url: embedAttachment.url,
-              height: embedAttachment.height ?? void 0,
-              width: embedAttachment.width ?? void 0,
-            };
+          // eslint-disable-next-line @typescript-eslint/init-declarations
+          let image: EmbedImage | undefined;
+          if (embedAttachment !== null) {
+            fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
+            if (embedAttachment.content_type?.startsWith('image/'))
+              image = {
+                url: embedAttachment.url,
+                height: embedAttachment.height ?? void 0,
+                width: embedAttachment.width ?? void 0,
+              };
+          }
+
+          await tracer.asyncSpan('delete-confession', async span => {
+            span.setAttribute('confession.internal.id', internalId.toString());
+            await tx.delete(confession).where(eq(confession.internalId, internalId));
+            logger.info('confession rejected', { 'confession.id': confessionId.toString() });
+          });
+
+          embed = {
+            type: EmbedType.Rich,
+            title: `${label} #${confessionId}`,
+            color: Color.Failure,
+            timestamp: timestamp.toISOString(),
+            description: content,
+            footer: {
+              text: 'Spectro Logs',
+              icon_url: APP_ICON_URL,
+            },
+            fields,
+            image,
+          };
         }
 
-        await tracer.asyncSpan('delete-confession', async span => {
-          span.setAttribute('confession.internal.id', internalId.toString());
-          await tx.delete(confession).where(eq(confession.internalId, internalId));
-          logger.info('confession rejected', { 'confession.id': confessionId.toString() });
-        });
-
-        embed = {
-          type: EmbedType.Rich,
-          title: `${label} #${confessionId}`,
-          color: Color.Failure,
-          timestamp: timestamp.toISOString(),
-          description: content,
-          footer: {
-            text: 'Spectro Logs',
-            icon_url: APP_ICON_URL,
-          },
-          fields,
-          image,
-        };
-      }
-
-      return embed;
-    });
+        return { embed, dispatch } satisfies SubmitVerdictResult;
+      },
+      { isolationLevel: 'read committed' },
+    );
   });
 }
 
@@ -338,9 +346,9 @@ export async function handleApproval(
   }
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
-  let embed: Embed;
+  let result: SubmitVerdictResult;
   try {
-    embed = await submitVerdict(
+    result = await submitVerdict(
       timestamp,
       applicationId,
       interactionToken,
@@ -359,8 +367,31 @@ export async function handleApproval(
     throw error;
   }
 
+  if (result.dispatch !== null) {
+    const { dispatch } = result;
+    await tracer.asyncSpan('send-approval-dispatch', async span => {
+      span.setAttributes({
+        'confession.internal.id': dispatch.internalId,
+        'interaction.id': dispatch.interactionId,
+      });
+
+      const { ids } = await inngest.send(
+        ConfessionApprovalEvent.create(
+          {
+            applicationId: dispatch.applicationId,
+            interactionToken: dispatch.interactionToken,
+            interactionId: dispatch.interactionId,
+            internalId: dispatch.internalId,
+          },
+          { id: dispatch.interactionId, ts: timestamp.valueOf() },
+        ),
+      );
+      logger.debug('inngest event emitted', { 'inngest.events.id': ids });
+    });
+  }
+
   return {
     type: InteractionResponseType.UpdateMessage,
-    data: { components: [], embeds: [embed] },
+    data: { components: [], embeds: [result.embed] },
   };
 }
