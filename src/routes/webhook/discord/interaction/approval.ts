@@ -1,7 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
 import { eq } from 'drizzle-orm';
-import { waitUntil } from '@vercel/functions';
 
 import { hasAllFlags } from '$lib/bits';
 import { Logger } from '$lib/server/telemetry/logger';
@@ -253,21 +252,18 @@ async function submitVerdict(
         };
 
         // Emit Inngest event for async dispatch (will send follow-up on failure)
-        waitUntil(
-          inngest
-            .send(
-              ConfessionApprovalEvent.create(
-                {
-                  applicationId,
-                  interactionToken,
-                  interactionId,
-                  internalId: internalId.toString(),
-                },
-                { id: interactionId, ts: timestamp.valueOf() },
-              ),
-            )
-            .then(({ ids }) => logger.debug('inngest event emitted', { 'inngest.events.id': ids })),
+        const { ids } = await inngest.send(
+          ConfessionApprovalEvent.create(
+            {
+              applicationId,
+              interactionToken,
+              interactionId,
+              internalId: internalId.toString(),
+            },
+            { id: interactionId, ts: timestamp.valueOf() },
+          ),
         );
+        logger.debug('inngest event emitted', { 'inngest.events.id': ids });
       } else {
         fields.push({
           name: 'Deleted by',
