@@ -689,17 +689,19 @@ export const processConfessionSubmission = inngest.createFunction(
           } catch (cause) {
             if (cause instanceof DiscordError)
               switch (cause.code) {
-                case DiscordErrorCode.UnknownWebhook:
-                case DiscordErrorCode.InvalidWebhookToken: {
-                  const wrapped = new NonRetriableError(
-                    'discord rejected original interaction response deletion',
-                    { cause },
-                  );
-                  logger.error('discord rejected original interaction response deletion', wrapped, {
+                case DiscordErrorCode.UnknownWebhook: {
+                  logger.error('original interaction response webhook already gone', cause, {
                     'discord.error.code': cause.code,
                     'discord.error.message': cause.message,
                   });
-                  throw wrapped;
+                  return;
+                }
+                case DiscordErrorCode.InvalidWebhookToken: {
+                  logger.fatal('discord rejected original interaction response deletion', cause, {
+                    'discord.error.code': cause.code,
+                    'discord.error.message': cause.message,
+                  });
+                  throw cause;
                 }
                 default:
                   break;
