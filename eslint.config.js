@@ -21,7 +21,7 @@ export default defineConfig(
       ...html.configs['flat/recommended'].rules,
       '@html-eslint/indent': 'off',
       '@html-eslint/no-duplicate-class': 'error',
-      '@html-eslint/no-extra-spacing-attrs': [
+      '@html-eslint/no-extra-spacing-tags': [
         'error',
         {
           enforceBeforeSelfClose: true,

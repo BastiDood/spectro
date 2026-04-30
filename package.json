@@ -45,7 +45,7 @@
   "devDependencies": {
     "@bastidood/eslint-plugin-imsort": "^0.12.0",
     "@eslint/js": "^10.0.1",
-    "@html-eslint/eslint-plugin": "^0.59.0",
+    "@html-eslint/eslint-plugin": "^0.60.0",
     "@sveltejs/adapter-vercel": "^6.3.3",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.2",
