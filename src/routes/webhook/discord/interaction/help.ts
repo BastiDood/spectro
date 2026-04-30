@@ -85,7 +85,7 @@ export function handleHelp([
           },
           {
             type: MessageComponentType.TextDisplay,
-            content: '-# Coded with love by <@374495340902088704>...',
+            content: '-# Coded with love by [Basti Ortiz](https://bastidood.dev/)',
           },
           {
             type: MessageComponentType.ActionRow,
@@ -122,9 +122,6 @@ export function handleHelp([
 
     return {
       flags,
-      allowed_mentions: {
-        users: ['374495340902088704'], // @bastidood
-      },
       components,
     };
   });

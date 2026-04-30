@@ -43,7 +43,7 @@ export function handleInfo([
           {
             type: MessageComponentType.TextDisplay,
             content:
-              '-# Coded with love by <@374495340902088704>. Themes, designs, and branding by <@372372038264029184>.',
+              '-# Coded with love by [Basti Ortiz](https://bastidood.dev/). Themes, designs, and branding by [Jelly Raborar](https://github.com/Anjellyrika).',
           },
           {
             type: MessageComponentType.ActionRow,
@@ -80,12 +80,6 @@ export function handleInfo([
 
     return {
       flags,
-      allowed_mentions: {
-        users: [
-          '374495340902088704', // @bastidood
-          '372372038264029184', // @jellycanne
-        ],
-      },
       components,
     };
   });
