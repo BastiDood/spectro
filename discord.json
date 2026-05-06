@@ -53,9 +53,15 @@
       {
         "type": 7,
         "channel_types": [0],
-        "name": "channel",
+        "name": "log-channel",
         "required": true,
-        "description": "The channel to which all confession logs and approval requests will be sent."
+        "description": "Private moderator channel for confession logs and approval requests."
+      },
+      {
+        "type": 7,
+        "channel_types": [0],
+        "name": "confession-channel",
+        "description": "Channel where anonymous confessions will be enabled."
       },
       {
         "type": 3,

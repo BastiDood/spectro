@@ -67,7 +67,7 @@ export function handleHelp([
           {
             type: MessageComponentType.TextDisplay,
             content:
-              '**`/setup <channel> [label] [color] [approval]`**\nRequires the **"Manage Channels"** permission. Enables confessions for the current channel. All confessions will be logged in the provided `channel`. Optionally, you can set a `label` to be used for the embed title (e.g., "Confession" by default). You may also set the RGB `color` hex code that will be used for the embeds. Finally, you may set whether to require prior `approval` before publishing a confession to a channel (e.g., no approval required by default). Running this command again will simply overwrite the affected previous settings.',
+              '**`/setup <log-channel> [confession-channel] [label] [color] [approval]`**\nRequires the **"Manage Channels"** permission. Enables confessions for the current channel, or for the provided `confession-channel` when one is selected. All confessions will be logged in the provided `log-channel`. Optionally, you can set a `label` to be used for the embed title (e.g., "Confession" by default). You may also set the RGB `color` hex code that will be used for the embeds. Finally, you may set whether to require prior `approval` before publishing a confession to a channel (e.g., no approval required by default). Running this command again will simply overwrite the affected previous settings.',
           },
           {
             type: MessageComponentType.TextDisplay,

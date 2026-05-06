@@ -36,11 +36,12 @@ export const processChannelSetup = inngest.createFunction(
         'channel.id': data.channelId,
         'guild.id': data.guildId,
         'log.channel.id': data.logChannelId,
+        'target.channel.id': data.targetChannelId,
       });
 
       const content = await step.run({ id: 'process-setup', name: 'Process Setup' }, async () => {
         const insert: NewChannel = {
-          id: BigInt(data.channelId),
+          id: BigInt(data.targetChannelId),
           guildId: BigInt(data.guildId),
           logChannelId: BigInt(data.logChannelId),
           disabledAt: null,
@@ -77,8 +78,8 @@ export const processChannelSetup = inngest.createFunction(
         logger.info('confessions enabled');
 
         return configured.isApprovalRequired
-          ? `Only approved confessions (labelled **${configured.label}**) are now enabled for this channel.`
-          : `Any confessions (labelled **${configured.label}**) are now enabled for this channel.`;
+          ? `Only approved confessions (labelled **${configured.label}**) are now enabled for <#${data.targetChannelId}>.`
+          : `Any confessions (labelled **${configured.label}**) are now enabled for <#${data.targetChannelId}>.`;
       });
 
       await step.run(

@@ -7,6 +7,7 @@ const ChannelSetupEventData = object({
   interactionId: string(),
   guildId: string(),
   channelId: string(),
+  targetChannelId: string(),
   logChannelId: string(),
   label: nullable(string()),
   color: nullable(string()),
@@ -14,6 +15,6 @@ const ChannelSetupEventData = object({
 });
 
 export const ChannelSetupEvent = eventType('discord/channel.setup', {
-  version: '2.0.0',
+  version: '3.0.0',
   schema: ChannelSetupEventData,
 });

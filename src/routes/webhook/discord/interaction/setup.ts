@@ -38,6 +38,7 @@ export async function handleSetup(
     });
 
     let logChannelId: Snowflake | null = null;
+    let targetChannelId: Snowflake | null = null;
     let label: string | null = null;
     let color: string | null = null;
     let isApprovalRequired: boolean | null = null;
@@ -45,7 +46,16 @@ export async function handleSetup(
     for (const option of options)
       switch (option.type) {
         case InteractionApplicationCommandChatInputOptionType.Channel:
-          logChannelId = option.value;
+          switch (option.name) {
+            case 'log-channel':
+              logChannelId = option.value;
+              break;
+            case 'confession-channel':
+              targetChannelId = option.value;
+              break;
+            default:
+              UnexpectedSetupArgumentError.throwNew(option.name);
+          }
           break;
         case InteractionApplicationCommandChatInputOptionType.String:
           switch (option.name) {
@@ -68,11 +78,17 @@ export async function handleSetup(
       }
 
     assert(logChannelId !== null);
+    const effectiveTargetChannelId = targetChannelId ?? channelId;
 
     const logChannel = resolvedChannels[logChannelId];
     assert(typeof logChannel !== 'undefined');
     strictEqual(logChannel.type, ChannelType.GuildText);
-    span.setAttribute('log.channel.id', logChannelId);
+
+    if (targetChannelId !== null) span.setAttribute('target.channel.id', targetChannelId);
+    span.setAttributes({
+      'log.channel.id': logChannelId,
+      'effective.channel.id': effectiveTargetChannelId,
+    });
 
     const { ids } = await inngest.send(
       ChannelSetupEvent.create(
@@ -82,6 +98,7 @@ export async function handleSetup(
           interactionToken,
           guildId,
           channelId,
+          targetChannelId: effectiveTargetChannelId,
           logChannelId,
           label,
           color,
