@@ -19,7 +19,7 @@
     "fmt:fix": "prettier . --experimental-cli --write --cache-location .prettiercache",
     "lint": "pnpm --workspace-root run --parallel /lint:/",
     "lint:eslint": "eslint --cache --concurrency auto",
-    "lint:svelte": "svelte-check --tsconfig ./tsconfig.json"
+    "lint:svelte": "svelte-check"
   },
   "dependencies": {
     "@iconify-icons/ic": "^1.2.13",
