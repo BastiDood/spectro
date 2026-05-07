@@ -1,5 +1,10 @@
 import { check, type InferOutput, number, object, pipe, safeInteger, string } from 'valibot';
 
+import { Logger } from '$lib/server/telemetry/logger';
+
+const SERVICE_NAME = 'models.discord.errors';
+const logger = Logger.byName(SERVICE_NAME);
+
 export const enum DiscordErrorCode {
   UnknownChannel = 10003,
   UnknownWebhook = 10015,
@@ -27,5 +32,14 @@ export class DiscordError extends Error {
   ) {
     super(message);
     this.name = 'DiscordError';
+  }
+
+  static throwNew(code: number, message: string): never {
+    const error = new DiscordError(code, message);
+    logger.error('discord api error', error, {
+      'discord.error.code': code,
+      'discord.error.message': message,
+    });
+    throw error;
   }
 }

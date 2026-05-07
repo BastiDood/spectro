@@ -139,13 +139,7 @@ export class DiscordClient {
 
       const json = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in createFollowupMessage', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.application.id': applicationId,
-      });
-      throw error;
+      return DiscordError.throwNew(code, message);
     });
   }
 
@@ -176,13 +170,7 @@ export class DiscordClient {
 
       const json = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in editOriginalInteractionResponse', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.application.id': applicationId,
-      });
-      throw error;
+      return DiscordError.throwNew(code, message);
     });
   }
 
@@ -208,13 +196,7 @@ export class DiscordClient {
 
       const json = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in deleteOriginalInteractionResponse', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.application.id': applicationId,
-      });
-      throw error;
+      return DiscordError.throwNew(code, message);
     });
   }
 }
