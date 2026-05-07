@@ -2,6 +2,7 @@ import { array, type InferOutput, object, optional } from 'valibot';
 
 import type { AllowedMentions } from '$lib/server/models/discord/allowed-mentions';
 import { Attachment } from '$lib/server/models/discord/attachment';
+import { Channel } from '$lib/server/models/discord/channel';
 import { Embed } from '$lib/server/models/discord/embed';
 
 import { MessageBase, MessageFlags } from './base';
@@ -16,6 +17,7 @@ export const Message = object({
   ...MessageBase.entries,
   attachments: optional(array(Attachment)),
   embeds: optional(array(Embed)),
+  thread: optional(Channel),
 });
 
 export type Message = InferOutput<typeof Message>;

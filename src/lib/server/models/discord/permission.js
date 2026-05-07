@@ -9,3 +9,12 @@ export const MANAGE_MESSAGES = 1n << 13n;
 
 /** Allows for users to send attachments with their messages. */
 export const ATTACH_FILES = 1n << 15n;
+
+/** Allows for deleting and archiving threads, and viewing all private threads. */
+export const MANAGE_THREADS = 1n << 34n;
+
+/** Allows for creating public and announcement threads. */
+export const CREATE_PUBLIC_THREADS = 1n << 35n;
+
+/** Allows for sending messages in threads. */
+export const SEND_MESSAGES_IN_THREADS = 1n << 38n;
