@@ -2,13 +2,14 @@ import {
   bigint,
   bit,
   boolean,
+  index,
   integer,
   pgSchema,
   text,
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { isNotNull, relations } from 'drizzle-orm';
 
 export const app = pgSchema('app');
 
@@ -40,6 +41,38 @@ export const channel = app.table('channel', {
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
+export const pendingChannelThreadKind = app.enum('pending_channel_thread_kind', ['new-thread']);
+export type PendingChannelThreadKind = (typeof pendingChannelThreadKind.enumValues)[number];
+
+export const pendingChannelThread = app.table(
+  'pending_channel_thread',
+  {
+    id: bigint('id', { mode: 'bigint' }).generatedAlwaysAsIdentity().notNull().primaryKey(),
+    channelId: bigint('channel_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => channel.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    kind: pendingChannelThreadKind('kind').notNull(),
+    title: text('title').notNull(),
+  },
+  ({ channelId }) => [index('pending_channel_thread_channel_id_idx').on(channelId)],
+);
+
+export type PendingChannelThread = typeof pendingChannelThread.$inferSelect;
+export type NewPendingChannelThread = typeof pendingChannelThread.$inferInsert;
+
+export const approvedChannelThread = app.table('approved_channel_thread', {
+  threadId: bigint('thread_id', { mode: 'bigint' }).notNull().primaryKey(),
+  pendingChannelThreadId: bigint('pending_channel_thread_id', { mode: 'bigint' })
+    .notNull()
+    .references(() => pendingChannelThread.id, { onDelete: 'cascade' })
+    .unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type ApprovedChannelThread = typeof approvedChannelThread.$inferSelect;
+export type NewApprovedChannelThread = typeof approvedChannelThread.$inferInsert;
+
 export const confession = app.table(
   'confession',
   {
@@ -50,6 +83,9 @@ export const confession = app.table(
     channelId: bigint('channel_id', { mode: 'bigint' })
       .notNull()
       .references(() => channel.id),
+    pendingChannelThreadId: bigint('pending_channel_thread_id', { mode: 'bigint' }).references(
+      () => pendingChannelThread.id,
+    ),
     parentMessageId: bigint('parent_message_id', { mode: 'bigint' }),
     // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
     confessionId: bigint('confession_id', { mode: 'bigint' })
@@ -60,7 +96,11 @@ export const confession = app.table(
     authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
     content: text('content').notNull(),
   },
-  ({ confessionId, channelId }) => [
+  ({ confessionId, channelId, pendingChannelThreadId }) => [
+    index('confession_channel_id_idx').on(channelId),
+    index('confession_pending_channel_thread_id_idx')
+      .on(pendingChannelThreadId)
+      .where(isNotNull(pendingChannelThreadId)),
     uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId),
   ],
 );
@@ -104,9 +144,36 @@ export type NewDurableAttachment = typeof durableAttachment.$inferInsert;
 
 export const confessionRelations = relations(confession, ({ one }) => ({
   channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
+  pendingChannelThread: one(pendingChannelThread, {
+    fields: [confession.pendingChannelThreadId],
+    references: [pendingChannelThread.id],
+  }),
   attachment: one(ephemeralAttachment, {
     fields: [confession.internalId],
     references: [ephemeralAttachment.confessionInternalId],
+  }),
+}));
+
+export const channelRelations = relations(channel, ({ many }) => ({
+  pendingChannelThreads: many(pendingChannelThread),
+}));
+
+export const pendingChannelThreadRelations = relations(pendingChannelThread, ({ one, many }) => ({
+  channel: one(channel, {
+    fields: [pendingChannelThread.channelId],
+    references: [channel.id],
+  }),
+  approvedChannelThread: one(approvedChannelThread, {
+    fields: [pendingChannelThread.id],
+    references: [approvedChannelThread.pendingChannelThreadId],
+  }),
+  confessions: many(confession),
+}));
+
+export const approvedChannelThreadRelations = relations(approvedChannelThread, ({ one }) => ({
+  pendingChannelThread: one(pendingChannelThread, {
+    fields: [approvedChannelThread.pendingChannelThreadId],
+    references: [pendingChannelThread.id],
   }),
 }));
 
