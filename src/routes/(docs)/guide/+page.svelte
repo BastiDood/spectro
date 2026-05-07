@@ -22,8 +22,9 @@
     a channel for confessions, server moderators (i.e., any member with the <span
       class="badge badge-accent">Manage Channels</span
     >
-    permission) must invoke the {@render command('setup')} command with a target
-    <strong>channel</strong> to which all confession logs will be sent.
+    permission) must invoke the {@render command('setup')} command with a
+    <strong>log-channel</strong> to which all confession logs will be sent. The command configures
+    the current channel by default, or the selected <strong>confession-channel</strong> when one is provided.
   </p>
   <p>
     Optionally, the <strong>label</strong> and the <strong>color</strong> of the confession embed
@@ -42,7 +43,7 @@
     simply overwrite the non-empty arguments of the command invocation.
   </p>
   <p>
-    The configured log <strong>channel</strong> is also where Spectro persists uploaded attachment artifacts
+    The configured <strong>log-channel</strong> is also where Spectro persists uploaded attachment artifacts
     before public rendering. If attachment-bearing confession logs are deleted later, those files may
     stop being reliably recoverable.
   </p>
@@ -163,9 +164,9 @@
   </p>
   <p>
     To re-enable confessions, the {@render command('setup')} command can be invoked again. Note that the
-    log
-    <strong>channel</strong> is a required argument. The rest of the optional arguments (e.g.,
-    <strong>label</strong>, <strong>color</strong>, and <strong>approval</strong>) will be restored
-    from the previous invocation of the {@render command('setup')} command.
+    <strong>log-channel</strong> is a required argument. The <strong>confession-channel</strong> is
+    an optional override that selects a different channel to re-enable. The rest of the optional
+    arguments (e.g., <strong>label</strong>, <strong>color</strong>, and <strong>approval</strong>)
+    will be restored from the previous invocation of the {@render command('setup')} command.
   </p>
 </section>

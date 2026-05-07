@@ -116,7 +116,10 @@
       >
         <span>/setup</span>
         <CommandOption required tooltip="Moderator-only channel for confession logs"
-          >channel</CommandOption
+          >log-channel</CommandOption
+        >
+        <CommandOption tooltip="Channel to enable anonymous confessions in"
+          >confession-channel</CommandOption
         >
         <CommandOption tooltip="Custom title for confession messages.">label</CommandOption>
         <CommandOption tooltip="Custom hex color for confession messages.">color</CommandOption>
@@ -125,18 +128,19 @@
       {@render permissionBadge('Manage Channels')}
     </div>
     <p>
-      <strong>Enable confessions for the current channel where the command is being run.</strong>
-      All confessions, along with the sender's username, will be logged in a separate provided
-      <code>channel</code> ideally only accessed by server moderators. You may set whether to
-      require moderator
+      <strong>Enable confessions for the current channel or a selected target channel.</strong>
+      All confessions, along with the sender's username, will be logged in the provided
+      <code>log-channel</code> ideally only accessed by server moderators. If
+      <code>confession-channel</code> is omitted, Spectro configures the channel where the command
+      is being run. You may set whether to require moderator
       <code>approval</code>
       before publishing a confession (not required by default). If enabled, confessions can be approved
       or rejected in the logs
-      <code>channel</code>. Running this command again will simply overwrite the affected previous
-      settings.
+      <code>log-channel</code>. Running this command again will simply overwrite the affected
+      previous settings.
     </p>
     <p>
-      For attachment-bearing confessions, this log <code>channel</code> also serves as the durable storage
+      For attachment-bearing confessions, this <code>log-channel</code> also serves as the durable storage
       anchor for the uploaded file artifact. Moderators should avoid deleting these log messages unless
       they are intentionally discarding the corresponding attachment record.
     </p>
