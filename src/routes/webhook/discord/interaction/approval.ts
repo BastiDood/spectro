@@ -1,6 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { eq } from 'drizzle-orm';
+import { aliasedTable, eq } from 'drizzle-orm';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
 import { assertSingle } from '$lib/assert';
@@ -141,14 +141,15 @@ async function submitVerdict(
         const result = await tracer.asyncSpan('select-confession-details', async span => {
           span.setAttribute('confession.internal.id', internalId.toString());
 
+          const lockedConfession = aliasedTable(confession, 'confession');
           const result = await tx
             .select({
               disabledAt: channel.disabledAt,
               label: channel.label,
-              authorId: confession.authorId,
-              approvedAt: confession.approvedAt,
-              content: confession.content,
-              confessionId: confession.confessionId,
+              authorId: lockedConfession.authorId,
+              approvedAt: lockedConfession.approvedAt,
+              content: lockedConfession.content,
+              confessionId: lockedConfession.confessionId,
               ephemeralAttachmentId: ephemeralAttachment.id,
               durableAttachmentId: durableAttachment.id,
               attachmentFilename: durableAttachment.filename,
@@ -157,19 +158,19 @@ async function submitVerdict(
               attachmentHeight: durableAttachment.height,
               attachmentWidth: durableAttachment.width,
             })
-            .from(confession)
-            .innerJoin(channel, eq(confession.channelId, channel.id))
+            .from(lockedConfession)
+            .innerJoin(channel, eq(lockedConfession.channelId, channel.id))
             .leftJoin(
               ephemeralAttachment,
-              eq(confession.internalId, ephemeralAttachment.confessionInternalId),
+              eq(lockedConfession.internalId, ephemeralAttachment.confessionInternalId),
             )
             .leftJoin(
               durableAttachment,
               eq(ephemeralAttachment.id, durableAttachment.ephemeralAttachmentId),
             )
-            .where(eq(confession.internalId, internalId))
+            .where(eq(lockedConfession.internalId, internalId))
             .limit(1)
-            .for('update', { of: confession })
+            .for('update', { of: lockedConfession })
             .then(assertSingle);
 
           logger.debug('confession details fetched', {
