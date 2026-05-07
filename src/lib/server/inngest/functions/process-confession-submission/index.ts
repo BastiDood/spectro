@@ -520,7 +520,6 @@ export const processConfessionSubmission = inngest.createFunction(
               },
             );
           }
-
           await step.run(
             {
               id: 'edit-original-interaction-response-after-log',
@@ -531,9 +530,7 @@ export const processConfessionSubmission = inngest.createFunction(
                 await DiscordClient.editOriginalInteractionResponse(
                   applicationId,
                   interactionToken,
-                  {
-                    content: logResult.content,
-                  },
+                  { content: logResult.content },
                 );
               } catch (cause) {
                 if (cause instanceof DiscordError)
@@ -581,101 +578,131 @@ export const processConfessionSubmission = inngest.createFunction(
         );
       }
 
-      if (createdConfession.approvedAt !== null) {
-        const postResult = await step.run(
-          { id: 'post-confession', name: 'Post Confession' },
+      if (createdConfession.approvedAt === null) {
+        await step.run(
+          {
+            id: 'edit-original-interaction-response-after-pending-log',
+            name: 'Edit Original Interaction Response',
+          },
           async () => {
-            // eslint-disable-next-line @typescript-eslint/init-declarations
-            let message: Message;
             try {
-              message = await DiscordClient.ENV.createMessage(
-                publicConfession.channelId,
-                createConfessionPayload(publicConfession),
-                `${eventId}:post`,
-              );
-            } catch (error) {
-              if (error instanceof DiscordError)
-                switch (error.code) {
-                  case DiscordErrorCode.InvalidFormBody: {
+              await DiscordClient.editOriginalInteractionResponse(applicationId, interactionToken, {
+                content: `${createdConfession.channel.label} #${createdConfession.confessionId} has been submitted and is pending moderator approval.`,
+              });
+            } catch (cause) {
+              if (cause instanceof DiscordError)
+                switch (cause.code) {
+                  case DiscordErrorCode.UnknownWebhook:
+                  case DiscordErrorCode.InvalidWebhookToken: {
                     const wrapped = new NonRetriableError(
-                      'discord rejected createMessage nonce payload',
-                      {
-                        cause: error,
-                      },
+                      'discord rejected original interaction response edit',
+                      { cause },
                     );
-                    logger.error(
-                      'discord nonce validation failed in process-confession-submission',
-                      wrapped,
-                      {
-                        'discord.error.code': error.code,
-                        'discord.error.message': error.message,
-                      },
-                    );
+                    logger.error('discord rejected original interaction response edit', wrapped, {
+                      'discord.error.code': cause.code,
+                      'discord.error.message': cause.message,
+                    });
                     throw wrapped;
                   }
-                  case DiscordErrorCode.UnknownChannel:
-                  case DiscordErrorCode.MissingAccess:
-                  case DiscordErrorCode.MissingPermissions:
-                    return getConfessionErrorMessage(error.code, {
-                      label: publicConfession.channel.label,
-                      confessionId: publicConfession.confessionId,
-                      channel: ConfessionChannel.Confession,
-                      status: 'submitted',
-                    });
                   default:
                     break;
                 }
-              throw error;
+              throw cause;
             }
-
-            logger.info('confession published', {
-              'discord.message.id': message.id,
-              'discord.message.channel.id': message.channel_id,
-              'discord.message.timestamp': message.timestamp,
-            });
-            return null;
           },
         );
+        return;
+      }
 
-        if (postResult !== null) {
-          await step.run(
-            {
-              id: 'edit-original-interaction-response-after-post',
-              name: 'Edit Original Interaction Response',
-            },
-            async () => {
-              try {
-                await DiscordClient.editOriginalInteractionResponse(
-                  applicationId,
-                  interactionToken,
-                  {
-                    content: postResult,
-                  },
-                );
-              } catch (cause) {
-                if (cause instanceof DiscordError)
-                  switch (cause.code) {
-                    case DiscordErrorCode.UnknownWebhook:
-                    case DiscordErrorCode.InvalidWebhookToken: {
-                      const wrapped = new NonRetriableError(
-                        'discord rejected original interaction response edit',
-                        { cause },
-                      );
-                      logger.error('discord rejected original interaction response edit', wrapped, {
-                        'discord.error.code': cause.code,
-                        'discord.error.message': cause.message,
-                      });
-                      throw wrapped;
-                    }
-                    default:
-                      break;
-                  }
-                throw cause;
+      const postResult = await step.run(
+        { id: 'post-confession', name: 'Post Confession' },
+        async () => {
+          // eslint-disable-next-line @typescript-eslint/init-declarations
+          let message: Message;
+          try {
+            message = await DiscordClient.ENV.createMessage(
+              publicConfession.channelId,
+              createConfessionPayload(publicConfession),
+              `${eventId}:post`,
+            );
+          } catch (error) {
+            if (error instanceof DiscordError)
+              switch (error.code) {
+                case DiscordErrorCode.InvalidFormBody: {
+                  const wrapped = new NonRetriableError(
+                    'discord rejected createMessage nonce payload',
+                    {
+                      cause: error,
+                    },
+                  );
+                  logger.error(
+                    'discord nonce validation failed in process-confession-submission',
+                    wrapped,
+                    {
+                      'discord.error.code': error.code,
+                      'discord.error.message': error.message,
+                    },
+                  );
+                  throw wrapped;
+                }
+                case DiscordErrorCode.UnknownChannel:
+                case DiscordErrorCode.MissingAccess:
+                case DiscordErrorCode.MissingPermissions:
+                  return getConfessionErrorMessage(error.code, {
+                    label: publicConfession.channel.label,
+                    confessionId: publicConfession.confessionId,
+                    channel: ConfessionChannel.Confession,
+                    status: 'submitted',
+                  });
+                default:
+                  break;
               }
-            },
-          );
-          return;
-        }
+            throw error;
+          }
+
+          logger.info('confession published', {
+            'discord.message.id': message.id,
+            'discord.message.channel.id': message.channel_id,
+            'discord.message.timestamp': message.timestamp,
+          });
+          return null;
+        },
+      );
+
+      if (postResult !== null) {
+        await step.run(
+          {
+            id: 'edit-original-interaction-response-after-post',
+            name: 'Edit Original Interaction Response',
+          },
+          async () => {
+            try {
+              await DiscordClient.editOriginalInteractionResponse(applicationId, interactionToken, {
+                content: postResult,
+              });
+            } catch (cause) {
+              if (cause instanceof DiscordError)
+                switch (cause.code) {
+                  case DiscordErrorCode.UnknownWebhook:
+                  case DiscordErrorCode.InvalidWebhookToken: {
+                    const wrapped = new NonRetriableError(
+                      'discord rejected original interaction response edit',
+                      { cause },
+                    );
+                    logger.error('discord rejected original interaction response edit', wrapped, {
+                      'discord.error.code': cause.code,
+                      'discord.error.message': cause.message,
+                    });
+                    throw wrapped;
+                  }
+                  default:
+                    break;
+                }
+              throw cause;
+            }
+          },
+        );
+        return;
       }
 
       await step.run(
