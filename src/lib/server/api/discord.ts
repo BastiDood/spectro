@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { parse } from 'valibot';
 
+import { Channel, ChannelType, type CreatePublicThread } from '$lib/server/models/discord/channel';
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
@@ -102,13 +103,39 @@ export class DiscordClient {
       }
 
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in createMessage', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.channel.id': channelId,
+      return DiscordError.throwNew(code, message);
+    });
+  }
+
+  async createPublicThread(channelId: Snowflake, name: string, idempotencySeed: string) {
+    return await tracer.asyncSpan('create-public-thread', async span => {
+      span.setAttributes({
+        'channel.id': channelId,
+        'idempotency.seed': idempotencySeed,
       });
-      throw error;
+
+      const response = await fetch(`${DiscordClient.#API_BASE_URL}/channels/${channelId}/threads`, {
+        body: JSON.stringify({
+          name,
+          type: ChannelType.PublicThread,
+        } satisfies CreatePublicThread),
+        method: 'POST',
+        headers: {
+          Authorization: this.#botToken,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const json = await response.json();
+
+      if (response.status === 201) {
+        const parsed = parse(Channel, json);
+        logger.debug('thread created', { 'thread.id': parsed.id });
+        return parsed;
+      }
+
+      const { code, message } = parse(DiscordErrorResponse, json);
+      return DiscordError.throwNew(code, message);
     });
   }
 

@@ -48,3 +48,8 @@ export const Channel = object({
 });
 
 export type Channel = InferOutput<typeof Channel>;
+
+export interface CreatePublicThread {
+  name: string;
+  type: ChannelType.PublicThread;
+}
