@@ -36,6 +36,14 @@
     "contexts": [0]
   },
   {
+    "type": 1,
+    "name": "thread",
+    "description": "Create an anonymous confession thread.",
+    "default_member_permissions": 309237645312,
+    "integration_types": [0],
+    "contexts": [0]
+  },
+  {
     "type": 3,
     "name": "Reply Anonymously",
     "default_member_permissions": 2048,
