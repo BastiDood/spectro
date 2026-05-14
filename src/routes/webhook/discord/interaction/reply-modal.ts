@@ -1,15 +1,31 @@
 import { createConfessionModal } from '$lib/server/confession';
-import { db } from '$lib/server/database';
+import { hasAllFlags } from '$lib/bits';
 import type { InteractionResponseMessage } from '$lib/server/models/discord/interaction-response/message';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { Logger } from '$lib/server/telemetry/logger';
+import {
+  MANAGE_THREADS,
+  SEND_MESSAGES,
+  SEND_MESSAGES_IN_THREADS,
+} from '$lib/server/models/discord/permission';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
+import { UnreachableCodeError } from '$lib/assert';
+
+import {
+  type ConfessionChannelDestination,
+  ConfessionDestinationType,
+  type ConfessionThreadDestination,
+} from './channel-context';
 
 const SERVICE_NAME = 'webhook.interaction.reply-modal';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
+
+type ReplyModalDestination =
+  | Pick<ConfessionChannelDestination, 'channelId' | 'type'>
+  | Pick<ConfessionThreadDestination, 'channelId' | 'isLocked' | 'threadId' | 'type'>;
 
 abstract class ReplyModalError extends Error {
   constructor(message?: string) {
@@ -18,103 +34,92 @@ abstract class ReplyModalError extends Error {
   }
 }
 
-class UnknownChannelReplyModalError extends ReplyModalError {
+class ReplyChannelMismatchError extends ReplyModalError {
   constructor() {
-    super('This channel has not been set up for confessions yet.');
-    this.name = 'UnknownChannelReplyModalError';
+    super('Spectro cannot determine the target channel for this anonymous reply.');
+    this.name = 'ReplyChannelMismatchError';
   }
 
-  static throwNew(): never {
-    const error = new UnknownChannelReplyModalError();
-    logger.fatal('unknown channel for reply modal', error);
-    throw error;
-  }
-}
-
-class DisabledChannelReplyModalError extends ReplyModalError {
-  constructor(public disabledAt: Date) {
-    const timestamp = Math.floor(disabledAt.valueOf() / 1000);
-    super(
-      `This channel has temporarily disabled confessions (including replies) since <t:${timestamp}:R>.`,
-    );
-    this.name = 'DisabledChannelReplyModalError';
-  }
-
-  static throwNew(disabledAt: Date): never {
-    const error = new DisabledChannelReplyModalError(disabledAt);
-    logger.fatal('channel disabled for reply modal', error, {
-      'error.disabled.at': disabledAt.toISOString(),
+  static throwNew(channelId: Snowflake, targetChannelId: Snowflake): never {
+    const error = new ReplyChannelMismatchError();
+    logger.fatal('reply target channel mismatch', error, {
+      'channel.id': channelId,
+      'target.channel.id': targetChannelId,
     });
     throw error;
   }
 }
 
-class ApprovalRequiredReplyModalError extends ReplyModalError {
-  constructor() {
-    super('You cannot (yet) reply to a confession in a channel that requires moderator approval.');
-    this.name = 'ApprovalRequiredReplyModalError';
-  }
-
-  static throwNew(): never {
-    const error = new ApprovalRequiredReplyModalError();
-    logger.fatal('approval required for reply modal', error);
-    throw error;
+class MissingReplyPermissionError extends ReplyModalError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MissingReplyPermissionError';
   }
 }
 
-/**
- * @throws {UnknownChannelReplyModalError}
- * @throws {DisabledChannelReplyModalError}
- * @throws {ApprovalRequiredReplyModalError}
- */
-async function renderReplyModal(timestamp: Date, channelId: Snowflake, messageId: Snowflake) {
-  return await tracer.asyncSpan('render-reply-modal', async span => {
+/** @throws {ReplyChannelMismatchError} */
+function renderReplyModal(
+  destination: ReplyModalDestination,
+  currentChannelId: Snowflake,
+  messageId: Snowflake,
+  messageChannelId: Snowflake,
+  permissions: bigint,
+) {
+  return tracer.span('render-reply-modal', span => {
     span.setAttributes({
-      'channel.id': channelId,
+      'channel.id': destination.channelId,
       'message.id': messageId,
     });
 
-    const channel = await tracer.asyncSpan('find-channel-by-id', async span => {
-      span.setAttribute('channel.id', channelId);
+    if (messageChannelId !== currentChannelId)
+      ReplyChannelMismatchError.throwNew(currentChannelId, messageChannelId);
 
-      const result = await db.query.channel.findFirst({
-        columns: { guildId: true, disabledAt: true, isApprovalRequired: true },
-        where({ id }, { eq }) {
-          return eq(id, BigInt(channelId));
-        },
-      });
-
-      if (typeof result === 'undefined') logger.warn('channel not found for reply modal');
-      else
-        logger.debug('channel found for reply modal', {
-          'guild.id': result.guildId.toString(),
-          'approval.required': result.isApprovalRequired,
-        });
-
-      return result;
-    });
-
-    if (typeof channel === 'undefined') UnknownChannelReplyModalError.throwNew();
-
-    const { disabledAt, isApprovalRequired } = channel;
-
-    if (disabledAt !== null && disabledAt <= timestamp)
-      DisabledChannelReplyModalError.throwNew(disabledAt);
-
-    if (isApprovalRequired) ApprovalRequiredReplyModalError.throwNew();
+    switch (destination.type) {
+      case ConfessionDestinationType.Channel:
+        if (!hasAllFlags(permissions, SEND_MESSAGES))
+          throw new MissingReplyPermissionError(
+            'You do not have permission to send anonymous replies in this channel.',
+          );
+        break;
+      case ConfessionDestinationType.Thread:
+        span.setAttribute('thread.id', destination.threadId);
+        if (!hasAllFlags(permissions, SEND_MESSAGES_IN_THREADS))
+          throw new MissingReplyPermissionError(
+            'You do not have permission to send anonymous replies in this thread.',
+          );
+        if (destination.isLocked && !hasAllFlags(permissions, MANAGE_THREADS))
+          throw new MissingReplyPermissionError(
+            'You do not have permission to reply anonymously in this locked thread.',
+          );
+        break;
+      default:
+        UnreachableCodeError.throwNew();
+    }
 
     logger.debug('reply modal prompted');
-    return createConfessionModal(messageId);
+    return createConfessionModal({
+      channelId: destination.channelId,
+      threadId: destination.type === ConfessionDestinationType.Thread ? destination.threadId : null,
+      parentMessageId: messageId,
+    });
   });
 }
 
-export async function handleReplyModal(
-  timestamp: Date,
-  channelId: Snowflake,
+export function handleReplyModal(
+  destination: ReplyModalDestination,
+  currentChannelId: Snowflake,
   messageId: Snowflake,
+  messageChannelId: Snowflake,
+  permissions: bigint,
 ) {
   try {
-    return await renderReplyModal(timestamp, channelId, messageId);
+    return renderReplyModal(
+      destination,
+      currentChannelId,
+      messageId,
+      messageChannelId,
+      permissions,
+    );
   } catch (error) {
     if (error instanceof ReplyModalError)
       return {

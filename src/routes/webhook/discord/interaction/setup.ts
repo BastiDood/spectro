@@ -1,7 +1,7 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
+import { type Channel, ChannelType } from '$lib/server/models/discord/channel';
 import { ChannelSetupEvent } from '$lib/server/inngest/functions/process-channel-setup/schema';
-import { ChannelType } from '$lib/server/models/discord/channel';
 import { inngest } from '$lib/server/inngest/client';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
@@ -9,7 +9,6 @@ import type { InteractionResponse } from '$lib/server/models/discord/interaction
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
-import type { Resolved } from '$lib/server/models/discord/resolved';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
@@ -24,7 +23,7 @@ export async function handleSetup(
   applicationId: Snowflake,
   interactionToken: string,
   interactionId: Snowflake,
-  resolvedChannels: NonNullable<Resolved['channels']>,
+  resolvedChannels: Record<string, Pick<Channel, 'type'>>,
   guildId: Snowflake,
   channelId: Snowflake,
   moderatorId: Snowflake,
