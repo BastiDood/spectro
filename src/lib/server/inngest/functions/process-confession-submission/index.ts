@@ -21,6 +21,7 @@ import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error
 import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import type { Message } from '$lib/server/models/discord/message';
+import { parseDiscordAttachmentCdnUrl } from '$lib/url/discord';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import {
@@ -40,10 +41,13 @@ import {
   loadApprovedThreadTitle,
   loadConfessionSubmissionChannel,
 } from './query';
+import { downloadDiscordAttachment } from './download';
 
 const SERVICE_NAME = 'inngest.process-confession-submission';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
+
+const DISCORD_ATTACHMENT_MAX_BYTES = 8 * 1024 * 1024;
 
 export const processConfessionSubmission = inngest.createFunction(
   {
@@ -334,9 +338,11 @@ export const processConfessionSubmission = inngest.createFunction(
           }
 
           const uploadedAttachment = preparedConfession.attachment;
+          const uploadedAttachmentUrl = parseDiscordAttachmentCdnUrl(uploadedAttachment.url);
+          assert(uploadedAttachmentUrl !== null);
+
           const response = await fetch(uploadedAttachment.url);
-          if (!response.ok) throw new Error('failed to download attachment');
-          const file = await response.arrayBuffer();
+          const file = await downloadDiscordAttachment(response, DISCORD_ATTACHMENT_MAX_BYTES);
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
@@ -418,21 +424,15 @@ export const processConfessionSubmission = inngest.createFunction(
               assert(typeof embed.image !== 'undefined');
               assert(typeof embed.image.proxy_url !== 'undefined');
 
-              const url = new URL(embed.image.url);
-              const [root, namespace, channelId, attachmentId, filename, ...rest] =
-                url.pathname.split('/');
-              strictEqual(rest.length, 0);
-              strictEqual(root, '');
-              assert(typeof filename !== 'undefined');
-              assert(typeof attachmentId !== 'undefined');
-              strictEqual(channelId, message.channel_id);
-              strictEqual(namespace, 'attachments');
+              const parsedAttachmentUrl = parseDiscordAttachmentCdnUrl(embed.image.url);
+              assert(parsedAttachmentUrl !== null);
+              strictEqual(parsedAttachmentUrl.channelId, message.channel_id);
 
               durableAttachment = {
-                id: attachmentId,
+                id: parsedAttachmentUrl.attachmentId,
                 messageId: message.id,
                 channelId: message.channel_id,
-                filename,
+                filename: parsedAttachmentUrl.filename,
                 url: embed.image.url,
                 proxyUrl: embed.image.proxy_url,
                 contentType: embed.image.content_type ?? null,
