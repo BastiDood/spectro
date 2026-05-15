@@ -53,3 +53,7 @@ export interface CreatePublicThread {
   name: string;
   type: ChannelType.PublicThread;
 }
+
+export interface CreatePublicThreadFromMessage {
+  name: string;
+}

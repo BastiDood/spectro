@@ -29,6 +29,7 @@ import { handleReplyModal } from './reply-modal';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
 import { handleThread } from './thread-modal';
+import { handleThreadReplyModal } from './thread-reply-modal';
 import {
   isConfessionThreadChannel,
   resolveConfessionChannelId,
@@ -167,6 +168,21 @@ async function handleInteraction(
                 const message = interaction.data.resolved.messages[interaction.data.target_id];
                 assert(typeof message !== 'undefined');
                 return handleReplyModal(
+                  resolveConfessionDestination(interaction.channel),
+                  interaction.channel.id,
+                  message.id,
+                  message.channel_id,
+                  interaction.member.permissions,
+                );
+              }
+            case 'Reply as Anonymous Thread':
+              assert(typeof interaction.channel !== 'undefined');
+              assert(typeof interaction.member?.permissions !== 'undefined');
+              assert(typeof interaction.data.resolved?.messages !== 'undefined');
+              {
+                const message = interaction.data.resolved.messages[interaction.data.target_id];
+                assert(typeof message !== 'undefined');
+                return handleThreadReplyModal(
                   resolveConfessionDestination(interaction.channel),
                   interaction.channel.id,
                   message.id,

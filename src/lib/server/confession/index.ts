@@ -137,6 +137,60 @@ export function createThreadConfessionModal(channelId: Snowflake): InteractionRe
   };
 }
 
+export function createThreadReplyConfessionModal(
+  channelId: Snowflake,
+  parentMessageId: Snowflake,
+): InteractionResponseModal {
+  return {
+    type: InteractionResponseType.Modal,
+    data: {
+      custom_id: ['confess', 'new-thread-reply', channelId, '', parentMessageId].join(':'),
+      title: 'Create Anonymous Reply Thread',
+      components: [
+        {
+          type: MessageComponentType.Label,
+          label: 'Thread Title',
+          description: 'This will be used as the Discord thread name.',
+          component: {
+            custom_id: 'title',
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Short,
+            required: true,
+            placeholder: 'What should this thread be called?',
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Reply',
+          description: 'Your reply will start an anonymous thread from the selected message.',
+          component: {
+            custom_id: 'content',
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Long,
+            required: true,
+            placeholder: 'What would you like to say?',
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Attachment',
+          description: 'Optional. Attach an image or file to your reply.',
+          component: {
+            custom_id: 'attachment',
+            type: MessageComponentType.FileUpload,
+            required: false,
+          },
+        },
+        {
+          type: MessageComponentType.TextDisplay,
+          content:
+            '-# For moderation purposes, server administrators can view the authors of all confessions.',
+        },
+      ],
+    },
+  };
+}
+
 export const enum LogPayloadType {
   Pending = 'pending',
   Approved = 'approved',

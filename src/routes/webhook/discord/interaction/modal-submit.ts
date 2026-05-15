@@ -35,10 +35,10 @@ interface MessageModalState {
 }
 
 interface NewThreadModalState {
-  mode: ConfessionSubmitMode.NewThread;
+  mode: ConfessionSubmitMode.NewThread | ConfessionSubmitMode.NewThreadReply;
   channelId: Snowflake;
   threadId: null;
-  parentMessageId: null;
+  parentMessageId: Snowflake | null;
 }
 
 type ModalState = MessageModalState | NewThreadModalState;
@@ -60,16 +60,16 @@ function parseModalState(customId: string): ModalState {
       return {
         mode,
         channelId,
-        threadId: threadId === '' || typeof threadId === 'undefined' ? null : threadId,
-        parentMessageId:
-          parentMessageId === '' || typeof parentMessageId === 'undefined' ? null : parentMessageId,
+        threadId: threadId ?? null,
+        parentMessageId: parentMessageId ?? null,
       };
     case ConfessionSubmitMode.NewThread:
+    case ConfessionSubmitMode.NewThreadReply:
       return {
         mode,
         channelId,
         threadId: null,
-        parentMessageId: null,
+        parentMessageId: parentMessageId ?? null,
       };
     default:
       throw new Error('unknown confession modal state');
@@ -113,7 +113,8 @@ export async function handleModalSubmit(
         disclaimerDisplay = assertDefined(disclaimer);
         break;
       }
-      case ConfessionSubmitMode.NewThread: {
+      case ConfessionSubmitMode.NewThread:
+      case ConfessionSubmitMode.NewThreadReply: {
         const [title, content, attachment, disclaimer, ...rest] = components;
         strictEqual(rest.length, 0);
         const titleLabel = assertDefined(title);
@@ -208,6 +209,7 @@ export async function handleModalSubmit(
         }
         break;
       case ConfessionSubmitMode.NewThread:
+      case ConfessionSubmitMode.NewThreadReply:
         break;
       default:
         UnreachableCodeError.throwNew();
@@ -250,6 +252,27 @@ export async function handleModalSubmit(
               attachment,
               mode: ConfessionSubmitMode.NewThread,
               threadTitle,
+            },
+            { id: interactionId, ts: timestamp.valueOf() },
+          ),
+        ));
+        break;
+      case ConfessionSubmitMode.NewThreadReply:
+        assert(threadTitle !== null);
+        assert(state.parentMessageId !== null);
+        ({ ids } = await inngest.send(
+          ConfessionSubmitEvent.create(
+            {
+              applicationId,
+              interactionId,
+              interactionToken,
+              channelId: state.channelId,
+              authorId,
+              content: contentComponent.value,
+              attachment,
+              mode: ConfessionSubmitMode.NewThreadReply,
+              threadTitle,
+              parentMessageId: state.parentMessageId,
             },
             { id: interactionId, ts: timestamp.valueOf() },
           ),

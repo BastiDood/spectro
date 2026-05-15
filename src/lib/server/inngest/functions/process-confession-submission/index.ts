@@ -97,6 +97,10 @@ export const processConfessionSubmission = inngest.createFunction(
               break;
             case ConfessionSubmitMode.NewThread:
               break;
+            case ConfessionSubmitMode.NewThreadReply:
+              if (channel.isApprovalRequired)
+                return 'This channel requires moderator approval, so Spectro cannot create an anonymous reply thread here yet.';
+              break;
             default:
               throw new NonRetriableError('unknown confession submission mode');
           }
@@ -151,9 +155,20 @@ export const processConfessionSubmission = inngest.createFunction(
             data.channelId,
           );
 
-          let threadId: string | null = null;
           let parentMessageId: string | null = null;
-          if (data.mode === ConfessionSubmitMode.Message) ({ parentMessageId, threadId } = data);
+          let threadId: string | null = null;
+          switch (data.mode) {
+            case ConfessionSubmitMode.Message:
+              ({ parentMessageId, threadId } = data);
+              break;
+            case ConfessionSubmitMode.NewThread:
+              break;
+            case ConfessionSubmitMode.NewThreadReply:
+              ({ parentMessageId } = data);
+              break;
+            default:
+              throw new NonRetriableError('unknown confession submission mode');
+          }
 
           const { internalId, confessionId, pendingChannelThreadId } = await db.transaction(
             async tx =>
@@ -167,7 +182,10 @@ export const processConfessionSubmission = inngest.createFunction(
                 parentMessageId: parentMessageId === null ? null : BigInt(parentMessageId),
                 attachment: serializeRequestedAttachment(data.attachment),
                 newThreadTitle:
-                  data.mode === ConfessionSubmitMode.NewThread ? data.threadTitle : null,
+                  data.mode === ConfessionSubmitMode.NewThread ||
+                  data.mode === ConfessionSubmitMode.NewThreadReply
+                    ? data.threadTitle
+                    : null,
                 existingThreadId: threadId === null ? null : BigInt(threadId),
               }),
             { isolationLevel: 'read committed' },
@@ -218,18 +236,23 @@ export const processConfessionSubmission = inngest.createFunction(
       );
 
       const preparedConfession =
-        data.mode === ConfessionSubmitMode.NewThread && createdConfession.approvedAt !== null
+        (data.mode === ConfessionSubmitMode.NewThread ||
+          data.mode === ConfessionSubmitMode.NewThreadReply) &&
+        createdConfession.approvedAt !== null
           ? await step.run(
               { id: 'create-discord-thread', name: 'Create Discord Thread' },
               async (): Promise<SerializedConfessionForProcess> => {
                 assert(createdConfession.pendingChannelThreadId !== null);
                 const { pendingChannelThreadId } = createdConfession;
 
-                const thread = await DiscordClient.ENV.createPublicThread(
-                  data.channelId,
-                  data.threadTitle,
-                  `${eventId}:thread`,
-                );
+                const thread =
+                  data.mode === ConfessionSubmitMode.NewThread
+                    ? await DiscordClient.ENV.createPublicThread(data.channelId, data.threadTitle)
+                    : await DiscordClient.ENV.createPublicThreadFromMessage(
+                        data.channelId,
+                        data.parentMessageId,
+                        data.threadTitle,
+                      );
 
                 await insertApprovedChannelThread(
                   db,

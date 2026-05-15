@@ -12,6 +12,7 @@ const RequestedAttachmentData = object({
 export const enum ConfessionSubmitMode {
   Message = 'message',
   NewThread = 'new-thread',
+  NewThreadReply = 'new-thread-reply',
 }
 
 const ConfessionSubmitEventBaseData = object({
@@ -38,9 +39,17 @@ const ConfessionNewThreadSubmitEventData = object({
   threadTitle: string(),
 });
 
+const ConfessionNewThreadReplySubmitEventData = object({
+  ...ConfessionSubmitEventBaseData.entries,
+  mode: literal(ConfessionSubmitMode.NewThreadReply),
+  threadTitle: string(),
+  parentMessageId: string(),
+});
+
 const ConfessionSubmitEventData = variant('mode', [
   ConfessionMessageSubmitEventData,
   ConfessionNewThreadSubmitEventData,
+  ConfessionNewThreadReplySubmitEventData,
 ]);
 
 export const ConfessionSubmitEvent = eventType('discord/confession.submit', {

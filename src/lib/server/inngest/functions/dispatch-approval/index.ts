@@ -60,7 +60,6 @@ export const dispatchApproval = inngest.createFunction(
           const thread = await DiscordClient.ENV.createPublicThread(
             loaded.channelId.toString(),
             pendingThread.title,
-            `${event.id}:thread`,
           );
 
           const threadId = BigInt(thread.id);
