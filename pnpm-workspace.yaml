@@ -1,12 +1,12 @@
-blockExoticSubdeps: true
+allowBuilds:
+  esbuild: true
+  protobufjs: false
+
+cleanupUnusedCatalogs: true
 
 engineStrict: true
 
-minimumReleaseAge: 720 # 1 Day
-
-onlyBuiltDependencies:
-  - esbuild
-  - protobufjs
+minimumReleaseAgeStrict: true
 
 patchedDependencies:
   '@inngest/ai': patches/@inngest__ai.patch
