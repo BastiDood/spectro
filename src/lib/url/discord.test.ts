@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeDiscordAttachmentUrl, parseDiscordAttachmentCdnUrl } from './discord';
+import {
+  DiscordAttachmentCdnNamespace,
+  normalizeDiscordAttachmentUrl,
+  parseDiscordAttachmentCdnUrl,
+} from './discord';
 
 describe('parseDiscordAttachmentCdnUrl', () => {
   it('parses signed Discord attachment CDN URLs', () => {
@@ -12,6 +16,20 @@ describe('parseDiscordAttachmentCdnUrl', () => {
       attachmentId: '1234567891233211234',
       channelId: '1012345678900020080',
       filename: 'my_image.png',
+      namespace: DiscordAttachmentCdnNamespace.Durable,
+    });
+  });
+
+  it('parses signed Discord ephemeral attachment CDN URLs', () => {
+    const parsed = parseDiscordAttachmentCdnUrl(
+      'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/my_image.png?ex=65d903de&is=65c68ede&hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f&',
+    );
+
+    expect(parsed).toMatchObject({
+      attachmentId: '1234567891233211234',
+      channelId: '1012345678900020080',
+      filename: 'my_image.png',
+      namespace: DiscordAttachmentCdnNamespace.Ephemeral,
     });
   });
 
@@ -79,6 +97,38 @@ describe('parseDiscordAttachmentCdnUrl', () => {
     ).toBeNull();
   });
 
+  it('rejects ephemeral attachment paths with missing channel IDs', () => {
+    expect(
+      parseDiscordAttachmentCdnUrl(
+        'https://cdn.discordapp.com/ephemeral-attachments//1234567891233211234/my_image.png',
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects ephemeral attachment paths with missing attachment IDs', () => {
+    expect(
+      parseDiscordAttachmentCdnUrl(
+        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080//my_image.png',
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects ephemeral attachment paths with missing filenames', () => {
+    expect(
+      parseDiscordAttachmentCdnUrl(
+        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/',
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects ephemeral attachment paths with extra segments', () => {
+    expect(
+      parseDiscordAttachmentCdnUrl(
+        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/my_image.png/extra',
+      ),
+    ).toBeNull();
+  });
+
   it('rejects malformed URLs', () => {
     expect(parseDiscordAttachmentCdnUrl('not a url')).toBeNull();
   });
@@ -92,6 +142,16 @@ describe('normalizeDiscordAttachmentUrl', () => {
       ),
     ).toBe(
       'https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png',
+    );
+  });
+
+  it('removes query parameters from ephemeral attachment URLs', () => {
+    expect(
+      normalizeDiscordAttachmentUrl(
+        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/my_image.png?ex=65d903de&is=65c68ede&hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f&',
+      ),
+    ).toBe(
+      'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/my_image.png',
     );
   });
 });

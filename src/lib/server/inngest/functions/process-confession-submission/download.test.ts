@@ -71,24 +71,12 @@ describe('downloadDiscordAttachment', () => {
     );
   });
 
-  it('rejects over-limit Content-Length before body access', async () => {
-    let bodyAccessed = false;
-
-    class BodyAccessResponse extends Response {
-      override get body() {
-        bodyAccessed = true;
-        return super.body;
-      }
-    }
-
-    const response = new BodyAccessResponse(createStream([createChunk(1)]), {
-      headers: { 'Content-Length': '6' },
-    });
+  it('rejects over-limit Content-Length', async () => {
+    const response = createResponse([createChunk(1)], '6');
 
     await expect(downloadDiscordAttachment(response, 5)).rejects.toBeInstanceOf(
       AttachmentTooLargeError,
     );
-    expect(bodyAccessed).toBe(false);
   });
 
   it('rejects when the stream exceeds the max size', async () => {

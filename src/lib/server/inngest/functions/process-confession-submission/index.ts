@@ -16,12 +16,12 @@ import {
   resetLogChannel,
   upsertDurableAttachmentData,
 } from '$lib/server/database';
+import { DiscordAttachmentCdnNamespace, parseDiscordAttachmentCdnUrl } from '$lib/url/discord';
 import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import type { Message } from '$lib/server/models/discord/message';
-import { parseDiscordAttachmentCdnUrl } from '$lib/url/discord';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import {
@@ -426,6 +426,7 @@ export const processConfessionSubmission = inngest.createFunction(
 
               const parsedAttachmentUrl = parseDiscordAttachmentCdnUrl(embed.image.url);
               assert(parsedAttachmentUrl !== null);
+              strictEqual(parsedAttachmentUrl.namespace, DiscordAttachmentCdnNamespace.Durable);
               strictEqual(parsedAttachmentUrl.channelId, message.channel_id);
 
               durableAttachment = {
