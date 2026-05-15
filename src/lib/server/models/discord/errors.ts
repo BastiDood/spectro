@@ -12,6 +12,9 @@ export const enum DiscordErrorCode {
   MissingPermissions = 50013,
   InvalidWebhookToken = 50027,
   InvalidFormBody = 50035,
+  ThreadAlreadyCreatedForMessage = 160004,
+  ThreadLocked = 160005,
+  MaxActiveThreadsReached = 160006,
 }
 
 export const DiscordErrorResponse = object({

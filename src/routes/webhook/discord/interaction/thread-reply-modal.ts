@@ -11,6 +11,7 @@ import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
+import { UnreachableCodeError } from '$lib/assert';
 
 import {
   type ConfessionChannelDestination,
@@ -74,6 +75,8 @@ class MissingThreadReplyPermissionError extends ThreadReplyModalError {
       case MissingThreadReplyPermissionErrorType.SendMessagesInThreads:
         message = 'You do not have permission to send messages in threads.';
         break;
+      default:
+        UnreachableCodeError.throwNew();
     }
     const error = new MissingThreadReplyPermissionError(message);
     logger.fatal('missing thread reply permission', error, { 'error.permission.type': type });

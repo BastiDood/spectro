@@ -7,6 +7,7 @@ import {
   createConfessionPayload,
   createLogPayload,
   getConfessionErrorMessage,
+  getThreadCreationErrorMessage,
   LogPayloadType,
 } from '$lib/server/confession';
 import { db, resetLogChannel, upsertDurableAttachmentData } from '$lib/server/database';
@@ -235,42 +236,105 @@ export const processConfessionSubmission = inngest.createFunction(
         },
       );
 
-      const preparedConfession =
+      let preparedConfession = createdConfession;
+      if (
         (data.mode === ConfessionSubmitMode.NewThread ||
           data.mode === ConfessionSubmitMode.NewThreadReply) &&
         createdConfession.approvedAt !== null
-          ? await step.run(
-              { id: 'create-discord-thread', name: 'Create Discord Thread' },
-              async (): Promise<SerializedConfessionForProcess> => {
-                assert(createdConfession.pendingChannelThreadId !== null);
-                const { pendingChannelThreadId } = createdConfession;
+      ) {
+        const threadResult = await step.run(
+          { id: 'create-discord-thread', name: 'Create Discord Thread' },
+          async (): Promise<SerializedConfessionForProcess | string> => {
+            assert(createdConfession.pendingChannelThreadId !== null);
+            const { pendingChannelThreadId } = createdConfession;
 
-                const thread =
-                  data.mode === ConfessionSubmitMode.NewThread
-                    ? await DiscordClient.ENV.createPublicThread(data.channelId, data.threadTitle)
-                    : await DiscordClient.ENV.createPublicThreadFromMessage(
-                        data.channelId,
-                        data.parentMessageId,
-                        data.threadTitle,
-                      );
+            try {
+              const thread =
+                data.mode === ConfessionSubmitMode.NewThread
+                  ? await DiscordClient.ENV.createPublicThread(data.channelId, data.threadTitle)
+                  : await DiscordClient.ENV.createPublicThreadFromMessage(
+                      data.channelId,
+                      data.parentMessageId,
+                      data.threadTitle,
+                    );
 
-                await insertApprovedChannelThread(
-                  db,
-                  BigInt(pendingChannelThreadId),
-                  BigInt(thread.id),
-                );
+              await insertApprovedChannelThread(
+                db,
+                BigInt(pendingChannelThreadId),
+                BigInt(thread.id),
+              );
 
-                return {
-                  ...createdConfession,
-                  publishChannelId: thread.id,
-                  thread: {
-                    id: thread.id,
-                    title: data.threadTitle,
+              return {
+                ...createdConfession,
+                publishChannelId: thread.id,
+                thread: {
+                  id: thread.id,
+                  title: data.threadTitle,
+                },
+              };
+            } catch (error) {
+              if (error instanceof DiscordError)
+                switch (error.code) {
+                  case DiscordErrorCode.UnknownChannel:
+                  case DiscordErrorCode.MissingAccess:
+                  case DiscordErrorCode.MissingPermissions:
+                  case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                  case DiscordErrorCode.ThreadLocked:
+                  case DiscordErrorCode.MaxActiveThreadsReached:
+                    return getThreadCreationErrorMessage(error.code, {
+                      label: createdConfession.channel.label,
+                      confessionId: createdConfession.confessionId,
+                    });
+                  default:
+                    break;
+                }
+              throw error;
+            }
+          },
+        );
+
+        if (typeof threadResult === 'string') {
+          await step.run(
+            {
+              id: 'edit-original-interaction-response-after-thread',
+              name: 'Edit Original Interaction Response',
+            },
+            async () => {
+              try {
+                await DiscordClient.editOriginalInteractionResponse(
+                  applicationId,
+                  interactionToken,
+                  {
+                    content: threadResult,
                   },
-                };
-              },
-            )
-          : createdConfession;
+                );
+              } catch (cause) {
+                if (cause instanceof DiscordError)
+                  switch (cause.code) {
+                    case DiscordErrorCode.UnknownWebhook:
+                    case DiscordErrorCode.InvalidWebhookToken: {
+                      const wrapped = new NonRetriableError(
+                        'discord rejected original interaction response edit',
+                        { cause },
+                      );
+                      logger.error('discord rejected original interaction response edit', wrapped, {
+                        'discord.error.code': cause.code,
+                        'discord.error.message': cause.message,
+                      });
+                      throw wrapped;
+                    }
+                    default:
+                      break;
+                  }
+                throw cause;
+              }
+            },
+          );
+          return;
+        }
+
+        preparedConfession = threadResult;
+      }
 
       const logResult = await step.run(
         { id: 'log-confession', name: 'Log Confession' },

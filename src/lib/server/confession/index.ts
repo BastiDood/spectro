@@ -445,15 +445,40 @@ export function createLogPayload(
   return params;
 }
 
-export function getConfessionErrorMessage(code: DiscordErrorCode, ctx: ErrorMessageContext) {
+export function getConfessionErrorMessage(
+  code: DiscordErrorCode,
+  { label, confessionId, channel, status }: ErrorMessageContext,
+) {
   switch (code) {
     case DiscordErrorCode.UnknownChannel:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but the ${ctx.channel} no longer exists.`;
+      return `${label} #${confessionId} has been ${status}, but the ${channel} no longer exists.`;
     case DiscordErrorCode.MissingAccess:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but Spectro cannot access the ${ctx.channel}.`;
+      return `${label} #${confessionId} has been ${status}, but Spectro cannot access the ${channel}.`;
     case DiscordErrorCode.MissingPermissions:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but Spectro doesn't have permission to send messages in the ${ctx.channel}.`;
+      return `${label} #${confessionId} has been ${status}, but Spectro doesn't have permission to send messages in the ${channel}.`;
     default:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but an unexpected error occurred. Please report this bug to the Spectro developers.`;
+      return `${label} #${confessionId} has been ${status}, but an unexpected error occurred. Please report this bug to the Spectro developers.`;
+  }
+}
+
+export function getThreadCreationErrorMessage(
+  code: DiscordErrorCode,
+  { label, confessionId }: Pick<ErrorMessageContext, 'label' | 'confessionId'>,
+) {
+  switch (code) {
+    case DiscordErrorCode.UnknownChannel:
+      return `${label} #${confessionId} has been submitted, but the channel for the Discord thread no longer exists.`;
+    case DiscordErrorCode.MissingAccess:
+      return `${label} #${confessionId} has been submitted, but Spectro cannot access the channel to create a thread.`;
+    case DiscordErrorCode.MissingPermissions:
+      return `${label} #${confessionId} has been submitted, but Spectro does not have permission to create the thread.`;
+    case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+      return `${label} #${confessionId} has been submitted, but Discord already has a thread for the selected message.`;
+    case DiscordErrorCode.ThreadLocked:
+      return `${label} #${confessionId} has been submitted, but Discord rejected the thread because it is locked.`;
+    case DiscordErrorCode.MaxActiveThreadsReached:
+      return `${label} #${confessionId} has been submitted, but Discord has reached the maximum number of active threads for this server.`;
+    default:
+      return `${label} #${confessionId} has been submitted, but Spectro could not create the Discord thread. Please report this bug to the Spectro developers.`;
   }
 }

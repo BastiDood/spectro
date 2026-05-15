@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { createConfessionPayload } from '.';
+import { DiscordErrorCode } from '$lib/server/models/discord/errors';
+
+import { createConfessionPayload, getThreadCreationErrorMessage } from '.';
 
 const confession = {
   confessionId: '42',
@@ -65,5 +67,40 @@ describe('createConfessionPayload', () => {
 
     expect(payload.embeds?.[0]?.image).toBeUndefined();
     expect(payload.embeds?.[0]?.fields).toBeUndefined();
+  });
+});
+
+describe('getThreadCreationErrorMessage', () => {
+  it('explains when Discord already has a thread for the selected message', () => {
+    expect(
+      getThreadCreationErrorMessage(DiscordErrorCode.ThreadAlreadyCreatedForMessage, {
+        label: 'Confession',
+        confessionId: '42',
+      }),
+    ).toBe(
+      'Confession #42 has been submitted, but Discord already has a thread for the selected message.',
+    );
+  });
+
+  it('explains when Spectro cannot create more active threads', () => {
+    expect(
+      getThreadCreationErrorMessage(DiscordErrorCode.MaxActiveThreadsReached, {
+        label: 'Confession',
+        confessionId: '42',
+      }),
+    ).toBe(
+      'Confession #42 has been submitted, but Discord has reached the maximum number of active threads for this server.',
+    );
+  });
+
+  it('explains when Spectro lacks Discord permissions to create a thread', () => {
+    expect(
+      getThreadCreationErrorMessage(DiscordErrorCode.MissingPermissions, {
+        label: 'Confession',
+        confessionId: '42',
+      }),
+    ).toBe(
+      'Confession #42 has been submitted, but Spectro does not have permission to create the thread.',
+    );
   });
 });
