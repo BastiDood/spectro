@@ -1,8 +1,7 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import assert from 'node:assert/strict';
 
 import { NonRetriableError } from 'inngest';
 
-import { assertOptional } from '$lib/assert';
 import {
   ConfessionChannel,
   createConfessionPayload,
@@ -10,18 +9,14 @@ import {
   getConfessionErrorMessage,
   LogPayloadType,
 } from '$lib/server/confession';
-import {
-  db,
-  type PersistableDurableAttachment,
-  resetLogChannel,
-  upsertDurableAttachmentData,
-} from '$lib/server/database';
-import { DiscordAttachmentCdnNamespace, parseDiscordAttachmentCdnUrl } from '$lib/url/discord';
+import { db, resetLogChannel, upsertDurableAttachmentData } from '$lib/server/database';
 import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
+import { extractDurableAttachmentMetadata } from '$lib/server/attachment';
 import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import type { Message } from '$lib/server/models/discord/message';
+import { parseDiscordAttachmentCdnUrl } from '$lib/url/discord';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import {
@@ -416,45 +411,7 @@ export const processConfessionSubmission = inngest.createFunction(
             throw error;
           }
 
-          const attachment = assertOptional(message.attachments ?? []);
-          let durableAttachment: PersistableDurableAttachment | null = null;
-          if (typeof attachment === 'undefined') {
-            const embed = assertOptional(message.embeds ?? []);
-            if (typeof embed !== 'undefined') {
-              assert(typeof embed.image !== 'undefined');
-              assert(typeof embed.image.proxy_url !== 'undefined');
-
-              const parsedAttachmentUrl = parseDiscordAttachmentCdnUrl(embed.image.url);
-              assert(parsedAttachmentUrl !== null);
-              strictEqual(parsedAttachmentUrl.namespace, DiscordAttachmentCdnNamespace.Durable);
-              strictEqual(parsedAttachmentUrl.channelId, message.channel_id);
-
-              durableAttachment = {
-                id: parsedAttachmentUrl.attachmentId,
-                messageId: message.id,
-                channelId: message.channel_id,
-                filename: parsedAttachmentUrl.filename,
-                url: embed.image.url,
-                proxyUrl: embed.image.proxy_url,
-                contentType: embed.image.content_type ?? null,
-                height: embed.image.height ?? null,
-                width: embed.image.width ?? null,
-              };
-            }
-          } else {
-            durableAttachment = {
-              id: attachment.id,
-              messageId: message.id,
-              channelId: message.channel_id,
-              filename: attachment.filename,
-              contentType: attachment.content_type ?? null,
-              url: attachment.url,
-              proxyUrl: attachment.proxy_url,
-              height: attachment.height ?? null,
-              width: attachment.width ?? null,
-            };
-          }
-
+          const durableAttachment = extractDurableAttachmentMetadata(message);
           if (durableAttachment === null) {
             const error = new NonRetriableError('durable attachment not found');
             logger.fatal('durable attachment not found after log upload', error, {

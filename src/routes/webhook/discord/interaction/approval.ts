@@ -11,9 +11,9 @@ import {
   ephemeralAttachment,
 } from '$lib/server/database/models';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/functions/dispatch-approval/schema';
+import type { CreateMessageAttachment } from '$lib/server/models/discord/message';
 import { db } from '$lib/server/database';
 import { type Embed, EmbedField, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
-import type { EmbedAttachment } from '$lib/server/models/discord/attachment';
 import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
@@ -106,7 +106,17 @@ interface ApprovalDispatch {
 
 interface SubmitVerdictResult {
   embed: Embed;
+  attachment: ApprovalVerdictAttachment | null;
   dispatch: ApprovalDispatch | null;
+}
+
+interface ApprovalVerdictAttachment {
+  id: string;
+  filename: string;
+  contentType: string | null;
+  url: string;
+  height: number | null;
+  width: number | null;
 }
 
 /**
@@ -124,7 +134,7 @@ async function submitVerdict(
   internalId: bigint,
   moderatorId: Snowflake,
   permissions: bigint,
-) {
+): Promise<SubmitVerdictResult> {
   return await tracer.asyncSpan('submit-verdict', async span => {
     span.setAttributes({
       timestamp: timestamp.toISOString(),
@@ -182,7 +192,7 @@ async function submitVerdict(
         });
         const { approvedAt, disabledAt, authorId, confessionId, label, content } = result;
 
-        let embedAttachment: EmbedAttachment | null = null;
+        let embedAttachment: ApprovalVerdictAttachment | null = null;
         if (result.ephemeralAttachmentId !== null)
           if (result.durableAttachmentId === null) {
             if (isApproved) MissingDurableAttachmentApprovalError.throwNew();
@@ -198,13 +208,13 @@ async function submitVerdict(
             });
 
             embedAttachment = {
+              id: result.durableAttachmentId.toString(),
               filename: result.attachmentFilename,
+              contentType: result.attachmentContentType,
               url: result.attachmentUrl,
+              height: result.attachmentHeight,
+              width: result.attachmentWidth,
             };
-            if (result.attachmentContentType !== null)
-              embedAttachment.content_type = result.attachmentContentType;
-            if (result.attachmentHeight !== null) embedAttachment.height = result.attachmentHeight;
-            if (result.attachmentWidth !== null) embedAttachment.width = result.attachmentWidth;
           }
 
         if (disabledAt !== null && disabledAt <= timestamp)
@@ -242,15 +252,13 @@ async function submitVerdict(
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;
-          if (embedAttachment !== null) {
-            fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
-            if (embedAttachment.content_type?.startsWith('image/'))
+          if (embedAttachment !== null)
+            if (embedAttachment.contentType?.startsWith('image/') === true)
               image = {
-                url: embedAttachment.url,
+                url: `attachment://${embedAttachment.filename}`,
                 height: embedAttachment.height ?? void 0,
                 width: embedAttachment.width ?? void 0,
               };
-          }
 
           logger.info('confession approved', { 'confession.id': confessionId.toString() });
           embed = {
@@ -281,15 +289,13 @@ async function submitVerdict(
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;
-          if (embedAttachment !== null) {
-            fields.push({ name: 'Attachment', value: embedAttachment.url, inline: true });
-            if (embedAttachment.content_type?.startsWith('image/'))
+          if (embedAttachment !== null)
+            if (embedAttachment.contentType?.startsWith('image/') === true)
               image = {
-                url: embedAttachment.url,
+                url: `attachment://${embedAttachment.filename}`,
                 height: embedAttachment.height ?? void 0,
                 width: embedAttachment.width ?? void 0,
               };
-          }
 
           await tracer.asyncSpan('delete-confession', async span => {
             span.setAttribute('confession.internal.id', internalId.toString());
@@ -315,7 +321,7 @@ async function submitVerdict(
           };
         }
 
-        return { embed, dispatch } satisfies SubmitVerdictResult;
+        return { embed, attachment: embedAttachment, dispatch };
       },
       { isolationLevel: 'read committed' },
     );
@@ -395,8 +401,12 @@ export async function handleApproval(
     });
   }
 
+  const attachments: CreateMessageAttachment[] = [];
+  if (result.attachment !== null)
+    attachments.push({ id: result.attachment.id, filename: result.attachment.filename });
+
   return {
     type: InteractionResponseType.UpdateMessage,
-    data: { components: [], embeds: [result.embed] },
+    data: { components: [], embeds: [result.embed], attachments },
   };
 }
