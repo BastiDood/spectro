@@ -54,14 +54,13 @@ function parseModalState(customId: string): ModalState {
   strictEqual(namespace, 'confess');
   strictEqual(rest.length, 0);
   assert(typeof channelId !== 'undefined');
-
   switch (mode) {
     case ConfessionSubmitMode.Message:
       return {
         mode,
         channelId,
-        threadId: threadId ?? null,
-        parentMessageId: parentMessageId ?? null,
+        threadId: threadId || null,
+        parentMessageId: parentMessageId || null,
       };
     case ConfessionSubmitMode.NewThread:
     case ConfessionSubmitMode.NewThreadReply:
@@ -69,7 +68,7 @@ function parseModalState(customId: string): ModalState {
         mode,
         channelId,
         threadId: null,
-        parentMessageId: parentMessageId ?? null,
+        parentMessageId: parentMessageId || null,
       };
     default:
       throw new Error('unknown confession modal state');
