@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { DiscordErrorCode } from '$lib/server/models/discord/errors';
 
-import { createConfessionPayload, getThreadCreationErrorMessage } from '.';
+import {
+  createConfessionPayload,
+  createLogPayload,
+  getThreadCreationErrorMessage,
+  LogPayloadType,
+} from '.';
 
 const confession = {
   confessionId: '42',
@@ -13,6 +18,19 @@ const confession = {
     label: 'Confession',
     color: null,
   },
+};
+
+const logConfession = {
+  ...confession,
+  channelId: '100000000000000001',
+  publishChannelId: '100000000000000002',
+  authorId: '100000000000000003',
+  channel: {
+    ...confession.channel,
+    guildId: '100000000000000004',
+  },
+  attachment: null,
+  thread: null,
 };
 
 describe('createConfessionPayload', () => {
@@ -67,6 +85,99 @@ describe('createConfessionPayload', () => {
 
     expect(payload.embeds?.[0]?.image).toBeUndefined();
     expect(payload.embeds?.[0]?.fields).toBeUndefined();
+  });
+});
+
+describe('createLogPayload', () => {
+  it('orders thread reply log fields', () => {
+    const payload = createLogPayload(
+      {
+        ...logConfession,
+        parentMessageId: '100000000000000005',
+        thread: {
+          id: '100000000000000002',
+          title: 'A thread title',
+        },
+      },
+      { type: LogPayloadType.Approved },
+    );
+
+    expect(payload.embeds?.[0]?.fields).toEqual([
+      {
+        name: 'Authored by',
+        value: '||<@100000000000000003>||',
+        inline: true,
+      },
+      {
+        name: 'Parent Channel',
+        value: '<#100000000000000001>',
+        inline: true,
+      },
+      {
+        name: 'Thread Channel',
+        value: '<#100000000000000002>',
+        inline: true,
+      },
+      {
+        name: 'Reply To',
+        value:
+          'https://discord.com/channels/100000000000000004/100000000000000002/100000000000000005',
+        inline: true,
+      },
+    ]);
+  });
+
+  it('orders resent thread log fields', () => {
+    const payload = createLogPayload(
+      {
+        ...logConfession,
+        thread: {
+          id: '100000000000000002',
+          title: 'A thread title',
+        },
+      },
+      { type: LogPayloadType.Resent, moderatorId: 100000000000000006n },
+    );
+
+    expect(payload.embeds?.[0]?.fields).toEqual([
+      {
+        name: 'Authored by',
+        value: '||<@100000000000000003>||',
+        inline: true,
+      },
+      {
+        name: 'Resent by',
+        value: '<@100000000000000006>',
+        inline: true,
+      },
+      {
+        name: 'Parent Channel',
+        value: '<#100000000000000001>',
+        inline: true,
+      },
+      {
+        name: 'Thread Channel',
+        value: '<#100000000000000002>',
+        inline: true,
+      },
+    ]);
+  });
+
+  it('omits thread-only fields for channel logs', () => {
+    const payload = createLogPayload(logConfession, { type: LogPayloadType.Approved });
+
+    expect(payload.embeds?.[0]?.fields).toEqual([
+      {
+        name: 'Authored by',
+        value: '||<@100000000000000003>||',
+        inline: true,
+      },
+      {
+        name: 'Thread Channel',
+        value: '<#100000000000000002>',
+        inline: true,
+      },
+    ]);
   });
 });
 

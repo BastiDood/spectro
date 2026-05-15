@@ -340,12 +340,10 @@ export function createLogPayload(
   if (mode.type === LogPayloadType.Resent)
     fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
 
-  fields.push({ name: 'Destination', value: `<#${confession.publishChannelId}>`, inline: true });
-
-  if (confession.thread !== null) {
+  if (confession.thread !== null)
     fields.push({ name: 'Parent Channel', value: `<#${confession.channelId}>`, inline: true });
-    fields.push({ name: 'Thread Title', value: confession.thread.title, inline: true });
-  }
+
+  fields.push({ name: 'Thread Channel', value: `<#${confession.publishChannelId}>`, inline: true });
 
   if (confession.parentMessageId !== null)
     fields.push({
