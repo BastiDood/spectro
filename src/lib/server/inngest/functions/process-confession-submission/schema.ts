@@ -1,5 +1,5 @@
 import { eventType } from 'inngest';
-import { nullable, object, string } from 'valibot';
+import { literal, nullable, object, string, variant } from 'valibot';
 
 const RequestedAttachmentData = object({
   id: string(),
@@ -9,18 +9,50 @@ const RequestedAttachmentData = object({
   proxyUrl: string(),
 });
 
-const ConfessionSubmitEventData = object({
+export const enum ConfessionSubmitMode {
+  Message = 'message',
+  NewThread = 'new-thread',
+  NewThreadReply = 'new-thread-reply',
+}
+
+const ConfessionSubmitEventBaseData = object({
   applicationId: string(),
   interactionToken: string(),
   interactionId: string(),
   channelId: string(),
   authorId: string(),
   content: string(),
-  parentMessageId: nullable(string()),
   attachment: nullable(RequestedAttachmentData),
 });
 
+const ConfessionMessageSubmitEventData = object({
+  ...ConfessionSubmitEventBaseData.entries,
+  mode: literal(ConfessionSubmitMode.Message),
+  threadId: nullable(string()),
+  threadTitle: nullable(string()),
+  parentMessageId: nullable(string()),
+});
+
+const ConfessionNewThreadSubmitEventData = object({
+  ...ConfessionSubmitEventBaseData.entries,
+  mode: literal(ConfessionSubmitMode.NewThread),
+  threadTitle: string(),
+});
+
+const ConfessionNewThreadReplySubmitEventData = object({
+  ...ConfessionSubmitEventBaseData.entries,
+  mode: literal(ConfessionSubmitMode.NewThreadReply),
+  threadTitle: string(),
+  parentMessageId: string(),
+});
+
+const ConfessionSubmitEventData = variant('mode', [
+  ConfessionMessageSubmitEventData,
+  ConfessionNewThreadSubmitEventData,
+  ConfessionNewThreadReplySubmitEventData,
+]);
+
 export const ConfessionSubmitEvent = eventType('discord/confession.submit', {
-  version: '2.0.0',
+  version: '3.0.0',
   schema: ConfessionSubmitEventData,
 });

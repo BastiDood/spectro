@@ -5,6 +5,7 @@ import { error, json } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
+import { type Channel, ChannelType } from '$lib/server/models/discord/channel';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
 import { hasAllFlags } from '$lib/bits';
 import { Interaction } from '$lib/server/models/discord/interaction';
@@ -13,11 +14,7 @@ import type { InteractionResponse } from '$lib/server/models/discord/interaction
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { InteractionType } from '$lib/server/models/discord/interaction/base';
 import { Logger } from '$lib/server/telemetry/logger';
-import {
-  MANAGE_CHANNELS,
-  MANAGE_MESSAGES,
-  SEND_MESSAGES,
-} from '$lib/server/models/discord/permission';
+import { MANAGE_CHANNELS, MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { Tracer } from '$lib/server/telemetry/tracer';
 import { UnreachableCodeError } from '$lib/assert';
@@ -31,16 +28,45 @@ import { handleModalSubmit } from './modal-submit';
 import { handleReplyModal } from './reply-modal';
 import { handleResend } from './resend';
 import { handleSetup } from './setup';
+import { handleThread } from './thread-modal';
+import { handleThreadReplyModal } from './thread-reply-modal';
+import {
+  isConfessionThreadChannel,
+  resolveConfessionChannelId,
+  resolveConfessionDestination,
+} from './channel-context';
 import {
   UnexpectedApplicationCommandChatInputNameError,
   UnexpectedApplicationCommandMessageNameError,
   UnexpectedApplicationCommandTypeError,
-  UnexpectedModalSubmitError,
 } from './errors';
 
 const SERVICE_NAME = 'webhook.interaction';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
+
+function getModalChannelContext(
+  channel: Pick<Channel, 'id' | 'name' | 'thread_metadata' | 'type'>,
+) {
+  switch (channel.type) {
+    case ChannelType.AnnouncementThread:
+    case ChannelType.PublicThread:
+    case ChannelType.PrivateThread:
+      assert(typeof channel.thread_metadata !== 'undefined');
+      assert(typeof channel.name === 'string');
+      return {
+        channelId: channel.id,
+        isLockedThread: channel.thread_metadata.locked,
+        threadTitle: channel.name,
+      };
+    default:
+      return {
+        channelId: channel.id,
+        isLockedThread: null,
+        threadTitle: null,
+      };
+  }
+}
 
 async function handleInteraction(
   timestamp: Date,
@@ -54,11 +80,24 @@ async function handleInteraction(
         case InteractionApplicationCommandType.ChatInput:
           switch (interaction.data.name) {
             case 'confess':
-              assert(typeof interaction.channel_id !== 'undefined');
+              assert(typeof interaction.channel !== 'undefined');
               assert(typeof interaction.member?.user !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
-              assert(hasAllFlags(interaction.member.permissions, SEND_MESSAGES));
-              return handleConfess(interaction.channel_id, interaction.member.user.id);
+              return handleConfess(
+                resolveConfessionDestination(interaction.channel),
+                interaction.member.user.id,
+                interaction.member.permissions,
+              );
+            case 'thread':
+              assert(typeof interaction.channel !== 'undefined');
+              assert(typeof interaction.member?.user !== 'undefined');
+              assert(typeof interaction.member.permissions !== 'undefined');
+              return handleThread(
+                resolveConfessionChannelId(interaction.channel),
+                isConfessionThreadChannel(interaction.channel),
+                interaction.member.user.id,
+                interaction.member.permissions,
+              );
             case 'help':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
@@ -83,7 +122,7 @@ async function handleInteraction(
                 interaction.data.options ?? [],
               );
             case 'lockdown':
-              assert(typeof interaction.channel_id !== 'undefined');
+              assert(typeof interaction.channel !== 'undefined');
               assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member?.permissions !== 'undefined');
               assert(hasAllFlags(interaction.member.permissions, MANAGE_CHANNELS));
@@ -92,11 +131,11 @@ async function handleInteraction(
                 interaction.application_id,
                 interaction.token,
                 interaction.id,
-                interaction.channel_id,
+                resolveConfessionChannelId(interaction.channel),
                 interaction.member.user.id,
               );
             case 'resend':
-              assert(typeof interaction.channel_id !== 'undefined');
+              assert(typeof interaction.channel !== 'undefined');
               assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllFlags(interaction.member.permissions, MANAGE_MESSAGES));
@@ -106,7 +145,7 @@ async function handleInteraction(
                 interaction.token,
                 interaction.id,
                 interaction.member.permissions,
-                interaction.channel_id,
+                resolveConfessionChannelId(interaction.channel),
                 interaction.member.user.id,
                 interaction.data.options ?? [],
               );
@@ -116,28 +155,49 @@ async function handleInteraction(
                 data: handleInfo(interaction.data.options ?? []),
               };
             default:
-              UnexpectedApplicationCommandChatInputNameError.throwNew(interaction.data.name);
+              break;
           }
-          break;
+          return UnexpectedApplicationCommandChatInputNameError.throwNew(interaction.data.name);
         case InteractionApplicationCommandType.Message:
           switch (interaction.data.name) {
             case 'Reply Anonymously':
-              assert(typeof interaction.channel_id !== 'undefined');
+              assert(typeof interaction.channel !== 'undefined');
               assert(typeof interaction.member?.permissions !== 'undefined');
-              assert(hasAllFlags(interaction.member.permissions, SEND_MESSAGES));
-              return await handleReplyModal(
-                timestamp,
-                interaction.channel_id,
-                interaction.data.target_id,
-              );
+              assert(typeof interaction.data.resolved?.messages !== 'undefined');
+              {
+                const message = interaction.data.resolved.messages[interaction.data.target_id];
+                assert(typeof message !== 'undefined');
+                return handleReplyModal(
+                  resolveConfessionDestination(interaction.channel),
+                  interaction.channel.id,
+                  message.id,
+                  message.channel_id,
+                  interaction.member.permissions,
+                );
+              }
+            case 'Reply as Anonymous Thread':
+              assert(typeof interaction.channel !== 'undefined');
+              assert(typeof interaction.member?.permissions !== 'undefined');
+              assert(typeof interaction.data.resolved?.messages !== 'undefined');
+              {
+                const message = interaction.data.resolved.messages[interaction.data.target_id];
+                assert(typeof message !== 'undefined');
+                return handleThreadReplyModal(
+                  resolveConfessionDestination(interaction.channel),
+                  interaction.channel.id,
+                  message.id,
+                  message.channel_id,
+                  interaction.member.permissions,
+                );
+              }
             default:
-              UnexpectedApplicationCommandMessageNameError.throwNew(interaction.data.name);
+              break;
           }
-          break;
+          return UnexpectedApplicationCommandMessageNameError.throwNew(interaction.data.name);
         default:
-          UnexpectedApplicationCommandTypeError.throwNew(interaction.data.type);
+          break;
       }
-      break;
+      return UnexpectedApplicationCommandTypeError.throwNew(interaction.data.type);
     case InteractionType.MessageComponent:
       assert(typeof interaction.message !== 'undefined');
       assert(typeof interaction.member?.user !== 'undefined');
@@ -153,28 +213,25 @@ async function handleInteraction(
         interaction.member.permissions,
       );
     case InteractionType.ModalSubmit:
-      switch (interaction.data.custom_id) {
-        case 'confess':
-          assert(typeof interaction.channel_id !== 'undefined');
-          assert(typeof interaction.member?.user !== 'undefined');
-          assert(typeof interaction.member.permissions !== 'undefined');
-          return await handleModalSubmit(
-            timestamp,
-            interaction.application_id,
-            interaction.token,
-            interaction.id,
-            interaction.channel_id,
-            interaction.member.user.id,
-            interaction.member.permissions,
-            interaction.data.components,
-            interaction.data.resolved,
-          );
-        default:
-          return UnexpectedModalSubmitError.throwNew(interaction.data.custom_id);
-      }
+      assert(typeof interaction.member?.user !== 'undefined');
+      assert(typeof interaction.member.permissions !== 'undefined');
+      assert(typeof interaction.channel !== 'undefined');
+      return await handleModalSubmit(
+        timestamp,
+        interaction.application_id,
+        interaction.token,
+        interaction.id,
+        interaction.data.custom_id,
+        getModalChannelContext(interaction.channel),
+        interaction.member.user.id,
+        interaction.member.permissions,
+        interaction.data.components,
+        interaction.data.resolved?.attachments,
+      );
     default:
-      UnreachableCodeError.throwNew();
+      break;
   }
+  return UnreachableCodeError.throwNew();
 }
 
 export async function POST({ request }) {

@@ -2,6 +2,12 @@ import { Buffer } from 'node:buffer';
 
 import { parse } from 'valibot';
 
+import {
+  Channel,
+  ChannelType,
+  type CreatePublicThread,
+  type CreatePublicThreadFromMessage,
+} from '$lib/server/models/discord/channel';
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
@@ -102,13 +108,70 @@ export class DiscordClient {
       }
 
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in createMessage', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.channel.id': channelId,
+      return DiscordError.throwNew(code, message);
+    });
+  }
+
+  async createPublicThread(channelId: Snowflake, name: string) {
+    return await tracer.asyncSpan('create-public-thread', async span => {
+      span.setAttributes({
+        'channel.id': channelId,
       });
-      throw error;
+
+      const response = await fetch(`${DiscordClient.#API_BASE_URL}/channels/${channelId}/threads`, {
+        body: JSON.stringify({
+          name,
+          type: ChannelType.PublicThread,
+        } satisfies CreatePublicThread),
+        method: 'POST',
+        headers: {
+          Authorization: this.#botToken,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const json = await response.json();
+
+      if (response.status === 201) {
+        const parsed = parse(Channel, json);
+        logger.debug('thread created', { 'thread.id': parsed.id });
+        return parsed;
+      }
+
+      const { code, message } = parse(DiscordErrorResponse, json);
+      return DiscordError.throwNew(code, message);
+    });
+  }
+
+  async createPublicThreadFromMessage(channelId: Snowflake, messageId: Snowflake, name: string) {
+    return await tracer.asyncSpan('create-public-thread-from-message', async span => {
+      span.setAttributes({
+        'channel.id': channelId,
+        'message.id': messageId,
+      });
+
+      const response = await fetch(
+        `${DiscordClient.#API_BASE_URL}/channels/${channelId}/messages/${messageId}/threads`,
+        {
+          body: JSON.stringify({ name } satisfies CreatePublicThreadFromMessage),
+          method: 'POST',
+          headers: {
+            Authorization: this.#botToken,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      const json = await response.json();
+
+      if (response.status === 201) {
+        const parsed = parse(Channel, json);
+        logger.debug('thread created from message', { 'thread.id': parsed.id });
+        return parsed;
+      }
+
+      const { code, message } = parse(DiscordErrorResponse, json);
+      return DiscordError.throwNew(code, message);
     });
   }
 
@@ -139,13 +202,7 @@ export class DiscordClient {
 
       const json = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in createFollowupMessage', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.application.id': applicationId,
-      });
-      throw error;
+      return DiscordError.throwNew(code, message);
     });
   }
 
@@ -176,13 +233,7 @@ export class DiscordClient {
 
       const json = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in editOriginalInteractionResponse', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.application.id': applicationId,
-      });
-      throw error;
+      return DiscordError.throwNew(code, message);
     });
   }
 
@@ -208,13 +259,7 @@ export class DiscordClient {
 
       const json = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
-      const error = new DiscordError(code, message);
-      logger.error('discord api error in deleteOriginalInteractionResponse', error, {
-        'discord.error.code': code,
-        'discord.error.message': message,
-        'discord.application.id': applicationId,
-      });
-      throw error;
+      return DiscordError.throwNew(code, message);
     });
   }
 }

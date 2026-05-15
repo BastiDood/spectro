@@ -1,4 +1,4 @@
-import { type InferOutput, object, picklist } from 'valibot';
+import { boolean, type InferOutput, nullish, object, optional, picklist, string } from 'valibot';
 
 import { Snowflake } from '$lib/server/models/discord/snowflake';
 
@@ -21,6 +21,7 @@ export const enum ChannelType {
 
 export const Channel = object({
   id: Snowflake,
+  name: nullish(string()),
   type: picklist([
     ChannelType.GuildText,
     ChannelType.DirectMessage,
@@ -37,6 +38,22 @@ export const Channel = object({
     ChannelType.GuildForum,
     ChannelType.GuildMedia,
   ]),
+  parent_id: nullish(Snowflake),
+  thread_metadata: optional(
+    object({
+      archived: boolean(),
+      locked: boolean(),
+    }),
+  ),
 });
 
 export type Channel = InferOutput<typeof Channel>;
+
+export interface CreatePublicThread {
+  name: string;
+  type: ChannelType.PublicThread;
+}
+
+export interface CreatePublicThreadFromMessage {
+  name: string;
+}

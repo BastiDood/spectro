@@ -18,13 +18,10 @@
 <section>
   <h2 id="set-up">Setting up Confession Channels</h2>
   <p>
-    By default, Spectro is not configured to send anonymous confessions to any channel. To "set up"
-    a channel for confessions, server moderators (i.e., any member with the <span
-      class="badge badge-accent">Manage Channels</span
-    >
-    permission) must invoke the {@render command('setup')} command with a
-    <strong>log-channel</strong> to which all confession logs will be sent. The command configures
-    the current channel by default, or the selected <strong>confession-channel</strong> when one is provided.
+    Spectro will not post anonymous messages until a moderator sets up a confession channel.
+    Moderators use {@render command('setup')} to choose where anonymous messages appear and where private
+    moderator logs are sent. The command sets up the current channel by default, or the selected
+    <strong>confession-channel</strong> when one is provided.
   </p>
   <p>
     Optionally, the <strong>label</strong> and the <strong>color</strong> of the confession embed
@@ -43,9 +40,9 @@
     simply overwrite the non-empty arguments of the command invocation.
   </p>
   <p>
-    The configured <strong>log-channel</strong> is also where Spectro persists uploaded attachment artifacts
-    before public rendering. If attachment-bearing confession logs are deleted later, those files may
-    stop being reliably recoverable.
+    The configured <strong>log-channel</strong> also helps Spectro keep uploaded files available for approvals
+    and resends. Moderators should avoid deleting confession log messages unless they are intentionally
+    removing that record.
   </p>
   <p>
     In summary, the following is a minimum checklist of required permissions and configurations for
@@ -75,17 +72,23 @@
     Once a channel has been properly configured, any member with the <span
       class="badge badge-accent">Send Messages</span
     >
-    permission can now invoke the {@render command('confess')} command to publish an anonymous confession.
+    permission can invoke {@render command('confess')} to post an anonymous confession. The command also
+    works inside an existing confession thread, where the message appears in that thread.
   </p>
   <p>
-    The confession modal includes an optional <strong>Attachment</strong> field where you can attach
-    images or files to your confession. If you choose to attach a file, you must have the
+    The confession modal includes an optional <strong>Attachment</strong> field. If you choose to
+    upload an image or file, you must have the
     <span class="badge badge-accent">Attach Files</span> permission.
   </p>
   <p>
-    For newer confessions, Spectro durably persists the uploaded file through the moderator log
-    before publishing the confession. This avoids depending on Discord's temporary modal-upload URLs
-    for later approval, resend, and public rendering.
+    Images show inline when possible. Other uploads are kept as files. Spectro uses the moderator
+    log to keep those uploads available for approvals, resends, and later viewing.
+  </p>
+  <p>
+    To start a new anonymous public thread from a confession channel, use {@render command(
+      'thread',
+    )}. The modal asks for a thread title and the anonymous message. If you are already inside a
+    confession thread, use {@render command('confess')} instead.
   </p>
   <div class="alert alert-warning">
     <Icon icon={BaselineAnnouncement} width={24} />
@@ -109,9 +112,9 @@
     interaction and the user who triggered the action.
   </p>
   <p>
-    For attachment-bearing confessions, approval operates on the durable attachment already stored
-    in the moderator log. Older legacy confessions that only relied on Discord's expired temporary
-    upload URLs may no longer be approvable.
+    For posts with attachments, approval uses the file kept by the moderator log. Older posts from
+    before this attachment flow may no longer be approvable if Discord no longer has the original
+    upload.
   </p>
   <div class="alert alert-warning">
     <Icon icon={BaselineAnnouncement} width={24} />
@@ -126,15 +129,21 @@
   <h2 id="reply-to-confessions">Replying to Confessions</h2>
   <p>
     Any member with the <span class="badge badge-accent">Send Messages</span> permission can
-    anonymously reply to any message in a confessions-enabled <strong>channel</strong>. Simply open
-    the context menu on that message (i.e., right-click on desktop and press-and-hold on mobile) and
+    anonymously reply to a message in a confessions-enabled <strong>channel</strong>. Open the
+    context menu on that message (i.e., right-click on desktop and press-and-hold on mobile) and
     then select the
-    <a href="/reference/#reply" class="link link-primary">Apps &gt; Reply Anonymously</a> option. A modal
-    with a text area input should pop up on the screen, where the anonymous reply can be drafted.
+    <a href="/reference/#reply" class="link link-primary">Apps &gt; Reply Anonymously</a> option. This
+    posts a normal anonymous reply to the selected message.
   </p>
   <p>
-    Like confessions, the reply modal includes an optional <strong>Attachment</strong> field. You
-    can attach images or files to your anonymous reply. If you attach a file, the
+    You can also choose <strong>Apps &gt; Reply as Anonymous Thread</strong> to start a new anonymous
+    thread from the selected message. This is for messages in the main confession channel, not for messages
+    already inside threads. In channels that require approval, use the normal reply flow instead because
+    Spectro cannot create the thread before moderators approve it.
+  </p>
+  <p>
+    Like confessions, replies can include an optional <strong>Attachment</strong>. If you upload an
+    image or file, the
     <span class="badge badge-accent">Attach Files</span> permission is required.
   </p>
 </section>
@@ -148,9 +157,8 @@
     user must be in the same channel that the confession was originally sent.
   </p>
   <p>
-    Resends reuse the durable attachment stored from the original moderator log flow. Legacy
-    attachment-bearing confessions created before this durability upgrade may fail with a
-    recoverable error if the original Discord CDN upload is no longer available.
+    Resends reuse the file kept by the moderator log when one is available. Older posts with
+    attachments may no longer be resendable if Discord no longer has the original upload.
   </p>
 </section>
 <section>

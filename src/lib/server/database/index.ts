@@ -9,6 +9,7 @@ import { Pool as PgPool } from 'pg';
 import { assertSingle, UnreachableCodeError } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { Logger } from '$lib/server/telemetry/logger';
+import { normalizeDiscordAttachmentUrl } from '$lib/url/discord';
 import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
 import { SPECTRO_DATABASE_DRIVER } from '$lib/server/env/spectro';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -106,12 +107,6 @@ async function insertAttachmentData(
   });
 }
 
-function normalizeAttachmentUrl(url: string) {
-  const normalizedUrl = new URL(url);
-  normalizedUrl.search = '';
-  return normalizedUrl.toString();
-}
-
 export async function upsertDurableAttachmentData(
   db: Interface,
   ephemeralAttachmentId: bigint,
@@ -133,8 +128,8 @@ export async function upsertDurableAttachmentData(
         channelId: BigInt(durableAttachment.channelId),
         filename: durableAttachment.filename,
         contentType: durableAttachment.contentType,
-        url: normalizeAttachmentUrl(durableAttachment.url),
-        proxyUrl: normalizeAttachmentUrl(durableAttachment.proxyUrl),
+        url: normalizeDiscordAttachmentUrl(durableAttachment.url),
+        proxyUrl: normalizeDiscordAttachmentUrl(durableAttachment.proxyUrl),
         height: durableAttachment.height,
         width: durableAttachment.width,
       })
@@ -256,64 +251,4 @@ export async function resetLogChannel(db: Interface, channelId: bigint) {
         return UnexpectedRowCountDatabaseError.throwNew(rowCount);
     }
   });
-}
-
-export interface SerializedAttachment {
-  id: string;
-  filename: string;
-  contentType: string | null;
-  url: string;
-  proxyUrl: string;
-  height?: number | null;
-  width?: number | null;
-}
-
-export interface SerializedConfessionForProcess {
-  internalId: string;
-  confessionId: string;
-  channelId: string;
-  authorId: string;
-  content: string;
-  createdAt: string;
-  approvedAt: string | null;
-  parentMessageId: string | null;
-  channel: {
-    label: string;
-    color: string | null;
-    logChannelId: string | null;
-    isApprovalRequired: boolean;
-  };
-  attachment: SerializedAttachment | null;
-}
-
-/** Serialized confession for public dispatch operations */
-export interface SerializedConfessionForDispatch {
-  confessionId: string;
-  channelId: string;
-  content: string;
-  createdAt: string;
-  approvedAt: string | null;
-  parentMessageId: string | null;
-  channel: {
-    label: string;
-    color: string | null;
-  };
-  attachment: SerializedAttachment | null;
-}
-
-/** Serialized confession for resend operations (resend-confession) */
-export interface SerializedConfessionForResend {
-  confessionId: string;
-  channelId: string;
-  authorId: string;
-  content: string;
-  createdAt: string;
-  approvedAt: string | null;
-  parentMessageId: string | null;
-  channel: {
-    label: string;
-    color: string | null;
-    logChannelId: string | null;
-  };
-  attachment: SerializedAttachment | null;
 }

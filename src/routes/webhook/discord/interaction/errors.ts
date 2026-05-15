@@ -51,21 +51,6 @@ export class UnexpectedApplicationCommandTypeError extends Error {
   }
 }
 
-export class UnexpectedModalSubmitError extends Error {
-  constructor(public customId: string) {
-    super(`unexpected modal submit ${customId}`);
-    this.name = 'UnexpectedModalSubmitError';
-  }
-
-  static throwNew(customId: string): never {
-    const error = new UnexpectedModalSubmitError(customId);
-    logger.fatal('unexpected modal submit', error, {
-      'error.custom.id': customId,
-    });
-    throw error;
-  }
-}
-
 export class UnexpectedSetupArgumentError extends Error {
   constructor(public argumentName: string) {
     super(`unexpected setup argument ${argumentName}`);

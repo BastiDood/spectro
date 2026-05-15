@@ -1,10 +1,5 @@
-import assert from 'node:assert/strict';
-
-import { and, eq } from 'drizzle-orm';
 import { NonRetriableError } from 'inngest';
 
-import * as schema from '$lib/server/database/models';
-import { assertOptional } from '$lib/assert';
 import { ATTACH_FILES } from '$lib/server/models/discord/permission';
 import {
   ConfessionChannel,
@@ -13,7 +8,7 @@ import {
   getConfessionErrorMessage,
   LogPayloadType,
 } from '$lib/server/confession';
-import { db, resetLogChannel, type SerializedConfessionForResend } from '$lib/server/database';
+import { db, resetLogChannel } from '$lib/server/database';
 import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { hasAllFlags } from '$lib/bits';
@@ -23,6 +18,8 @@ import type { Message } from '$lib/server/models/discord/message';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { ConfessionResendEvent } from './schema';
+import { createResendConfessionState } from './state';
+import { loadResendConfession } from './query';
 
 const SERVICE_NAME = 'inngest.process-confession-resend';
 const logger = Logger.byName(SERVICE_NAME);
@@ -58,97 +55,13 @@ export const processConfessionResend = inngest.createFunction(
       const confessionId = BigInt(data.confessionId);
       const confession = await step.run(
         { id: 'load-resend-confession', name: 'Load Resend Confession' },
-        async (): Promise<string | SerializedConfessionForResend> => {
-          const result = await db
-            .select({
-              confessionId: schema.confession.confessionId,
-              channelId: schema.confession.channelId,
-              authorId: schema.confession.authorId,
-              content: schema.confession.content,
-              createdAt: schema.confession.createdAt,
-              approvedAt: schema.confession.approvedAt,
-              parentMessageId: schema.confession.parentMessageId,
-              channelLabel: schema.channel.label,
-              channelColor: schema.channel.color,
-              channelLogChannelId: schema.channel.logChannelId,
-              ephemeralAttachmentId: schema.ephemeralAttachment.id,
-              durableAttachmentId: schema.durableAttachment.id,
-              attachmentFilename: schema.durableAttachment.filename,
-              attachmentContentType: schema.durableAttachment.contentType,
-              attachmentUrl: schema.durableAttachment.url,
-              attachmentProxyUrl: schema.durableAttachment.proxyUrl,
-              attachmentHeight: schema.durableAttachment.height,
-              attachmentWidth: schema.durableAttachment.width,
-            })
-            .from(schema.confession)
-            .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-            .leftJoin(
-              schema.ephemeralAttachment,
-              eq(schema.confession.internalId, schema.ephemeralAttachment.confessionInternalId),
-            )
-            .leftJoin(
-              schema.durableAttachment,
-              eq(schema.ephemeralAttachment.id, schema.durableAttachment.ephemeralAttachmentId),
-            )
-            .where(
-              and(
-                eq(schema.confession.channelId, BigInt(data.channelId)),
-                eq(schema.confession.confessionId, confessionId),
-              ),
-            )
-            .limit(1)
-            .then(assertOptional);
-
-          if (typeof result === 'undefined')
-            return `Confession #${confessionId} does not exist in this channel.`;
-
-          if (result.approvedAt === null)
-            return `Confession #${confessionId} has not yet been approved for publication in this channel.`;
-
-          if (result.channelLogChannelId === null)
-            return 'You cannot resend confessions until a valid confession log channel has been configured.';
-
-          if (result.ephemeralAttachmentId !== null) {
-            if (result.durableAttachmentId === null)
-              return `Confession #${confessionId} includes a legacy attachment that is no longer available in the Discord CDN, so it cannot be resent.`;
-
-            const permission = BigInt(data.memberPermissions);
-            if (!hasAllFlags(permission, ATTACH_FILES))
-              return 'You do not have the permission to resend confessions with attachments in this channel.';
-          }
-
-          let attachment: SerializedConfessionForResend['attachment'] = null;
-          if (result.ephemeralAttachmentId !== null) {
-            assert(result.durableAttachmentId !== null);
-            assert(result.attachmentFilename !== null);
-            assert(result.attachmentUrl !== null);
-            assert(result.attachmentProxyUrl !== null);
-            attachment = {
-              id: result.durableAttachmentId.toString(),
-              filename: result.attachmentFilename,
-              contentType: result.attachmentContentType,
-              url: result.attachmentUrl,
-              proxyUrl: result.attachmentProxyUrl,
-              height: result.attachmentHeight,
-              width: result.attachmentWidth,
-            };
-          }
-
-          return {
-            confessionId: result.confessionId.toString(),
-            channelId: result.channelId.toString(),
-            authorId: result.authorId.toString(),
-            content: result.content,
-            createdAt: result.createdAt.toISOString(),
-            approvedAt: result.approvedAt.toISOString(),
-            parentMessageId: result.parentMessageId?.toString() ?? null,
-            channel: {
-              label: result.channelLabel,
-              color: result.channelColor,
-              logChannelId: result.channelLogChannelId.toString(),
-            },
-            attachment,
-          } satisfies SerializedConfessionForResend;
+        async () => {
+          const loaded = await loadResendConfession(db, BigInt(data.channelId), confessionId);
+          return createResendConfessionState(
+            loaded,
+            confessionId,
+            hasAllFlags(BigInt(data.memberPermissions), ATTACH_FILES),
+          );
         },
       );
 
@@ -191,23 +104,6 @@ export const processConfessionResend = inngest.createFunction(
       const logResult = await step.run(
         { id: 'log-resent-confession', name: 'Log Resent Confession' },
         async (): Promise<LogFailure | null> => {
-          if (confession.approvedAt === null) {
-            const error = new NonRetriableError('confession not approved');
-            logger.fatal('confession not approved for log resend', error);
-            throw error;
-          }
-
-          if (confession.channel.logChannelId === null)
-            return {
-              content: getConfessionErrorMessage(DiscordErrorCode.UnknownChannel, {
-                label: confession.channel.label,
-                confessionId: confession.confessionId,
-                channel: ConfessionChannel.Log,
-                status: 'resent',
-              }),
-              resetLogChannelId: null,
-            };
-
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
           try {
@@ -325,17 +221,11 @@ export const processConfessionResend = inngest.createFunction(
       const resendResult = await step.run(
         { id: 'resend-confession', name: 'Resend Confession' },
         async () => {
-          if (confession.approvedAt === null) {
-            const error = new NonRetriableError('confession not approved');
-            logger.fatal('confession not approved for resend', error);
-            throw error;
-          }
-
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
           try {
             message = await DiscordClient.ENV.createMessage(
-              confession.channelId,
+              confession.publishChannelId,
               createConfessionPayload(confession),
               `${eventId}:post`,
             );

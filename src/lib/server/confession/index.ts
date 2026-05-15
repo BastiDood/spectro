@@ -15,45 +15,43 @@ import { MessageComponentTextInputStyle } from '$lib/server/models/discord/messa
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
-import type {
-  SerializedAttachment,
-  SerializedConfessionForDispatch,
-  SerializedConfessionForProcess,
-  SerializedConfessionForResend,
-} from '$lib/server/database';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { UnreachableCodeError } from '$lib/assert';
 
-export function createConfessionModal(parentMessageId: Snowflake | null): InteractionResponseModal {
-  // eslint-disable-next-line @typescript-eslint/init-declarations
+interface CreateConfessionModalOptions {
+  channelId: Snowflake;
+  threadId: Snowflake | null;
+  parentMessageId: Snowflake | null;
+}
+
+export function createConfessionModal({
+  channelId,
+  threadId,
+  parentMessageId,
+}: CreateConfessionModalOptions): InteractionResponseModal {
+  /* eslint-disable @typescript-eslint/init-declarations */
   let title: string;
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let label: string;
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let description: string;
-  // eslint-disable-next-line @typescript-eslint/init-declarations
-  let customId: string;
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let placeholder: string;
+  /* eslint-enable @typescript-eslint/init-declarations */
 
   if (parentMessageId === null) {
     title = 'Submit Confession';
     label = 'Confession';
     description = 'Your confession will be posted anonymously to the channel.';
-    customId = 'content';
     placeholder = 'What would you like to confess?';
   } else {
     title = 'Reply to a Message';
     label = 'Reply';
     description = 'Your reply will be posted anonymously in response to the selected message.';
-    customId = parentMessageId;
     placeholder = 'What would you like to say?';
   }
 
   return {
     type: InteractionResponseType.Modal,
     data: {
-      custom_id: 'confess',
+      custom_id: ['confess', 'message', channelId, threadId ?? '', parentMessageId ?? ''].join(':'),
       title,
       components: [
         {
@@ -61,7 +59,7 @@ export function createConfessionModal(parentMessageId: Snowflake | null): Intera
           label,
           description,
           component: {
-            custom_id: customId,
+            custom_id: 'content',
             type: MessageComponentType.TextInput,
             style: MessageComponentTextInputStyle.Long,
             required: true,
@@ -72,6 +70,111 @@ export function createConfessionModal(parentMessageId: Snowflake | null): Intera
           type: MessageComponentType.Label,
           label: 'Attachment',
           description: 'Optional. Attach an image or file to your confession.',
+          component: {
+            custom_id: 'attachment',
+            type: MessageComponentType.FileUpload,
+            required: false,
+          },
+        },
+        {
+          type: MessageComponentType.TextDisplay,
+          content:
+            '-# For moderation purposes, server administrators can view the authors of all confessions.',
+        },
+      ],
+    },
+  };
+}
+
+export function createThreadConfessionModal(channelId: Snowflake): InteractionResponseModal {
+  return {
+    type: InteractionResponseType.Modal,
+    data: {
+      custom_id: ['confess', 'new-thread', channelId].join(':'),
+      title: 'Create Anonymous Thread',
+      components: [
+        {
+          type: MessageComponentType.Label,
+          label: 'Thread Title',
+          description: 'This will be used as the Discord thread name.',
+          component: {
+            custom_id: 'title',
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Short,
+            required: true,
+            placeholder: 'What should this thread be called?',
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Confession',
+          description: 'Your confession will start the anonymous thread.',
+          component: {
+            custom_id: 'content',
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Long,
+            required: true,
+            placeholder: 'What would you like to confess?',
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Attachment',
+          description: 'Optional. Attach an image or file to your confession.',
+          component: {
+            custom_id: 'attachment',
+            type: MessageComponentType.FileUpload,
+            required: false,
+          },
+        },
+        {
+          type: MessageComponentType.TextDisplay,
+          content:
+            '-# For moderation purposes, server administrators can view the authors of all confessions.',
+        },
+      ],
+    },
+  };
+}
+
+export function createThreadReplyConfessionModal(
+  channelId: Snowflake,
+  parentMessageId: Snowflake,
+): InteractionResponseModal {
+  return {
+    type: InteractionResponseType.Modal,
+    data: {
+      custom_id: ['confess', 'new-thread-reply', channelId, '', parentMessageId].join(':'),
+      title: 'Create Anonymous Reply Thread',
+      components: [
+        {
+          type: MessageComponentType.Label,
+          label: 'Thread Title',
+          description: 'This will be used as the Discord thread name.',
+          component: {
+            custom_id: 'title',
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Short,
+            required: true,
+            placeholder: 'What should this thread be called?',
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Reply',
+          description: 'Your reply will start an anonymous thread from the selected message.',
+          component: {
+            custom_id: 'content',
+            type: MessageComponentType.TextInput,
+            style: MessageComponentTextInputStyle.Long,
+            required: true,
+            placeholder: 'What would you like to say?',
+          },
+        },
+        {
+          type: MessageComponentType.Label,
+          label: 'Attachment',
+          description: 'Optional. Attach an image or file to your reply.',
           component: {
             custom_id: 'attachment',
             type: MessageComponentType.FileUpload,
@@ -122,7 +225,47 @@ interface ErrorMessageContext {
   status: string;
 }
 
-function deserializeAttachment(attachment: SerializedAttachment | null) {
+export interface SerializedAttachment {
+  id: string;
+  filename: string;
+  contentType: string | null;
+  url: string;
+  proxyUrl: string;
+  height?: number | null;
+  width?: number | null;
+}
+
+type DeserializableAttachment = Pick<
+  SerializedAttachment,
+  'contentType' | 'filename' | 'height' | 'id' | 'url' | 'width'
+>;
+
+interface ConfessionPayloadInput {
+  confessionId: string;
+  content: string;
+  createdAt: string;
+  parentMessageId: string | null;
+  channel: {
+    label: string;
+    color: string | null;
+  };
+  attachment: DeserializableAttachment | null;
+}
+
+interface LogPayloadInput extends ConfessionPayloadInput {
+  channelId: string;
+  publishChannelId: string;
+  authorId: string;
+  channel: ConfessionPayloadInput['channel'] & {
+    guildId: string;
+  };
+  thread: {
+    id: string;
+    title: string;
+  } | null;
+}
+
+function deserializeAttachment(attachment: DeserializableAttachment | null) {
   return attachment === null
     ? null
     : {
@@ -137,10 +280,7 @@ function deserializeAttachment(attachment: SerializedAttachment | null) {
 
 /** Create a confession message payload for the public confession channel */
 export function createConfessionPayload(
-  confession:
-    | SerializedConfessionForDispatch
-    | SerializedConfessionForProcess
-    | SerializedConfessionForResend,
+  confession: ConfessionPayloadInput,
   timestampOverride?: Date,
 ) {
   const attachment = deserializeAttachment(confession.attachment);
@@ -187,7 +327,7 @@ export function createConfessionPayload(
 
 /** Create a log message payload for the moderator log channel */
 export function createLogPayload(
-  confession: SerializedConfessionForProcess | SerializedConfessionForResend,
+  confession: LogPayloadInput,
   mode: LogPayloadMode,
   durableAttachmentUrl?: string,
 ) {
@@ -199,6 +339,18 @@ export function createLogPayload(
 
   if (mode.type === LogPayloadType.Resent)
     fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
+
+  if (confession.thread !== null)
+    fields.push({ name: 'Parent Channel', value: `<#${confession.channelId}>`, inline: true });
+
+  fields.push({ name: 'Thread Channel', value: `<#${confession.publishChannelId}>`, inline: true });
+
+  if (confession.parentMessageId !== null)
+    fields.push({
+      name: 'Reply To',
+      value: `https://discord.com/channels/${confession.channel.guildId}/${confession.publishChannelId}/${confession.parentMessageId}`,
+      inline: true,
+    });
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
   let image: EmbedImage | undefined;
@@ -291,15 +443,40 @@ export function createLogPayload(
   return params;
 }
 
-export function getConfessionErrorMessage(code: DiscordErrorCode, ctx: ErrorMessageContext) {
+export function getConfessionErrorMessage(
+  code: DiscordErrorCode,
+  { label, confessionId, channel, status }: ErrorMessageContext,
+) {
   switch (code) {
     case DiscordErrorCode.UnknownChannel:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but the ${ctx.channel} no longer exists.`;
+      return `${label} #${confessionId} has been ${status}, but the ${channel} no longer exists.`;
     case DiscordErrorCode.MissingAccess:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but Spectro cannot access the ${ctx.channel}.`;
+      return `${label} #${confessionId} has been ${status}, but Spectro cannot access the ${channel}.`;
     case DiscordErrorCode.MissingPermissions:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but Spectro doesn't have permission to send messages in the ${ctx.channel}.`;
+      return `${label} #${confessionId} has been ${status}, but Spectro doesn't have permission to send messages in the ${channel}.`;
     default:
-      return `${ctx.label} #${ctx.confessionId} has been ${ctx.status}, but an unexpected error occurred. Please report this bug to the Spectro developers.`;
+      return `${label} #${confessionId} has been ${status}, but an unexpected error occurred. Please report this bug to the Spectro developers.`;
+  }
+}
+
+export function getThreadCreationErrorMessage(
+  code: DiscordErrorCode,
+  { label, confessionId }: Pick<ErrorMessageContext, 'label' | 'confessionId'>,
+) {
+  switch (code) {
+    case DiscordErrorCode.UnknownChannel:
+      return `${label} #${confessionId} has been submitted, but the channel for the Discord thread no longer exists.`;
+    case DiscordErrorCode.MissingAccess:
+      return `${label} #${confessionId} has been submitted, but Spectro cannot access the channel to create a thread.`;
+    case DiscordErrorCode.MissingPermissions:
+      return `${label} #${confessionId} has been submitted, but Spectro does not have permission to create the thread.`;
+    case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+      return `${label} #${confessionId} has been submitted, but Discord already has a thread for the selected message.`;
+    case DiscordErrorCode.ThreadLocked:
+      return `${label} #${confessionId} has been submitted, but Discord rejected the thread because it is locked.`;
+    case DiscordErrorCode.MaxActiveThreadsReached:
+      return `${label} #${confessionId} has been submitted, but Discord has reached the maximum number of active threads for this server.`;
+    default:
+      return `${label} #${confessionId} has been submitted, but Spectro could not create the Discord thread. Please report this bug to the Spectro developers.`;
   }
 }
