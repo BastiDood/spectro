@@ -356,6 +356,9 @@ export function createLogPayload(
       inline: true,
     });
 
+  if (confession.thread !== null)
+    fields.push({ name: 'Thread Title', value: confession.thread.title, inline: true });
+
   // eslint-disable-next-line @typescript-eslint/init-declarations
   let image: EmbedImage | undefined;
   if (

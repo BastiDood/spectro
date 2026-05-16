@@ -9,6 +9,7 @@ import {
   confession,
   durableAttachment,
   ephemeralAttachment,
+  pendingChannelThread,
 } from '$lib/server/database/models';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/functions/dispatch-approval/schema';
 import type { CreateMessageAttachment } from '$lib/server/models/discord/message';
@@ -167,9 +168,14 @@ async function submitVerdict(
               attachmentUrl: durableAttachment.url,
               attachmentHeight: durableAttachment.height,
               attachmentWidth: durableAttachment.width,
+              threadTitle: pendingChannelThread.title,
             })
             .from(lockedConfession)
             .innerJoin(channel, eq(lockedConfession.channelId, channel.id))
+            .leftJoin(
+              pendingChannelThread,
+              eq(lockedConfession.pendingChannelThreadId, pendingChannelThread.id),
+            )
             .leftJoin(
               ephemeralAttachment,
               eq(lockedConfession.internalId, ephemeralAttachment.confessionInternalId),
@@ -250,6 +256,9 @@ async function submitVerdict(
             inline: true,
           });
 
+          if (result.threadTitle !== null)
+            fields.push({ name: 'Thread Title', value: result.threadTitle, inline: true });
+
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;
           if (embedAttachment !== null)
@@ -286,6 +295,9 @@ async function submitVerdict(
             value: `<@${moderatorId}>`,
             inline: true,
           });
+
+          if (result.threadTitle !== null)
+            fields.push({ name: 'Thread Title', value: result.threadTitle, inline: true });
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;

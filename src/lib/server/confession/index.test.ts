@@ -124,6 +124,11 @@ describe('createLogPayload', () => {
           'https://discord.com/channels/100000000000000004/100000000000000001/100000000000000005',
         inline: true,
       },
+      {
+        name: 'Thread Title',
+        value: 'A thread title',
+        inline: true,
+      },
     ]);
   });
 
@@ -158,6 +163,11 @@ describe('createLogPayload', () => {
       {
         name: 'Thread Channel',
         value: '<#100000000000000002>',
+        inline: true,
+      },
+      {
+        name: 'Thread Title',
+        value: 'A thread title',
         inline: true,
       },
     ]);
