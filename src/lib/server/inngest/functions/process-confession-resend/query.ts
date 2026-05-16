@@ -3,49 +3,12 @@ import { and, eq } from 'drizzle-orm';
 import * as schema from '$lib/server/database/models';
 import { AssertionError, assertOptional } from '$lib/assert';
 import type { Interface } from '$lib/server/database';
+import { Tracer } from '$lib/server/telemetry/tracer';
 
-interface DurableAttachmentState {
-  id: bigint;
-  filename: string;
-  contentType: string | null;
-  url: string;
-  proxyUrl: string;
-  height: number | null;
-  width: number | null;
-}
+import type { ResendConfessionState } from './state';
 
-interface AttachmentState {
-  id: bigint;
-  durable: DurableAttachmentState | null;
-}
-
-interface ApprovedThreadState {
-  threadId: bigint;
-}
-
-interface PendingThreadState {
-  id: bigint;
-  title: string;
-  approved: ApprovedThreadState | null;
-}
-
-export interface ResendConfessionState {
-  confessionId: bigint;
-  channelId: bigint;
-  authorId: bigint;
-  content: string;
-  createdAt: Date;
-  approvedAt: Date | null;
-  parentMessageId: bigint | null;
-  channel: {
-    guildId: bigint;
-    label: string;
-    color: string | null;
-    logChannelId: bigint | null;
-  };
-  pendingThread: PendingThreadState | null;
-  attachment: AttachmentState | null;
-}
+const SERVICE_NAME = 'inngest.process-confession-resend.query';
+const tracer = Tracer.byName(SERVICE_NAME);
 
 interface FlatResendConfessionRow {
   confessionId: bigint;
@@ -62,6 +25,7 @@ interface FlatResendConfessionRow {
   logChannelId: bigint | null;
   threadPendingChannelThreadId: bigint | null;
   threadTitle: string | null;
+  threadParentMessageId: bigint | null;
   approvedPendingChannelThreadId: bigint | null;
   approvedThreadId: bigint | null;
   attachmentId: bigint | null;
@@ -95,6 +59,7 @@ type PendingThreadRow = Pick<
   | 'approvedPendingChannelThreadId'
   | 'approvedThreadId'
   | 'pendingChannelThreadId'
+  | 'threadParentMessageId'
   | 'threadPendingChannelThreadId'
   | 'threadTitle'
 >;
@@ -167,6 +132,7 @@ function createPendingThread(row: PendingThreadRow) {
     return {
       id: row.pendingChannelThreadId,
       title: row.threadTitle,
+      parentMessageId: row.threadParentMessageId,
       approved: null,
     };
   }
@@ -178,6 +144,7 @@ function createPendingThread(row: PendingThreadRow) {
   return {
     id: row.pendingChannelThreadId,
     title: row.threadTitle,
+    parentMessageId: row.threadParentMessageId,
     approved: {
       threadId: row.approvedThreadId,
     },
@@ -205,60 +172,69 @@ function createResendConfession(row: FlatResendConfessionRow): ResendConfessionS
 }
 
 export async function loadResendConfession(db: Interface, channelId: bigint, confessionId: bigint) {
-  const row = await db
-    .select({
-      confessionId: schema.confession.confessionId,
-      channelId: schema.confession.channelId,
-      pendingChannelThreadId: schema.confession.pendingChannelThreadId,
-      authorId: schema.confession.authorId,
-      content: schema.confession.content,
-      createdAt: schema.confession.createdAt,
-      approvedAt: schema.confession.approvedAt,
-      parentMessageId: schema.confession.parentMessageId,
-      guildId: schema.channel.guildId,
-      label: schema.channel.label,
-      color: schema.channel.color,
-      logChannelId: schema.channel.logChannelId,
-      threadPendingChannelThreadId: schema.pendingChannelThread.id,
-      threadTitle: schema.pendingChannelThread.title,
-      approvedPendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
-      approvedThreadId: schema.approvedChannelThread.threadId,
-      attachmentId: schema.ephemeralAttachment.id,
-      durableAttachmentId: schema.durableAttachment.id,
-      durableAttachmentEphemeralId: schema.durableAttachment.ephemeralAttachmentId,
-      durableAttachmentFilename: schema.durableAttachment.filename,
-      durableAttachmentContentType: schema.durableAttachment.contentType,
-      durableAttachmentUrl: schema.durableAttachment.url,
-      durableAttachmentProxyUrl: schema.durableAttachment.proxyUrl,
-      durableAttachmentHeight: schema.durableAttachment.height,
-      durableAttachmentWidth: schema.durableAttachment.width,
-    })
-    .from(schema.confession)
-    .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
-    .leftJoin(
-      schema.pendingChannelThread,
-      eq(schema.confession.pendingChannelThreadId, schema.pendingChannelThread.id),
-    )
-    .leftJoin(
-      schema.approvedChannelThread,
-      eq(schema.pendingChannelThread.id, schema.approvedChannelThread.pendingChannelThreadId),
-    )
-    .leftJoin(
-      schema.ephemeralAttachment,
-      eq(schema.confession.internalId, schema.ephemeralAttachment.confessionInternalId),
-    )
-    .leftJoin(
-      schema.durableAttachment,
-      eq(schema.ephemeralAttachment.id, schema.durableAttachment.ephemeralAttachmentId),
-    )
-    .where(
-      and(
-        eq(schema.confession.channelId, channelId),
-        eq(schema.confession.confessionId, confessionId),
-      ),
-    )
-    .limit(1)
-    .then(assertOptional);
-  if (typeof row === 'undefined') return;
-  return createResendConfession(row);
+  return await tracer.asyncSpan('load-resend-confession', async span => {
+    span.setAttributes({
+      'channel.id': channelId.toString(),
+      'confession.id': confessionId.toString(),
+    });
+
+    const row = await db
+      .select({
+        confessionId: schema.confession.confessionId,
+        channelId: schema.confession.channelId,
+        pendingChannelThreadId: schema.confession.pendingChannelThreadId,
+        authorId: schema.confession.authorId,
+        content: schema.confession.content,
+        createdAt: schema.confession.createdAt,
+        approvedAt: schema.confession.approvedAt,
+        parentMessageId: schema.confession.parentMessageId,
+        guildId: schema.channel.guildId,
+        label: schema.channel.label,
+        color: schema.channel.color,
+        logChannelId: schema.channel.logChannelId,
+        threadPendingChannelThreadId: schema.pendingChannelThread.id,
+        threadTitle: schema.pendingChannelThread.title,
+        threadParentMessageId: schema.pendingChannelThread.parentMessageId,
+        approvedPendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
+        approvedThreadId: schema.approvedChannelThread.threadId,
+        attachmentId: schema.ephemeralAttachment.id,
+        durableAttachmentId: schema.durableAttachment.id,
+        durableAttachmentEphemeralId: schema.durableAttachment.ephemeralAttachmentId,
+        durableAttachmentFilename: schema.durableAttachment.filename,
+        durableAttachmentContentType: schema.durableAttachment.contentType,
+        durableAttachmentUrl: schema.durableAttachment.url,
+        durableAttachmentProxyUrl: schema.durableAttachment.proxyUrl,
+        durableAttachmentHeight: schema.durableAttachment.height,
+        durableAttachmentWidth: schema.durableAttachment.width,
+      })
+      .from(schema.confession)
+      .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
+      .leftJoin(
+        schema.pendingChannelThread,
+        eq(schema.confession.pendingChannelThreadId, schema.pendingChannelThread.id),
+      )
+      .leftJoin(
+        schema.approvedChannelThread,
+        eq(schema.pendingChannelThread.id, schema.approvedChannelThread.pendingChannelThreadId),
+      )
+      .leftJoin(
+        schema.ephemeralAttachment,
+        eq(schema.confession.internalId, schema.ephemeralAttachment.confessionInternalId),
+      )
+      .leftJoin(
+        schema.durableAttachment,
+        eq(schema.ephemeralAttachment.id, schema.durableAttachment.ephemeralAttachmentId),
+      )
+      .where(
+        and(
+          eq(schema.confession.channelId, channelId),
+          eq(schema.confession.confessionId, confessionId),
+        ),
+      )
+      .limit(1)
+      .then(assertOptional);
+    if (typeof row === 'undefined') return;
+
+    return createResendConfession(row);
+  });
 }

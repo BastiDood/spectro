@@ -121,7 +121,7 @@ describe('createLogPayload', () => {
       {
         name: 'Reply To',
         value:
-          'https://discord.com/channels/100000000000000004/100000000000000002/100000000000000005',
+          'https://discord.com/channels/100000000000000004/100000000000000001/100000000000000005',
         inline: true,
       },
     ]);

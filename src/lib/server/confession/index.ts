@@ -240,25 +240,29 @@ type DeserializableAttachment = Pick<
   'contentType' | 'filename' | 'height' | 'id' | 'url' | 'width'
 >;
 
+interface ConfessionPayloadInputChannel {
+  label: string;
+  color: string | null;
+}
+
 interface ConfessionPayloadInput {
   confessionId: string;
   content: string;
   createdAt: string;
   parentMessageId: string | null;
-  channel: {
-    label: string;
-    color: string | null;
-  };
+  channel: ConfessionPayloadInputChannel;
   attachment: DeserializableAttachment | null;
+}
+
+interface LogPayloadInputChannel extends ConfessionPayloadInputChannel {
+  guildId: string;
 }
 
 interface LogPayloadInput extends ConfessionPayloadInput {
   channelId: string;
   publishChannelId: string;
   authorId: string;
-  channel: ConfessionPayloadInput['channel'] & {
-    guildId: string;
-  };
+  channel: LogPayloadInputChannel;
   thread: {
     id: string;
     title: string;
@@ -348,7 +352,7 @@ export function createLogPayload(
   if (confession.parentMessageId !== null)
     fields.push({
       name: 'Reply To',
-      value: `https://discord.com/channels/${confession.channel.guildId}/${confession.publishChannelId}/${confession.parentMessageId}`,
+      value: `https://discord.com/channels/${confession.channel.guildId}/${confession.channelId}/${confession.parentMessageId}`,
       inline: true,
     });
 

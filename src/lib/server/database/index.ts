@@ -6,7 +6,7 @@ import { eq, sql } from 'drizzle-orm';
 import { Pool as NeonPool } from '@neondatabase/serverless';
 import { Pool as PgPool } from 'pg';
 
-import { assertSingle, UnreachableCodeError } from '$lib/assert';
+import { assertOptional, assertSingle, UnreachableCodeError } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { Logger } from '$lib/server/telemetry/logger';
 import { normalizeDiscordAttachmentUrl } from '$lib/url/discord';
@@ -197,6 +197,78 @@ export async function insertConfession(
     });
 
     return { internalId, confessionId };
+  });
+}
+
+async function loadApprovedThreadByPendingChannelThreadId(
+  db: Interface,
+  pendingChannelThreadId: bigint,
+) {
+  return await tracer.asyncSpan('load-approved-thread-by-pending-channel-thread-id', async span => {
+    span.setAttribute('pending.channel.thread.id', pendingChannelThreadId.toString());
+    return await db
+      .select({
+        pendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
+        threadId: schema.approvedChannelThread.threadId,
+      })
+      .from(schema.approvedChannelThread)
+      .where(eq(schema.approvedChannelThread.pendingChannelThreadId, pendingChannelThreadId))
+      .limit(1)
+      .then(assertOptional);
+  });
+}
+
+async function loadApprovedThreadByThreadId(db: Interface, threadId: bigint) {
+  return await tracer.asyncSpan('load-approved-thread-by-thread-id', async span => {
+    span.setAttribute('thread.id', threadId.toString());
+    return await db
+      .select({
+        pendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
+        threadId: schema.approvedChannelThread.threadId,
+      })
+      .from(schema.approvedChannelThread)
+      .where(eq(schema.approvedChannelThread.threadId, threadId))
+      .limit(1)
+      .then(assertOptional);
+  });
+}
+
+export async function resolveApprovedChannelThread(
+  db: Transaction,
+  pendingChannelThreadId: bigint,
+  threadId: bigint,
+) {
+  return await tracer.asyncSpan('resolve-approved-channel-thread', async span => {
+    span.setAttributes({
+      'pending.channel.thread.id': pendingChannelThreadId.toString(),
+      'thread.id': threadId.toString(),
+    });
+
+    await db.execute(sql`select pg_advisory_xact_lock(${threadId})`);
+
+    const approvedForPending = await loadApprovedThreadByPendingChannelThreadId(
+      db,
+      pendingChannelThreadId,
+    );
+    if (typeof approvedForPending !== 'undefined') return approvedForPending;
+
+    const approvedForThread = await loadApprovedThreadByThreadId(db, threadId);
+    if (typeof approvedForThread !== 'undefined') return approvedForThread;
+
+    const { rowCount } = await db.insert(schema.approvedChannelThread).values({
+      pendingChannelThreadId,
+      threadId,
+    });
+
+    switch (rowCount) {
+      case null:
+        return UnexpectedRowCountDatabaseError.throwNew();
+      case 1:
+        logger.debug('approved channel thread inserted');
+        return { pendingChannelThreadId, threadId };
+      default:
+        return UnexpectedRowCountDatabaseError.throwNew(rowCount);
+    }
   });
 }
 

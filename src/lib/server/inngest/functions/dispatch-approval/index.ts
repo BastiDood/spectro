@@ -4,8 +4,9 @@ import {
   ConfessionChannel,
   createConfessionPayload,
   getConfessionErrorMessage,
+  getThreadCreationErrorMessage,
 } from '$lib/server/confession';
-import { db } from '$lib/server/database';
+import { db, resolveApprovedChannelThread } from '$lib/server/database';
 import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { inngest } from '$lib/server/inngest/client';
@@ -13,13 +14,29 @@ import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
+import {
+  type ApprovalDispatchConfession,
+  FatalApprovalDispatchStateError,
+  serializeLoadedApprovalConfession,
+} from './state';
 import { ConfessionApprovalEvent } from './schema';
-import { FatalApprovalDispatchStateError, serializeResolvedApprovalConfession } from './state';
-import { insertApprovedChannelThread, loadApprovalDispatchConfession } from './query';
+import { loadApprovalDispatchConfession } from './query';
 
 const SERVICE_NAME = 'inngest.dispatch-approval';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
+
+interface CreatedThreadResult {
+  ok: true;
+  threadId: string;
+}
+
+interface FailedThreadCreationResult {
+  ok: false;
+  content: string;
+}
+
+type ThreadCreationResult = CreatedThreadResult | FailedThreadCreationResult;
 
 export const dispatchApproval = inngest.createFunction(
   {
@@ -38,8 +55,8 @@ export const dispatchApproval = inngest.createFunction(
         'inngest.event.data.interactionId': event.data.interactionId,
       });
 
-      const confession = await step.run(
-        { id: 'resolve-approved-confession', name: 'Resolve Approved Confession' },
+      const loaded = await step.run(
+        { id: 'load-approved-confession', name: 'Load Approved Confession' },
         async () => {
           const loaded = await loadApprovalDispatchConfession(db, BigInt(event.data.internalId));
           if (typeof loaded === 'undefined')
@@ -53,27 +70,114 @@ export const dispatchApproval = inngest.createFunction(
             'confession.parent.message.id': loaded.parentMessageId?.toString() ?? null,
           });
 
-          const { pendingThread } = loaded;
-          if (pendingThread === null || pendingThread.approved !== null)
-            return serializeResolvedApprovalConfession(loaded);
-
-          const thread = await DiscordClient.ENV.createPublicThread(
-            loaded.channelId.toString(),
-            pendingThread.title,
-          );
-
-          const threadId = BigInt(thread.id);
-          await insertApprovedChannelThread(db, pendingThread.id, threadId);
-
-          return serializeResolvedApprovalConfession({
-            ...loaded,
-            pendingThread: {
-              ...pendingThread,
-              approved: { threadId },
-            },
-          });
+          return serializeLoadedApprovalConfession(loaded);
         },
       );
+
+      let resolvedThreadId: string | null = null;
+      let pendingChannelThreadId: string | null = null;
+      let thread: ApprovalDispatchConfession['thread'] = null;
+      if (loaded.pendingThread !== null) {
+        const { pendingThread } = loaded;
+        pendingChannelThreadId = pendingThread.id;
+        resolvedThreadId = pendingThread.approvedThreadId;
+
+        if (resolvedThreadId === null) {
+          const threadResult = await step.run(
+            { id: 'create-discord-thread', name: 'Create Discord Thread' },
+            async (): Promise<ThreadCreationResult> => {
+              try {
+                if (pendingThread.parentMessageId === null) {
+                  const thread = await DiscordClient.ENV.createPublicThread(
+                    loaded.channelId,
+                    pendingThread.title,
+                  );
+                  return { ok: true, threadId: thread.id };
+                }
+
+                const thread = await DiscordClient.ENV.createPublicThreadFromMessage(
+                  loaded.channelId,
+                  pendingThread.parentMessageId,
+                  pendingThread.title,
+                );
+                return { ok: true, threadId: thread.id };
+              } catch (error) {
+                if (error instanceof DiscordError)
+                  switch (error.code) {
+                    case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                      if (pendingThread.parentMessageId !== null)
+                        return {
+                          ok: true,
+                          threadId: pendingThread.parentMessageId,
+                        };
+                      return {
+                        ok: false,
+                        content: getThreadCreationErrorMessage(error.code, {
+                          label: loaded.channel.label,
+                          confessionId: loaded.confessionId,
+                        }),
+                      };
+                    case DiscordErrorCode.UnknownChannel:
+                    case DiscordErrorCode.MissingAccess:
+                    case DiscordErrorCode.MissingPermissions:
+                    case DiscordErrorCode.ThreadLocked:
+                    case DiscordErrorCode.MaxActiveThreadsReached:
+                      return {
+                        ok: false,
+                        content: getThreadCreationErrorMessage(error.code, {
+                          label: loaded.channel.label,
+                          confessionId: loaded.confessionId,
+                        }),
+                      };
+                    default:
+                      break;
+                  }
+                throw error;
+              }
+            },
+          );
+
+          if (!threadResult.ok)
+            FatalApprovalDispatchStateError.throwNew('approved thread destination unavailable', {
+              'confession.id': loaded.confessionId,
+              'failure.message': threadResult.content,
+            });
+
+          resolvedThreadId = await step.run(
+            { id: 'resolve-approved-thread', name: 'Resolve Approved Thread' },
+            async () => {
+              const approved = await db.transaction(
+                async tx =>
+                  await resolveApprovedChannelThread(
+                    tx,
+                    BigInt(pendingThread.id),
+                    BigInt(threadResult.threadId),
+                  ),
+                { isolationLevel: 'read committed' },
+              );
+              return approved.threadId.toString();
+            },
+          );
+        }
+
+        thread = {
+          id: resolvedThreadId,
+          title: pendingThread.title,
+        };
+      }
+
+      const confession: ApprovalDispatchConfession = {
+        confessionId: loaded.confessionId,
+        channelId: loaded.channelId,
+        pendingChannelThreadId,
+        publishChannelId: resolvedThreadId ?? loaded.channelId,
+        content: loaded.content,
+        createdAt: loaded.createdAt,
+        parentMessageId: loaded.parentMessageId,
+        channel: loaded.channel,
+        thread,
+        attachment: loaded.attachment,
+      };
 
       const result = await step.run(
         { id: 'dispatch-approval', name: 'Dispatch Approved Confession' },

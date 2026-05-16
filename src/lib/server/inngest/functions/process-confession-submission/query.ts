@@ -1,11 +1,12 @@
 import { and, eq, sql } from 'drizzle-orm';
 
 import * as schema from '$lib/server/database/models';
-import { assertOptional, assertSingle } from '$lib/assert';
+import { AssertionError, assertDefined, assertOptional, assertSingle } from '$lib/assert';
 import {
   type InsertableAttachment,
   type Interface,
   insertConfession,
+  resolveApprovedChannelThread,
   type Transaction,
 } from '$lib/server/database';
 import { Logger } from '$lib/server/telemetry/logger';
@@ -29,66 +30,36 @@ interface CreateConfessionSubmissionParams {
   existingThreadId: bigint | null;
 }
 
+interface PendingChannelThreadTarget {
+  channelId: bigint;
+  title: string;
+  parentMessageId: bigint | null;
+}
+
+interface FlatPendingChannelThreadRow {
+  pendingChannelThreadId: bigint;
+  title: string;
+  parentMessageId: bigint | null;
+  approvedPendingChannelThreadId: bigint | null;
+  approvedThreadId: bigint | null;
+}
+
 export async function loadConfessionSubmissionChannel(db: Interface, channelId: bigint) {
-  return await db
-    .select({
-      guildId: schema.channel.guildId,
-      logChannelId: schema.channel.logChannelId,
-      disabledAt: schema.channel.disabledAt,
-      isApprovalRequired: schema.channel.isApprovalRequired,
-      label: schema.channel.label,
-      color: schema.channel.color,
-    })
-    .from(schema.channel)
-    .where(eq(schema.channel.id, channelId))
-    .limit(1)
-    .then(assertOptional);
-}
-
-export async function insertPendingChannelThread(db: Interface, channelId: bigint, title: string) {
-  return await tracer.asyncSpan('insert-pending-channel-thread', async span => {
+  return await tracer.asyncSpan('load-confession-submission-channel', async span => {
     span.setAttribute('channel.id', channelId.toString());
-
-    const { id } = await db
-      .insert(schema.pendingChannelThread)
-      .values({
-        channelId,
-        kind: 'new-thread',
-        title,
+    return await db
+      .select({
+        guildId: schema.channel.guildId,
+        logChannelId: schema.channel.logChannelId,
+        disabledAt: schema.channel.disabledAt,
+        isApprovalRequired: schema.channel.isApprovalRequired,
+        label: schema.channel.label,
+        color: schema.channel.color,
       })
-      .returning({ id: schema.pendingChannelThread.id })
-      .then(assertSingle);
-
-    logger.debug('pending channel thread inserted', { 'pending.channel.thread.id': id.toString() });
-    return id;
-  });
-}
-
-export async function insertApprovedChannelThread(
-  db: Interface,
-  pendingChannelThreadId: bigint,
-  threadId: bigint,
-) {
-  return await tracer.asyncSpan('insert-approved-channel-thread', async span => {
-    span.setAttributes({
-      'pending.channel.thread.id': pendingChannelThreadId.toString(),
-      'thread.id': threadId.toString(),
-    });
-
-    const { rowCount } = await db.insert(schema.approvedChannelThread).values({
-      pendingChannelThreadId,
-      threadId,
-    });
-
-    switch (rowCount) {
-      case null:
-        return UnexpectedRowCountDatabaseError.throwNew();
-      case 1:
-        logger.debug('approved channel thread inserted');
-        return;
-      default:
-        return UnexpectedRowCountDatabaseError.throwNew(rowCount);
-    }
+      .from(schema.channel)
+      .where(eq(schema.channel.id, channelId))
+      .limit(1)
+      .then(assertOptional);
   });
 }
 
@@ -102,17 +73,14 @@ async function setConfessionPendingChannelThread(
       'confession.internal.id': internalId.toString(),
       'pending.channel.thread.id': pendingChannelThreadId.toString(),
     });
-
     const { rowCount } = await db
       .update(schema.confession)
       .set({ pendingChannelThreadId })
       .where(eq(schema.confession.internalId, internalId));
-
     switch (rowCount) {
       case null:
         return UnexpectedRowCountDatabaseError.throwNew();
       case 1:
-        logger.debug('confession pending channel thread set');
         return;
       default:
         return UnexpectedRowCountDatabaseError.throwNew(rowCount);
@@ -120,51 +88,196 @@ async function setConfessionPendingChannelThread(
   });
 }
 
-async function loadPendingChannelThreadIdForApprovedThread(
+function createPendingChannelThreadState(row: FlatPendingChannelThreadRow) {
+  if (row.approvedThreadId === null) {
+    if (row.approvedPendingChannelThreadId !== null)
+      AssertionError.throwNew('invalid pending channel thread row: approved owner without thread');
+    return {
+      id: row.pendingChannelThreadId,
+      title: row.title,
+      parentMessageId: row.parentMessageId,
+      approved: null,
+    };
+  }
+
+  if (row.approvedPendingChannelThreadId === null)
+    AssertionError.throwNew('invalid pending channel thread row: approved owner missing');
+  if (row.approvedPendingChannelThreadId !== row.pendingChannelThreadId)
+    AssertionError.throwNew('invalid pending channel thread row: approved owner mismatch');
+
+  return {
+    id: row.pendingChannelThreadId,
+    title: row.title,
+    parentMessageId: row.parentMessageId,
+    approved: { threadId: row.approvedThreadId },
+  };
+}
+
+async function insertPendingChannelThread(db: Interface, target: PendingChannelThreadTarget) {
+  return await tracer.asyncSpan('insert-pending-channel-thread', async span => {
+    span.setAttribute('channel.id', target.channelId.toString());
+    if (target.parentMessageId !== null)
+      span.setAttribute('parent.message.id', target.parentMessageId.toString());
+
+    const kind = target.parentMessageId === null ? 'new-thread' : 'new-thread-reply';
+    const { id } = await db
+      .insert(schema.pendingChannelThread)
+      .values({
+        channelId: target.channelId,
+        kind,
+        parentMessageId: target.parentMessageId,
+        title: target.title,
+      })
+      .returning({ id: schema.pendingChannelThread.id })
+      .then(assertSingle);
+
+    logger.debug('pending channel thread inserted', { 'pending.channel.thread.id': id.toString() });
+
+    return {
+      id,
+      title: target.title,
+      parentMessageId: target.parentMessageId,
+      approved: null,
+    };
+  });
+}
+
+async function loadPendingChannelThreadByReplyTarget(
+  db: Interface,
+  channelId: bigint,
+  parentMessageId: bigint,
+) {
+  return await tracer.asyncSpan('load-pending-channel-thread-by-reply-target', async span => {
+    span.setAttributes({
+      'channel.id': channelId.toString(),
+      'parent.message.id': parentMessageId.toString(),
+    });
+    const row = await db
+      .select({
+        pendingChannelThreadId: schema.pendingChannelThread.id,
+        title: schema.pendingChannelThread.title,
+        parentMessageId: schema.pendingChannelThread.parentMessageId,
+        approvedPendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
+        approvedThreadId: schema.approvedChannelThread.threadId,
+      })
+      .from(schema.pendingChannelThread)
+      .leftJoin(
+        schema.approvedChannelThread,
+        eq(schema.pendingChannelThread.id, schema.approvedChannelThread.pendingChannelThreadId),
+      )
+      .where(
+        and(
+          eq(schema.pendingChannelThread.channelId, channelId),
+          eq(schema.pendingChannelThread.parentMessageId, parentMessageId),
+        ),
+      )
+      .limit(1)
+      .then(assertOptional);
+    if (typeof row === 'undefined') return;
+    return createPendingChannelThreadState(row);
+  });
+}
+
+async function loadPendingChannelThreadForApprovedThread(
   db: Interface,
   channelId: bigint,
   threadId: bigint,
 ) {
-  const { pendingChannelThreadId } = await db
-    .select({ pendingChannelThreadId: schema.pendingChannelThread.id })
-    .from(schema.approvedChannelThread)
-    .innerJoin(
-      schema.pendingChannelThread,
-      eq(schema.approvedChannelThread.pendingChannelThreadId, schema.pendingChannelThread.id),
-    )
-    .where(
-      and(
-        eq(schema.pendingChannelThread.channelId, channelId),
-        eq(schema.approvedChannelThread.threadId, threadId),
-      ),
-    )
-    .limit(1)
-    .then(assertSingle);
-  return pendingChannelThreadId;
+  return await tracer.asyncSpan('load-pending-channel-thread-for-approved-thread', async span => {
+    span.setAttributes({
+      'channel.id': channelId.toString(),
+      'thread.id': threadId.toString(),
+    });
+
+    const row = await db
+      .select({
+        pendingChannelThreadId: schema.pendingChannelThread.id,
+        title: schema.pendingChannelThread.title,
+        parentMessageId: schema.pendingChannelThread.parentMessageId,
+        approvedPendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
+        approvedThreadId: schema.approvedChannelThread.threadId,
+      })
+      .from(schema.approvedChannelThread)
+      .innerJoin(
+        schema.pendingChannelThread,
+        eq(schema.approvedChannelThread.pendingChannelThreadId, schema.pendingChannelThread.id),
+      )
+      .where(
+        and(
+          eq(schema.pendingChannelThread.channelId, channelId),
+          eq(schema.approvedChannelThread.threadId, threadId),
+        ),
+      )
+      .limit(1)
+      .then(assertOptional);
+    if (typeof row === 'undefined') return;
+
+    return createPendingChannelThreadState(row);
+  });
+}
+
+async function ensurePendingChannelThread(db: Transaction, target: PendingChannelThreadTarget) {
+  return await tracer.asyncSpan('ensure-pending-channel-thread', async span => {
+    span.setAttribute('channel.id', target.channelId.toString());
+    if (target.parentMessageId !== null)
+      span.setAttribute('parent.message.id', target.parentMessageId.toString());
+
+    if (target.parentMessageId !== null) {
+      await db.execute(sql`select pg_advisory_xact_lock(${target.parentMessageId})`);
+
+      const existing = await loadPendingChannelThreadByReplyTarget(
+        db,
+        target.channelId,
+        target.parentMessageId,
+      );
+      if (typeof existing !== 'undefined') {
+        logger.debug('found existing thread');
+        return existing;
+      }
+
+      const approved = await loadPendingChannelThreadForApprovedThread(
+        db,
+        target.channelId,
+        target.parentMessageId,
+      );
+      if (typeof approved !== 'undefined') {
+        logger.debug('found approved thread');
+        return approved;
+      }
+    }
+
+    return await insertPendingChannelThread(db, target);
+  });
 }
 
 export async function loadApprovedThreadTitle(db: Interface, channelId: bigint, threadId: bigint) {
-  const { title } = await db
-    .select({ title: schema.pendingChannelThread.title })
-    .from(schema.approvedChannelThread)
-    .innerJoin(
-      schema.pendingChannelThread,
-      eq(schema.approvedChannelThread.pendingChannelThreadId, schema.pendingChannelThread.id),
-    )
-    .where(
-      and(
-        eq(schema.pendingChannelThread.channelId, channelId),
-        eq(schema.approvedChannelThread.threadId, threadId),
-      ),
-    )
-    .limit(1)
-    .then(assertSingle);
-  return title;
+  return await tracer.asyncSpan('load-approved-thread-title', async span => {
+    span.setAttributes({
+      'channel.id': channelId.toString(),
+      'thread.id': threadId.toString(),
+    });
+
+    const { title } = await db
+      .select({ title: schema.pendingChannelThread.title })
+      .from(schema.approvedChannelThread)
+      .innerJoin(
+        schema.pendingChannelThread,
+        eq(schema.approvedChannelThread.pendingChannelThreadId, schema.pendingChannelThread.id),
+      )
+      .where(
+        and(
+          eq(schema.pendingChannelThread.channelId, channelId),
+          eq(schema.approvedChannelThread.threadId, threadId),
+        ),
+      )
+      .limit(1)
+      .then(assertSingle);
+    return title;
+  });
 }
 
 export async function ensureExistingThreadRegistration(
   db: Transaction,
-  isApprovalRequired: boolean,
   channelId: string,
   threadId: string,
   title: string,
@@ -176,8 +289,6 @@ export async function ensureExistingThreadRegistration(
       title,
     });
 
-    // Acquires advisory lock to prevent race on creating the
-    // same approved channel thread by multiple requests.
     await db.execute(sql`select pg_advisory_xact_lock(${BigInt(threadId)})`);
 
     const existing = await db
@@ -196,14 +307,14 @@ export async function ensureExistingThreadRegistration(
       .limit(1)
       .then(assertOptional);
 
-    if (typeof existing === 'undefined') {
-      // TODO: Eventually allow approval-required channels with thread creation.
-      if (isApprovalRequired)
-        return 'This channel requires moderator approval, so Spectro cannot register existing threads for anonymous confessions here.';
-      const pendingChannelThreadId = await insertPendingChannelThread(db, BigInt(channelId), title);
-      await insertApprovedChannelThread(db, pendingChannelThreadId, BigInt(threadId));
-    }
+    if (typeof existing !== 'undefined') return null;
 
+    const pending = await insertPendingChannelThread(db, {
+      channelId: BigInt(channelId),
+      title,
+      parentMessageId: null,
+    });
+    await resolveApprovedChannelThread(db, pending.id, BigInt(threadId));
     return null;
   });
 }
@@ -212,38 +323,48 @@ export async function createConfessionSubmission(
   db: Transaction,
   params: CreateConfessionSubmissionParams,
 ) {
-  const { internalId, confessionId } = await insertConfession(
-    db,
-    params.createdAt,
-    params.guildId,
-    params.channelId,
-    params.authorId,
-    params.content,
-    params.isApprovalRequired ? null : params.createdAt,
-    params.parentMessageId,
-    params.attachment,
-  );
+  return await tracer.asyncSpan('create-confession-submission', async span => {
+    span.setAttributes({
+      'channel.id': params.channelId.toString(),
+      'author.id': params.authorId.toString(),
+      'parent.message.id': params.parentMessageId?.toString(),
+      'existing.thread.id': params.existingThreadId?.toString(),
+    });
 
-  if (params.newThreadTitle !== null) {
-    const pendingChannelThreadId = await insertPendingChannelThread(
+    const { internalId, confessionId } = await insertConfession(
       db,
+      params.createdAt,
+      params.guildId,
       params.channelId,
-      params.newThreadTitle,
-    );
-    await setConfessionPendingChannelThread(db, internalId, pendingChannelThreadId);
-    return { internalId, confessionId, pendingChannelThreadId };
-  }
-
-  if (params.existingThreadId !== null) {
-    const pendingChannelThreadId = await loadPendingChannelThreadIdForApprovedThread(
-      db,
-      params.channelId,
-      params.existingThreadId,
+      params.authorId,
+      params.content,
+      params.isApprovalRequired ? null : params.createdAt,
+      params.parentMessageId,
+      params.attachment,
     );
 
-    await setConfessionPendingChannelThread(db, internalId, pendingChannelThreadId);
-    return { internalId, confessionId, pendingChannelThreadId };
-  }
+    if (params.newThreadTitle !== null) {
+      const pendingThread = await ensurePendingChannelThread(db, {
+        channelId: params.channelId,
+        title: params.newThreadTitle,
+        parentMessageId: params.parentMessageId,
+      });
+      await setConfessionPendingChannelThread(db, internalId, pendingThread.id);
+      return { internalId, confessionId, pendingThread };
+    }
 
-  return { internalId, confessionId, pendingChannelThreadId: null };
+    if (params.existingThreadId !== null) {
+      const pendingThread = assertDefined(
+        await loadPendingChannelThreadForApprovedThread(
+          db,
+          params.channelId,
+          params.existingThreadId,
+        ),
+      );
+      await setConfessionPendingChannelThread(db, internalId, pendingThread.id);
+      return { internalId, confessionId, pendingThread };
+    }
+
+    return { internalId, confessionId, pendingThread: null };
+  });
 }
