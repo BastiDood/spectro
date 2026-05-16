@@ -41,7 +41,10 @@ export const channel = app.table('channel', {
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
-export const pendingChannelThreadKind = app.enum('pending_channel_thread_kind', ['new-thread']);
+export const pendingChannelThreadKind = app.enum('pending_channel_thread_kind', [
+  'new-thread',
+  'new-thread-reply',
+]);
 export type PendingChannelThreadKind = (typeof pendingChannelThreadKind.enumValues)[number];
 
 export const pendingChannelThread = app.table(
@@ -53,9 +56,15 @@ export const pendingChannelThread = app.table(
       .references(() => channel.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     kind: pendingChannelThreadKind('kind').notNull(),
+    parentMessageId: bigint('parent_message_id', { mode: 'bigint' }),
     title: text('title').notNull(),
   },
-  ({ channelId }) => [index('pending_channel_thread_channel_id_idx').on(channelId)],
+  ({ channelId, parentMessageId }) => [
+    index('pending_channel_thread_channel_id_idx').on(channelId),
+    uniqueIndex('pending_channel_thread_reply_target_unique_idx')
+      .on(channelId, parentMessageId)
+      .where(isNotNull(parentMessageId)),
+  ],
 );
 
 export type PendingChannelThread = typeof pendingChannelThread.$inferSelect;
