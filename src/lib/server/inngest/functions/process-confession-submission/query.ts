@@ -170,10 +170,7 @@ async function loadPendingChannelThreadByReplyTarget(
       .from(schema.approvedChannelThread)
       .innerJoin(
         approvedTitle,
-        eq(
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
-          approvedTitle.confessionInternalId,
-        ),
+        eq(schema.approvedChannelThread.confessionInternalId, approvedTitle.confessionInternalId),
       )
       .as('approved_thread_for_pending');
 
@@ -226,7 +223,7 @@ async function loadPendingChannelThreadForApprovedThread(
       .innerJoin(
         schema.pendingChannelThreadTitle,
         eq(
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+          schema.approvedChannelThread.confessionInternalId,
           schema.pendingChannelThreadTitle.confessionInternalId,
         ),
       )
@@ -295,7 +292,7 @@ export async function loadApprovedThreadTitle(db: Interface, channelId: bigint, 
       .innerJoin(
         schema.pendingChannelThreadTitle,
         eq(
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+          schema.approvedChannelThread.confessionInternalId,
           schema.pendingChannelThreadTitle.confessionInternalId,
         ),
       )

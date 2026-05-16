@@ -73,7 +73,7 @@ interface FlatApprovedChannelThreadResolutionRow {
 
 interface ResolvedApprovedChannelThread {
   pendingChannelThreadId: bigint;
-  pendingChannelThreadTitleConfessionInternalId: bigint;
+  confessionInternalId: bigint;
   threadId: bigint;
 }
 
@@ -85,7 +85,7 @@ interface ApprovedChannelThreadResolution {
 
 interface NullableResolvedApprovedChannelThreadRow {
   pendingChannelThreadId: bigint | null;
-  pendingChannelThreadTitleConfessionInternalId: bigint | null;
+  confessionInternalId: bigint | null;
   threadId: bigint | null;
 }
 
@@ -108,7 +108,7 @@ function createResolvedApprovedChannelThread(
   if (row.threadId === null) {
     if (row.pendingChannelThreadId !== null)
       AssertionError.throwNew('invalid approved channel thread row: pending owner without thread');
-    if (row.pendingChannelThreadTitleConfessionInternalId !== null)
+    if (row.confessionInternalId !== null)
       AssertionError.throwNew('invalid approved channel thread row: title owner without thread');
     return null;
   }
@@ -120,13 +120,12 @@ function createResolvedApprovedChannelThread(
     row.pendingChannelThreadId !== expectedPendingChannelThreadId
   )
     AssertionError.throwNew('invalid approved channel thread row: pending owner mismatch');
-  if (row.pendingChannelThreadTitleConfessionInternalId === null)
+  if (row.confessionInternalId === null)
     AssertionError.throwNew('invalid approved channel thread row: title owner missing');
 
   return {
     pendingChannelThreadId: row.pendingChannelThreadId,
-    pendingChannelThreadTitleConfessionInternalId:
-      row.pendingChannelThreadTitleConfessionInternalId,
+    confessionInternalId: row.confessionInternalId,
     threadId: row.threadId,
   };
 }
@@ -140,7 +139,7 @@ function createApprovedChannelThreadResolution(
       {
         pendingChannelThreadId:
           row.pendingApprovalThreadId === null ? null : row.pendingChannelThreadId,
-        pendingChannelThreadTitleConfessionInternalId: row.pendingApprovalTitleConfessionInternalId,
+        confessionInternalId: row.pendingApprovalTitleConfessionInternalId,
         threadId: row.pendingApprovalThreadId,
       },
       row.pendingChannelThreadId,
@@ -148,7 +147,7 @@ function createApprovedChannelThreadResolution(
     approvedForThread: createResolvedApprovedChannelThread(
       {
         pendingChannelThreadId: row.threadApprovalPendingChannelThreadId,
-        pendingChannelThreadTitleConfessionInternalId: row.threadApprovalTitleConfessionInternalId,
+        confessionInternalId: row.threadApprovalTitleConfessionInternalId,
         threadId: row.threadApprovalThreadId,
       },
       row.pendingChannelThreadId,
@@ -284,13 +283,12 @@ export async function insertConfession(
 
 async function loadApprovedChannelThreadResolution(
   db: Interface,
-  pendingChannelThreadTitleConfessionInternalId: bigint,
+  confessionInternalId: bigint,
   threadId: bigint,
 ) {
   return await tracer.asyncSpan('load-approved-channel-thread-resolution', async span => {
     span.setAttributes({
-      'pending.channel.thread.title.confession.internal.id':
-        pendingChannelThreadTitleConfessionInternalId.toString(),
+      'pending.channel.thread.title.confession.internal.id': confessionInternalId.toString(),
       'thread.id': threadId.toString(),
     });
 
@@ -298,17 +296,13 @@ async function loadApprovedChannelThreadResolution(
     const approvedThreadForPending = db
       .select({
         pendingChannelThreadId: approvedTitle.pendingChannelThreadId,
-        pendingChannelThreadTitleConfessionInternalId:
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+        confessionInternalId: schema.approvedChannelThread.confessionInternalId,
         threadId: schema.approvedChannelThread.threadId,
       })
       .from(schema.approvedChannelThread)
       .innerJoin(
         approvedTitle,
-        eq(
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
-          approvedTitle.confessionInternalId,
-        ),
+        eq(schema.approvedChannelThread.confessionInternalId, approvedTitle.confessionInternalId),
       )
       .as('approved_thread_for_pending');
 
@@ -319,15 +313,14 @@ async function loadApprovedChannelThreadResolution(
     const approvedThreadForThread = db
       .select({
         pendingChannelThreadId: approvedThreadTitle.pendingChannelThreadId,
-        pendingChannelThreadTitleConfessionInternalId:
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+        confessionInternalId: schema.approvedChannelThread.confessionInternalId,
         threadId: schema.approvedChannelThread.threadId,
       })
       .from(schema.approvedChannelThread)
       .innerJoin(
         approvedThreadTitle,
         eq(
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+          schema.approvedChannelThread.confessionInternalId,
           approvedThreadTitle.confessionInternalId,
         ),
       )
@@ -337,12 +330,10 @@ async function loadApprovedChannelThreadResolution(
     const row = await db
       .select({
         pendingChannelThreadId: schema.pendingChannelThreadTitle.pendingChannelThreadId,
-        pendingApprovalTitleConfessionInternalId:
-          approvedThreadForPending.pendingChannelThreadTitleConfessionInternalId,
+        pendingApprovalTitleConfessionInternalId: approvedThreadForPending.confessionInternalId,
         pendingApprovalThreadId: approvedThreadForPending.threadId,
         threadApprovalPendingChannelThreadId: approvedThreadForThread.pendingChannelThreadId,
-        threadApprovalTitleConfessionInternalId:
-          approvedThreadForThread.pendingChannelThreadTitleConfessionInternalId,
+        threadApprovalTitleConfessionInternalId: approvedThreadForThread.confessionInternalId,
         threadApprovalThreadId: approvedThreadForThread.threadId,
       })
       .from(schema.pendingChannelThreadTitle)
@@ -363,12 +354,7 @@ async function loadApprovedChannelThreadResolution(
           eq(approvedThreadForThread.threadId, threadId),
         ),
       )
-      .where(
-        eq(
-          schema.pendingChannelThreadTitle.confessionInternalId,
-          pendingChannelThreadTitleConfessionInternalId,
-        ),
-      )
+      .where(eq(schema.pendingChannelThreadTitle.confessionInternalId, confessionInternalId))
       .limit(1)
       .then(assertSingle);
 
@@ -379,18 +365,17 @@ async function loadApprovedChannelThreadResolution(
 export async function resolveApprovedChannelThread(
   db: Transaction,
   threadId: bigint,
-  pendingChannelThreadTitleConfessionInternalId: bigint,
+  confessionInternalId: bigint,
 ) {
   return await tracer.asyncSpan('resolve-approved-channel-thread', async span => {
     span.setAttributes({
-      'pending.channel.thread.title.confession.internal.id':
-        pendingChannelThreadTitleConfessionInternalId.toString(),
+      'pending.channel.thread.title.confession.internal.id': confessionInternalId.toString(),
       'thread.id': threadId.toString(),
     });
 
     const resolution = await loadApprovedChannelThreadResolution(
       db,
-      pendingChannelThreadTitleConfessionInternalId,
+      confessionInternalId,
       threadId,
     );
     const { pendingChannelThreadId } = resolution;
@@ -402,7 +387,7 @@ export async function resolveApprovedChannelThread(
 
     const resolutionAfterLock = await loadApprovedChannelThreadResolution(
       db,
-      pendingChannelThreadTitleConfessionInternalId,
+      confessionInternalId,
       threadId,
     );
     if (resolutionAfterLock.approvedForPending !== null)
@@ -412,7 +397,7 @@ export async function resolveApprovedChannelThread(
       return resolutionAfterLock.approvedForThread;
 
     const { rowCount } = await db.insert(schema.approvedChannelThread).values({
-      pendingChannelThreadTitleConfessionInternalId,
+      confessionInternalId,
       threadId,
     });
 
@@ -423,7 +408,7 @@ export async function resolveApprovedChannelThread(
         logger.debug('approved channel thread inserted');
         return {
           pendingChannelThreadId,
-          pendingChannelThreadTitleConfessionInternalId,
+          confessionInternalId,
           threadId,
         };
       default:

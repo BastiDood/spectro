@@ -114,12 +114,8 @@ export const pendingChannelThreadTitle = app.table(
       .references(() => pendingChannelThread.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
   },
-  ({ confessionInternalId, pendingChannelThreadId }) => [
+  ({ pendingChannelThreadId }) => [
     index('pending_channel_thread_title_pending_channel_thread_id_idx').on(pendingChannelThreadId),
-    uniqueIndex('pending_channel_thread_title_confession_thread_unique_idx').on(
-      confessionInternalId,
-      pendingChannelThreadId,
-    ),
   ],
 );
 
@@ -128,10 +124,7 @@ export type NewPendingChannelThreadTitle = typeof pendingChannelThreadTitle.$inf
 
 export const approvedChannelThread = app.table('approved_channel_thread', {
   threadId: bigint('thread_id', { mode: 'bigint' }).notNull().primaryKey(),
-  pendingChannelThreadTitleConfessionInternalId: bigint(
-    'pending_channel_thread_title_confession_internal_id',
-    { mode: 'bigint' },
-  )
+  confessionInternalId: bigint('confession_internal_id', { mode: 'bigint' })
     .notNull()
     .references(() => pendingChannelThreadTitle.confessionInternalId, { onDelete: 'cascade' })
     .unique(),
@@ -197,7 +190,7 @@ export const pendingChannelThreadRelations = relations(pendingChannelThread, ({ 
 
 export const approvedChannelThreadRelations = relations(approvedChannelThread, ({ one }) => ({
   pendingChannelThreadTitle: one(pendingChannelThreadTitle, {
-    fields: [approvedChannelThread.pendingChannelThreadTitleConfessionInternalId],
+    fields: [approvedChannelThread.confessionInternalId],
     references: [pendingChannelThreadTitle.confessionInternalId],
   }),
 }));
@@ -215,7 +208,7 @@ export const pendingChannelThreadTitleRelations = relations(
     }),
     approvedChannelThread: one(approvedChannelThread, {
       fields: [pendingChannelThreadTitle.confessionInternalId],
-      references: [approvedChannelThread.pendingChannelThreadTitleConfessionInternalId],
+      references: [approvedChannelThread.confessionInternalId],
     }),
   }),
 );

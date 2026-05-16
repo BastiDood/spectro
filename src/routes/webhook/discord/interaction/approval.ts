@@ -325,10 +325,7 @@ async function loadApprovalVerdictConfession(tx: Transaction, internalId: bigint
       .from(approvedChannelThread)
       .innerJoin(
         approvedTitle,
-        eq(
-          approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
-          approvedTitle.confessionInternalId,
-        ),
+        eq(approvedChannelThread.confessionInternalId, approvedTitle.confessionInternalId),
       )
       .as('approved_thread_for_pending');
 

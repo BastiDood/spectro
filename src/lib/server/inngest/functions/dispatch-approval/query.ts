@@ -203,17 +203,13 @@ export async function loadApprovalDispatchConfession(db: Interface, internalId: 
       .select({
         approvedPendingChannelThreadId: approvedTitle.pendingChannelThreadId,
         approvedThreadTitle: approvedTitle.title,
-        approvedThreadTitleConfessionInternalId:
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+        approvedThreadTitleConfessionInternalId: schema.approvedChannelThread.confessionInternalId,
         approvedThreadId: schema.approvedChannelThread.threadId,
       })
       .from(schema.approvedChannelThread)
       .innerJoin(
         approvedTitle,
-        eq(
-          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
-          approvedTitle.confessionInternalId,
-        ),
+        eq(schema.approvedChannelThread.confessionInternalId, approvedTitle.confessionInternalId),
       )
       .as('approved_thread_for_pending');
 
