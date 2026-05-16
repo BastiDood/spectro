@@ -87,6 +87,7 @@ export interface ApprovalDispatchConfession {
   content: string;
   createdAt: string;
   parentMessageId: string | null;
+  pendingThreadTitle: string | null;
   channel: {
     guildId: string;
     label: string;

@@ -348,11 +348,22 @@ export async function createConfessionSubmission(
         params.newThreadTitle,
       );
 
-      if (pendingThread.approved !== null) return { internalId, confessionId, pendingThread };
+      if (pendingThread.approved !== null)
+        return {
+          internalId,
+          confessionId,
+          pendingThread: {
+            ...pendingThread,
+            title: params.newThreadTitle,
+          },
+        };
       return {
         internalId,
         confessionId,
-        pendingThread: { ...pendingThread, title: params.newThreadTitle },
+        pendingThread: {
+          ...pendingThread,
+          title: params.newThreadTitle,
+        },
       };
     }
 
@@ -372,7 +383,11 @@ export async function createConfessionSubmission(
           existingPendingThread.id,
           params.existingThreadTitle,
         );
-        return { internalId, confessionId, pendingThread: existingPendingThread };
+        return {
+          internalId,
+          confessionId,
+          pendingThread: { ...existingPendingThread, title: params.existingThreadTitle },
+        };
       }
 
       await db.execute(sql`select pg_advisory_xact_lock(${params.existingThreadId})`);
@@ -389,7 +404,14 @@ export async function createConfessionSubmission(
           loadedPendingThread.id,
           params.existingThreadTitle,
         );
-        return { internalId, confessionId, pendingThread: loadedPendingThread };
+        return {
+          internalId,
+          confessionId,
+          pendingThread: {
+            ...loadedPendingThread,
+            title: params.existingThreadTitle,
+          },
+        };
       }
 
       const pendingThread = await insertPendingChannelThread(db, {

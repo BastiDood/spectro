@@ -174,6 +174,7 @@ export const dispatchApproval = inngest.createFunction(
         content: loaded.content,
         createdAt: loaded.createdAt,
         parentMessageId: loaded.parentMessageId,
+        pendingThreadTitle: loaded.pendingThread?.title ?? null,
         channel: loaded.channel,
         thread,
         attachment: loaded.attachment,

@@ -204,9 +204,11 @@ export const processConfessionSubmission = inngest.createFunction(
 
           let publishChannelId = data.channelId;
           let pendingChannelThreadId: string | null = null;
+          let pendingThreadTitle: string | null = null;
           let thread: SerializedConfessionForProcess['thread'] = null;
           if (pendingThread !== null) {
             pendingChannelThreadId = pendingThread.id.toString();
+            pendingThreadTitle = pendingThread.title;
             const { approved } = pendingThread;
             if (approved !== null) {
               publishChannelId = approved.threadId.toString();
@@ -228,6 +230,7 @@ export const processConfessionSubmission = inngest.createFunction(
             createdAt: createdAt.toISOString(),
             approvedAt: channel.isApprovalRequired ? null : createdAt.toISOString(),
             parentMessageId,
+            pendingThreadTitle,
             channel: {
               guildId: channel.guildId.toString(),
               label: channel.label,
@@ -380,6 +383,7 @@ export const processConfessionSubmission = inngest.createFunction(
         preparedConfession = {
           ...createdConfession,
           publishChannelId: threadId,
+          pendingThreadTitle: title,
           thread: {
             id: threadId,
             title,

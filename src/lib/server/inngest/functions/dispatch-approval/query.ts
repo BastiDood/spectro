@@ -163,7 +163,7 @@ function createPendingThread(row: PendingThreadRow) {
     AssertionError.throwNew('invalid approval dispatch row: approved thread title missing');
   return {
     id: row.pendingChannelThreadId,
-    title: row.approvedThreadTitle,
+    title: row.requestedThreadTitle,
     parentMessageId: row.threadParentMessageId,
     approved: {
       threadId: row.approvedThreadId,

@@ -4,6 +4,7 @@ export interface SerializedConfessionForResend {
   confessionId: string;
   channelId: string;
   pendingChannelThreadId: string | null;
+  pendingThreadTitle: string | null;
   publishChannelId: string;
   authorId: string;
   content: string;
@@ -135,12 +136,21 @@ function serializeResendConfession(
   >,
 ): SerializedConfessionForResend {
   const { pendingThread } = confession;
-  const approvedThread = pendingThread?.approved ?? null;
+
+  let pendingChannelThreadId: string | null = null;
+  let pendingThreadTitle: string | null = null;
+  let approvedThread: ApprovedThreadState | null = null;
+  if (pendingThread !== null) {
+    pendingChannelThreadId = pendingThread.id.toString();
+    pendingThreadTitle = pendingThread.title;
+    approvedThread = pendingThread.approved;
+  }
 
   return {
     confessionId: confession.confessionId.toString(),
     channelId: confession.channelId.toString(),
-    pendingChannelThreadId: pendingThread?.id.toString() ?? null,
+    pendingChannelThreadId,
+    pendingThreadTitle,
     publishChannelId: approvedThread?.threadId.toString() ?? confession.channelId.toString(),
     authorId: confession.authorId.toString(),
     content: confession.content,

@@ -23,6 +23,7 @@ const confession = {
 const logConfession = {
   ...confession,
   channelId: '100000000000000001',
+  pendingThreadTitle: null,
   publishChannelId: '100000000000000002',
   authorId: '100000000000000003',
   channel: {
@@ -168,6 +169,41 @@ describe('createLogPayload', () => {
       {
         name: 'Thread Title',
         value: 'A thread title',
+        inline: true,
+      },
+    ]);
+  });
+
+  it('orders pending thread log fields before the Discord thread exists', () => {
+    const payload = createLogPayload(
+      {
+        ...logConfession,
+        parentMessageId: '100000000000000005',
+        pendingThreadTitle: 'A pending thread title',
+      },
+      { type: LogPayloadType.Pending, internalId: 100000000000000007n },
+    );
+
+    expect(payload.embeds?.[0]?.fields).toEqual([
+      {
+        name: 'Authored by',
+        value: '||<@100000000000000003>||',
+        inline: true,
+      },
+      {
+        name: 'Thread Channel',
+        value: '<#100000000000000002>',
+        inline: true,
+      },
+      {
+        name: 'Reply To',
+        value:
+          'https://discord.com/channels/100000000000000004/100000000000000001/100000000000000005',
+        inline: true,
+      },
+      {
+        name: 'Thread Title',
+        value: 'A pending thread title',
         inline: true,
       },
     ]);

@@ -286,7 +286,7 @@ function createApprovalVerdictThread(row: ApprovalVerdictThreadRow) {
     AssertionError.throwNew('invalid approval verdict row: approved thread title missing');
 
   return {
-    title: row.approvedThreadTitle,
+    title: row.requestedThreadTitle,
     threadId: row.approvedThreadId,
   };
 }

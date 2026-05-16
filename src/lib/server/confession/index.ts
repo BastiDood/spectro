@@ -260,6 +260,7 @@ interface LogPayloadInputChannel extends ConfessionPayloadInputChannel {
 
 interface LogPayloadInput extends ConfessionPayloadInput {
   channelId: string;
+  pendingThreadTitle: string | null;
   publishChannelId: string;
   authorId: string;
   channel: LogPayloadInputChannel;
@@ -356,8 +357,8 @@ export function createLogPayload(
       inline: true,
     });
 
-  if (confession.thread !== null)
-    fields.push({ name: 'Thread Title', value: confession.thread.title, inline: true });
+  const threadTitle = confession.thread?.title ?? confession.pendingThreadTitle;
+  if (threadTitle !== null) fields.push({ name: 'Thread Title', value: threadTitle, inline: true });
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
   let image: EmbedImage | undefined;
