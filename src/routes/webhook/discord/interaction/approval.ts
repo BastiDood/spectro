@@ -3,14 +3,15 @@ import assert, { strictEqual } from 'node:assert/strict';
 import { aliasedTable, eq } from 'drizzle-orm';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { assertSingle } from '$lib/assert';
 import {
+  approvedChannelThread,
   channel,
   confession,
   durableAttachment,
   ephemeralAttachment,
   pendingChannelThread,
 } from '$lib/server/database/models';
+import { assertSingle } from '$lib/assert';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/functions/dispatch-approval/schema';
 import type { CreateMessageAttachment } from '$lib/server/models/discord/message';
 import { db } from '$lib/server/database';
@@ -157,10 +158,13 @@ async function submitVerdict(
             .select({
               disabledAt: channel.disabledAt,
               label: channel.label,
+              guildId: channel.guildId,
+              channelId: lockedConfession.channelId,
               authorId: lockedConfession.authorId,
               approvedAt: lockedConfession.approvedAt,
               content: lockedConfession.content,
               confessionId: lockedConfession.confessionId,
+              parentMessageId: lockedConfession.parentMessageId,
               ephemeralAttachmentId: ephemeralAttachment.id,
               durableAttachmentId: durableAttachment.id,
               attachmentFilename: durableAttachment.filename,
@@ -169,12 +173,17 @@ async function submitVerdict(
               attachmentHeight: durableAttachment.height,
               attachmentWidth: durableAttachment.width,
               threadTitle: pendingChannelThread.title,
+              threadId: approvedChannelThread.threadId,
             })
             .from(lockedConfession)
             .innerJoin(channel, eq(lockedConfession.channelId, channel.id))
             .leftJoin(
               pendingChannelThread,
               eq(lockedConfession.pendingChannelThreadId, pendingChannelThread.id),
+            )
+            .leftJoin(
+              approvedChannelThread,
+              eq(pendingChannelThread.id, approvedChannelThread.pendingChannelThreadId),
             )
             .leftJoin(
               ephemeralAttachment,
@@ -235,6 +244,19 @@ async function submitVerdict(
             inline: true,
           },
         ];
+
+        if (result.threadTitle !== null) {
+          fields.push({ name: 'Parent Channel', value: `<#${result.channelId}>`, inline: true });
+          if (result.threadId !== null)
+            fields.push({ name: 'Thread Channel', value: `<#${result.threadId}>`, inline: true });
+        }
+
+        if (result.parentMessageId !== null)
+          fields.push({
+            name: 'Reply To',
+            value: `https://discord.com/channels/${result.guildId}/${result.channelId}/${result.parentMessageId}`,
+            inline: true,
+          });
 
         // eslint-disable-next-line @typescript-eslint/init-declarations
         let embed: Embed;
