@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { aliasedTable, eq } from 'drizzle-orm';
 
 import * as schema from '$lib/server/database/models';
 import { AssertionError, assertOptional } from '$lib/assert';
@@ -22,9 +22,11 @@ interface FlatApprovalDispatchConfessionRow {
   label: string;
   color: string | null;
   threadPendingChannelThreadId: bigint | null;
-  threadTitle: string | null;
+  requestedThreadTitle: string | null;
+  approvedThreadTitle: string | null;
   threadParentMessageId: bigint | null;
   approvedPendingChannelThreadId: bigint | null;
+  approvedThreadTitleConfessionInternalId: bigint | null;
   approvedThreadId: bigint | null;
   attachmentId: bigint | null;
   durableAttachmentId: bigint | null;
@@ -56,10 +58,12 @@ type PendingThreadRow = Pick<
   FlatApprovalDispatchConfessionRow,
   | 'approvedPendingChannelThreadId'
   | 'approvedThreadId'
+  | 'approvedThreadTitle'
+  | 'approvedThreadTitleConfessionInternalId'
   | 'pendingChannelThreadId'
+  | 'requestedThreadTitle'
   | 'threadParentMessageId'
   | 'threadPendingChannelThreadId'
-  | 'threadTitle'
 >;
 
 function createDurableAttachment(row: DurableAttachmentRow) {
@@ -112,8 +116,12 @@ function createPendingThread(row: PendingThreadRow) {
   if (row.pendingChannelThreadId === null) {
     if (row.threadPendingChannelThreadId !== null)
       AssertionError.throwNew('invalid approval dispatch row: orphan pending thread row');
-    if (row.threadTitle !== null)
-      AssertionError.throwNew('invalid approval dispatch row: orphan pending thread title');
+    if (row.requestedThreadTitle !== null)
+      AssertionError.throwNew('invalid approval dispatch row: orphan requested thread title');
+    if (row.approvedThreadTitle !== null)
+      AssertionError.throwNew('invalid approval dispatch row: orphan approved thread title');
+    if (row.approvedThreadTitleConfessionInternalId !== null)
+      AssertionError.throwNew('invalid approval dispatch row: orphan approved title owner');
     if (row.approvedPendingChannelThreadId !== null)
       AssertionError.throwNew('invalid approval dispatch row: orphan approved thread owner');
     if (row.approvedThreadId !== null)
@@ -125,17 +133,21 @@ function createPendingThread(row: PendingThreadRow) {
     AssertionError.throwNew('invalid approval dispatch row: pending thread row missing');
   if (row.threadPendingChannelThreadId !== row.pendingChannelThreadId)
     AssertionError.throwNew('invalid approval dispatch row: pending thread id mismatch');
-  if (row.threadTitle === null)
-    AssertionError.throwNew('invalid approval dispatch row: pending thread title missing');
+  if (row.requestedThreadTitle === null)
+    AssertionError.throwNew('invalid approval dispatch row: requested thread title missing');
 
   if (row.approvedThreadId === null) {
     if (row.approvedPendingChannelThreadId !== null)
       AssertionError.throwNew(
         'invalid approval dispatch row: approved thread owner without thread id',
       );
+    if (row.approvedThreadTitleConfessionInternalId !== null)
+      AssertionError.throwNew('invalid approval dispatch row: approved title without thread id');
+    if (row.approvedThreadTitle !== null)
+      AssertionError.throwNew('invalid approval dispatch row: approved title without thread id');
     return {
       id: row.pendingChannelThreadId,
-      title: row.threadTitle,
+      title: row.requestedThreadTitle,
       parentMessageId: row.threadParentMessageId,
       approved: null,
     };
@@ -145,9 +157,13 @@ function createPendingThread(row: PendingThreadRow) {
     AssertionError.throwNew('invalid approval dispatch row: approved thread owner missing');
   if (row.approvedPendingChannelThreadId !== row.pendingChannelThreadId)
     AssertionError.throwNew('invalid approval dispatch row: approved thread owner mismatch');
+  if (row.approvedThreadTitleConfessionInternalId === null)
+    AssertionError.throwNew('invalid approval dispatch row: approved title owner missing');
+  if (row.approvedThreadTitle === null)
+    AssertionError.throwNew('invalid approval dispatch row: approved thread title missing');
   return {
     id: row.pendingChannelThreadId,
-    title: row.threadTitle,
+    title: row.approvedThreadTitle,
     parentMessageId: row.threadParentMessageId,
     approved: {
       threadId: row.approvedThreadId,
@@ -181,11 +197,31 @@ export async function loadApprovalDispatchConfession(db: Interface, internalId: 
   return await tracer.asyncSpan('load-approval-dispatch-confession', async span => {
     span.setAttribute('confession.internal.id', internalId.toString());
 
+    const requestedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'requested_title');
+    const approvedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'approved_title');
+    const approvedThreadForPending = db
+      .select({
+        approvedPendingChannelThreadId: approvedTitle.pendingChannelThreadId,
+        approvedThreadTitle: approvedTitle.title,
+        approvedThreadTitleConfessionInternalId:
+          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+        approvedThreadId: schema.approvedChannelThread.threadId,
+      })
+      .from(schema.approvedChannelThread)
+      .innerJoin(
+        approvedTitle,
+        eq(
+          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+          approvedTitle.confessionInternalId,
+        ),
+      )
+      .as('approved_thread_for_pending');
+
     const row = await db
       .select({
         confessionId: schema.confession.confessionId,
         channelId: schema.confession.channelId,
-        pendingChannelThreadId: schema.confession.pendingChannelThreadId,
+        pendingChannelThreadId: requestedTitle.pendingChannelThreadId,
         content: schema.confession.content,
         createdAt: schema.confession.createdAt,
         approvedAt: schema.confession.approvedAt,
@@ -194,10 +230,13 @@ export async function loadApprovalDispatchConfession(db: Interface, internalId: 
         label: schema.channel.label,
         color: schema.channel.color,
         threadPendingChannelThreadId: schema.pendingChannelThread.id,
-        threadTitle: schema.pendingChannelThread.title,
+        requestedThreadTitle: requestedTitle.title,
         threadParentMessageId: schema.pendingChannelThread.parentMessageId,
-        approvedPendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
-        approvedThreadId: schema.approvedChannelThread.threadId,
+        approvedPendingChannelThreadId: approvedThreadForPending.approvedPendingChannelThreadId,
+        approvedThreadTitle: approvedThreadForPending.approvedThreadTitle,
+        approvedThreadTitleConfessionInternalId:
+          approvedThreadForPending.approvedThreadTitleConfessionInternalId,
+        approvedThreadId: approvedThreadForPending.approvedThreadId,
         attachmentId: schema.ephemeralAttachment.id,
         durableAttachmentId: schema.durableAttachment.id,
         durableAttachmentEphemeralId: schema.durableAttachment.ephemeralAttachmentId,
@@ -211,12 +250,19 @@ export async function loadApprovalDispatchConfession(db: Interface, internalId: 
       .from(schema.confession)
       .innerJoin(schema.channel, eq(schema.confession.channelId, schema.channel.id))
       .leftJoin(
-        schema.pendingChannelThread,
-        eq(schema.confession.pendingChannelThreadId, schema.pendingChannelThread.id),
+        requestedTitle,
+        eq(schema.confession.internalId, requestedTitle.confessionInternalId),
       )
       .leftJoin(
-        schema.approvedChannelThread,
-        eq(schema.pendingChannelThread.id, schema.approvedChannelThread.pendingChannelThreadId),
+        schema.pendingChannelThread,
+        eq(requestedTitle.pendingChannelThreadId, schema.pendingChannelThread.id),
+      )
+      .leftJoin(
+        approvedThreadForPending,
+        eq(
+          requestedTitle.pendingChannelThreadId,
+          approvedThreadForPending.approvedPendingChannelThreadId,
+        ),
       )
       .leftJoin(
         schema.ephemeralAttachment,

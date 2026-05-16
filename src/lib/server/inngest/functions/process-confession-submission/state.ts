@@ -78,10 +78,21 @@ export interface FailedLogConfessionResult {
   resetLogChannelId: string | null;
 }
 
-export interface LoggedConfessionResult {
+export interface LoggedConfessionWithoutAttachmentResult {
   logged: true;
-  durableAttachment: PersistableDurableAttachment | null;
+  attachmentId: null;
+  durableAttachment: null;
 }
+
+export interface LoggedConfessionWithAttachmentResult {
+  logged: true;
+  attachmentId: string;
+  durableAttachment: PersistableDurableAttachment;
+}
+
+export type LoggedConfessionResult =
+  | LoggedConfessionWithAttachmentResult
+  | LoggedConfessionWithoutAttachmentResult;
 
 export type LogConfessionResult = FailedLogConfessionResult | LoggedConfessionResult;
 

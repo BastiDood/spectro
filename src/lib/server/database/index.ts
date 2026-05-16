@@ -1,12 +1,12 @@
 import process from 'node:process';
 
+import { aliasedTable, and, eq, sql } from 'drizzle-orm';
 import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
 import { drizzle as pgDrizzle } from 'drizzle-orm/node-postgres';
-import { eq, sql } from 'drizzle-orm';
 import { Pool as NeonPool } from '@neondatabase/serverless';
 import { Pool as PgPool } from 'pg';
 
-import { assertOptional, assertSingle, UnreachableCodeError } from '$lib/assert';
+import { AssertionError, assertSingle, UnreachableCodeError } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { Logger } from '$lib/server/telemetry/logger';
 import { normalizeDiscordAttachmentUrl } from '$lib/url/discord';
@@ -62,6 +62,33 @@ export type InsertableAttachment = Pick<
   'id' | 'filename' | 'content_type' | 'url' | 'proxy_url'
 >;
 
+interface FlatApprovedChannelThreadResolutionRow {
+  pendingChannelThreadId: bigint;
+  pendingApprovalTitleConfessionInternalId: bigint | null;
+  pendingApprovalThreadId: bigint | null;
+  threadApprovalPendingChannelThreadId: bigint | null;
+  threadApprovalTitleConfessionInternalId: bigint | null;
+  threadApprovalThreadId: bigint | null;
+}
+
+interface ResolvedApprovedChannelThread {
+  pendingChannelThreadId: bigint;
+  pendingChannelThreadTitleConfessionInternalId: bigint;
+  threadId: bigint;
+}
+
+interface ApprovedChannelThreadResolution {
+  pendingChannelThreadId: bigint;
+  approvedForPending: ResolvedApprovedChannelThread | null;
+  approvedForThread: ResolvedApprovedChannelThread | null;
+}
+
+interface NullableResolvedApprovedChannelThreadRow {
+  pendingChannelThreadId: bigint | null;
+  pendingChannelThreadTitleConfessionInternalId: bigint | null;
+  threadId: bigint | null;
+}
+
 export interface PersistableDurableAttachment {
   id: string;
   messageId: string;
@@ -72,6 +99,61 @@ export interface PersistableDurableAttachment {
   proxyUrl: string;
   height: number | null;
   width: number | null;
+}
+
+function createResolvedApprovedChannelThread(
+  row: NullableResolvedApprovedChannelThreadRow,
+  expectedPendingChannelThreadId: bigint | null,
+) {
+  if (row.threadId === null) {
+    if (row.pendingChannelThreadId !== null)
+      AssertionError.throwNew('invalid approved channel thread row: pending owner without thread');
+    if (row.pendingChannelThreadTitleConfessionInternalId !== null)
+      AssertionError.throwNew('invalid approved channel thread row: title owner without thread');
+    return null;
+  }
+
+  if (row.pendingChannelThreadId === null)
+    AssertionError.throwNew('invalid approved channel thread row: pending owner missing');
+  if (
+    expectedPendingChannelThreadId !== null &&
+    row.pendingChannelThreadId !== expectedPendingChannelThreadId
+  )
+    AssertionError.throwNew('invalid approved channel thread row: pending owner mismatch');
+  if (row.pendingChannelThreadTitleConfessionInternalId === null)
+    AssertionError.throwNew('invalid approved channel thread row: title owner missing');
+
+  return {
+    pendingChannelThreadId: row.pendingChannelThreadId,
+    pendingChannelThreadTitleConfessionInternalId:
+      row.pendingChannelThreadTitleConfessionInternalId,
+    threadId: row.threadId,
+  };
+}
+
+function createApprovedChannelThreadResolution(
+  row: FlatApprovedChannelThreadResolutionRow,
+): ApprovedChannelThreadResolution {
+  return {
+    pendingChannelThreadId: row.pendingChannelThreadId,
+    approvedForPending: createResolvedApprovedChannelThread(
+      {
+        pendingChannelThreadId:
+          row.pendingApprovalThreadId === null ? null : row.pendingChannelThreadId,
+        pendingChannelThreadTitleConfessionInternalId: row.pendingApprovalTitleConfessionInternalId,
+        threadId: row.pendingApprovalThreadId,
+      },
+      row.pendingChannelThreadId,
+    ),
+    approvedForThread: createResolvedApprovedChannelThread(
+      {
+        pendingChannelThreadId: row.threadApprovalPendingChannelThreadId,
+        pendingChannelThreadTitleConfessionInternalId: row.threadApprovalTitleConfessionInternalId,
+        threadId: row.threadApprovalThreadId,
+      },
+      row.pendingChannelThreadId,
+    ),
+  };
 }
 
 async function insertAttachmentData(
@@ -200,63 +282,137 @@ export async function insertConfession(
   });
 }
 
-async function loadApprovedThreadByPendingChannelThreadId(
+async function loadApprovedChannelThreadResolution(
   db: Interface,
-  pendingChannelThreadId: bigint,
+  pendingChannelThreadTitleConfessionInternalId: bigint,
+  threadId: bigint,
 ) {
-  return await tracer.asyncSpan('load-approved-thread-by-pending-channel-thread-id', async span => {
-    span.setAttribute('pending.channel.thread.id', pendingChannelThreadId.toString());
-    return await db
-      .select({
-        pendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
-        threadId: schema.approvedChannelThread.threadId,
-      })
-      .from(schema.approvedChannelThread)
-      .where(eq(schema.approvedChannelThread.pendingChannelThreadId, pendingChannelThreadId))
-      .limit(1)
-      .then(assertOptional);
-  });
-}
+  return await tracer.asyncSpan('load-approved-channel-thread-resolution', async span => {
+    span.setAttributes({
+      'pending.channel.thread.title.confession.internal.id':
+        pendingChannelThreadTitleConfessionInternalId.toString(),
+      'thread.id': threadId.toString(),
+    });
 
-async function loadApprovedThreadByThreadId(db: Interface, threadId: bigint) {
-  return await tracer.asyncSpan('load-approved-thread-by-thread-id', async span => {
-    span.setAttribute('thread.id', threadId.toString());
-    return await db
+    const approvedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'approved_title');
+    const approvedThreadForPending = db
       .select({
-        pendingChannelThreadId: schema.approvedChannelThread.pendingChannelThreadId,
+        pendingChannelThreadId: approvedTitle.pendingChannelThreadId,
+        pendingChannelThreadTitleConfessionInternalId:
+          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
         threadId: schema.approvedChannelThread.threadId,
       })
       .from(schema.approvedChannelThread)
+      .innerJoin(
+        approvedTitle,
+        eq(
+          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+          approvedTitle.confessionInternalId,
+        ),
+      )
+      .as('approved_thread_for_pending');
+
+    const approvedThreadTitle = aliasedTable(
+      schema.pendingChannelThreadTitle,
+      'approved_thread_title',
+    );
+    const approvedThreadForThread = db
+      .select({
+        pendingChannelThreadId: approvedThreadTitle.pendingChannelThreadId,
+        pendingChannelThreadTitleConfessionInternalId:
+          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+        threadId: schema.approvedChannelThread.threadId,
+      })
+      .from(schema.approvedChannelThread)
+      .innerJoin(
+        approvedThreadTitle,
+        eq(
+          schema.approvedChannelThread.pendingChannelThreadTitleConfessionInternalId,
+          approvedThreadTitle.confessionInternalId,
+        ),
+      )
       .where(eq(schema.approvedChannelThread.threadId, threadId))
+      .as('approved_thread_for_thread');
+
+    const row = await db
+      .select({
+        pendingChannelThreadId: schema.pendingChannelThreadTitle.pendingChannelThreadId,
+        pendingApprovalTitleConfessionInternalId:
+          approvedThreadForPending.pendingChannelThreadTitleConfessionInternalId,
+        pendingApprovalThreadId: approvedThreadForPending.threadId,
+        threadApprovalPendingChannelThreadId: approvedThreadForThread.pendingChannelThreadId,
+        threadApprovalTitleConfessionInternalId:
+          approvedThreadForThread.pendingChannelThreadTitleConfessionInternalId,
+        threadApprovalThreadId: approvedThreadForThread.threadId,
+      })
+      .from(schema.pendingChannelThreadTitle)
+      .leftJoin(
+        approvedThreadForPending,
+        eq(
+          schema.pendingChannelThreadTitle.pendingChannelThreadId,
+          approvedThreadForPending.pendingChannelThreadId,
+        ),
+      )
+      .leftJoin(
+        approvedThreadForThread,
+        and(
+          eq(
+            schema.pendingChannelThreadTitle.pendingChannelThreadId,
+            approvedThreadForThread.pendingChannelThreadId,
+          ),
+          eq(approvedThreadForThread.threadId, threadId),
+        ),
+      )
+      .where(
+        eq(
+          schema.pendingChannelThreadTitle.confessionInternalId,
+          pendingChannelThreadTitleConfessionInternalId,
+        ),
+      )
       .limit(1)
-      .then(assertOptional);
+      .then(assertSingle);
+
+    return createApprovedChannelThreadResolution(row);
   });
 }
 
 export async function resolveApprovedChannelThread(
   db: Transaction,
-  pendingChannelThreadId: bigint,
   threadId: bigint,
+  pendingChannelThreadTitleConfessionInternalId: bigint,
 ) {
   return await tracer.asyncSpan('resolve-approved-channel-thread', async span => {
     span.setAttributes({
-      'pending.channel.thread.id': pendingChannelThreadId.toString(),
+      'pending.channel.thread.title.confession.internal.id':
+        pendingChannelThreadTitleConfessionInternalId.toString(),
       'thread.id': threadId.toString(),
     });
 
-    await db.execute(sql`select pg_advisory_xact_lock(${threadId})`);
-
-    const approvedForPending = await loadApprovedThreadByPendingChannelThreadId(
+    const resolution = await loadApprovedChannelThreadResolution(
       db,
-      pendingChannelThreadId,
+      pendingChannelThreadTitleConfessionInternalId,
+      threadId,
     );
-    if (typeof approvedForPending !== 'undefined') return approvedForPending;
+    const { pendingChannelThreadId } = resolution;
+    span.setAttribute('pending.channel.thread.id', pendingChannelThreadId.toString());
 
-    const approvedForThread = await loadApprovedThreadByThreadId(db, threadId);
-    if (typeof approvedForThread !== 'undefined') return approvedForThread;
+    if (resolution.approvedForPending !== null) return resolution.approvedForPending;
+
+    await db.execute(sql`select pg_advisory_xact_lock(${pendingChannelThreadId})`);
+
+    const resolutionAfterLock = await loadApprovedChannelThreadResolution(
+      db,
+      pendingChannelThreadTitleConfessionInternalId,
+      threadId,
+    );
+    if (resolutionAfterLock.approvedForPending !== null)
+      return resolutionAfterLock.approvedForPending;
+
+    if (resolutionAfterLock.approvedForThread !== null)
+      return resolutionAfterLock.approvedForThread;
 
     const { rowCount } = await db.insert(schema.approvedChannelThread).values({
-      pendingChannelThreadId,
+      pendingChannelThreadTitleConfessionInternalId,
       threadId,
     });
 
@@ -265,7 +421,11 @@ export async function resolveApprovedChannelThread(
         return UnexpectedRowCountDatabaseError.throwNew();
       case 1:
         logger.debug('approved channel thread inserted');
-        return { pendingChannelThreadId, threadId };
+        return {
+          pendingChannelThreadId,
+          pendingChannelThreadTitleConfessionInternalId,
+          threadId,
+        };
       default:
         return UnexpectedRowCountDatabaseError.throwNew(rowCount);
     }

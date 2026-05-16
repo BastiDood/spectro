@@ -1,5 +1,3 @@
-import assert from 'node:assert/strict';
-
 import { NonRetriableError } from 'inngest';
 
 import {
@@ -28,6 +26,7 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import {
   assertConfessionSubmissionChannel,
   createPublicConfession,
+  FatalConfessionSubmissionStateError,
   type LogConfessionResult,
   mapConfessionSubmissionChannel,
   type SerializedConfessionForProcess,
@@ -37,7 +36,6 @@ import {
 import { ConfessionSubmitEvent, ConfessionSubmitMode } from './schema';
 import {
   createConfessionSubmission,
-  ensureExistingThreadRegistration,
   loadApprovedThreadTitle,
   loadConfessionSubmissionChannel,
 } from './query';
@@ -94,16 +92,8 @@ export const processConfessionSubmission = inngest.createFunction(
 
           switch (data.mode) {
             case ConfessionSubmitMode.Message:
-              if (data.threadId !== null) {
-                if (data.threadTitle === null)
-                  return 'Spectro cannot submit confessions in this thread without a thread name.';
-                const { channelId, threadId, threadTitle } = data;
-                return await db.transaction(
-                  async tx =>
-                    await ensureExistingThreadRegistration(tx, channelId, threadId, threadTitle),
-                  { isolationLevel: 'read committed' },
-                );
-              }
+              if (data.threadId !== null && data.threadTitle === null)
+                return 'Spectro cannot submit confessions in this thread without a thread name.';
             // falls through
             case ConfessionSubmitMode.NewThread:
             case ConfessionSubmitMode.NewThreadReply:
@@ -177,6 +167,23 @@ export const processConfessionSubmission = inngest.createFunction(
               throw new NonRetriableError('unknown confession submission mode');
           }
 
+          let newThreadTitle: string | null = null;
+          switch (data.mode) {
+            case ConfessionSubmitMode.NewThread:
+            case ConfessionSubmitMode.NewThreadReply:
+              newThreadTitle = data.threadTitle;
+            // falls through
+            default:
+              break;
+          }
+
+          let existingThreadId: bigint | null = null;
+          let existingThreadTitle: string | null = null;
+          if (threadId !== null) {
+            existingThreadId = BigInt(threadId);
+            existingThreadTitle = data.threadTitle;
+          }
+
           const { internalId, confessionId, pendingThread } = await db.transaction(
             async tx =>
               await createConfessionSubmission(tx, {
@@ -188,12 +195,9 @@ export const processConfessionSubmission = inngest.createFunction(
                 isApprovalRequired: channel.isApprovalRequired,
                 parentMessageId: parentMessageId === null ? null : BigInt(parentMessageId),
                 attachment: serializeRequestedAttachment(data.attachment),
-                newThreadTitle:
-                  data.mode === ConfessionSubmitMode.NewThread ||
-                  data.mode === ConfessionSubmitMode.NewThreadReply
-                    ? data.threadTitle
-                    : null,
-                existingThreadId: threadId === null ? null : BigInt(threadId),
+                newThreadTitle,
+                existingThreadId,
+                existingThreadTitle,
               }),
             { isolationLevel: 'read committed' },
           );
@@ -247,8 +251,9 @@ export const processConfessionSubmission = inngest.createFunction(
       );
 
       let preparedConfession = createdConfession;
+      const { pendingChannelThreadId } = createdConfession;
       if (
-        createdConfession.pendingChannelThreadId !== null &&
+        pendingChannelThreadId !== null &&
         createdConfession.thread === null &&
         createdConfession.approvedAt !== null
       ) {
@@ -351,9 +356,6 @@ export const processConfessionSubmission = inngest.createFunction(
           return;
         }
 
-        const { pendingChannelThreadId } = createdConfession;
-        assert(pendingChannelThreadId !== null);
-
         const threadId = await step.run(
           { id: 'resolve-approved-thread', name: 'Resolve Approved Thread' },
           async () => {
@@ -361,8 +363,8 @@ export const processConfessionSubmission = inngest.createFunction(
               async tx =>
                 await resolveApprovedChannelThread(
                   tx,
-                  BigInt(pendingChannelThreadId),
                   BigInt(threadResult.threadId),
+                  BigInt(createdConfession.internalId),
                 ),
               { isolationLevel: 'read committed' },
             );
@@ -464,13 +466,18 @@ export const processConfessionSubmission = inngest.createFunction(
             });
             return {
               logged: true,
+              attachmentId: null,
               durableAttachment: null,
             };
           }
 
           const uploadedAttachment = preparedConfession.attachment;
           const uploadedAttachmentUrl = parseDiscordAttachmentCdnUrl(uploadedAttachment.url);
-          assert(uploadedAttachmentUrl !== null);
+          if (uploadedAttachmentUrl === null)
+            FatalConfessionSubmissionStateError.throwNew('uploaded attachment url invalid', {
+              'attachment.id': uploadedAttachment.id,
+              'attachment.url': uploadedAttachment.url,
+            });
 
           const response = await fetch(uploadedAttachment.url);
           const file = await downloadDiscordAttachment(response, DISCORD_ATTACHMENT_MAX_BYTES);
@@ -565,6 +572,7 @@ export const processConfessionSubmission = inngest.createFunction(
 
           return {
             logged: true,
+            attachmentId: uploadedAttachment.id,
             durableAttachment,
           };
         },
@@ -617,18 +625,19 @@ export const processConfessionSubmission = inngest.createFunction(
       }
 
       const { durableAttachment } = logResult;
-      if (durableAttachment !== null) {
-        const { attachment } = preparedConfession;
-        assert(attachment !== null);
+      if (durableAttachment !== null)
         await step.run(
           {
             id: 'persist-durable-attachment',
             name: 'Persist Durable Attachment',
           },
           async () =>
-            await upsertDurableAttachmentData(db, BigInt(attachment.id), durableAttachment),
+            await upsertDurableAttachmentData(
+              db,
+              BigInt(logResult.attachmentId),
+              durableAttachment,
+            ),
         );
-      }
 
       if (preparedConfession.approvedAt === null) {
         await step.run(

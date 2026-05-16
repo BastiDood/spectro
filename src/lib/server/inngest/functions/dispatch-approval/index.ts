@@ -150,8 +150,8 @@ export const dispatchApproval = inngest.createFunction(
                 async tx =>
                   await resolveApprovedChannelThread(
                     tx,
-                    BigInt(pendingThread.id),
                     BigInt(threadResult.threadId),
+                    BigInt(event.data.internalId),
                   ),
                 { isolationLevel: 'read committed' },
               );
