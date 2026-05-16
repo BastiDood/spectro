@@ -38,6 +38,7 @@ export interface SerializedConfessionForProcess {
   createdAt: string;
   approvedAt: string | null;
   parentMessageId: string | null;
+  pendingThreadTitle: string | null;
   channel: {
     guildId: string;
     label: string;
@@ -60,6 +61,7 @@ export interface SerializedConfessionForDispatch {
   content: string;
   createdAt: string;
   parentMessageId: string | null;
+  pendingThreadTitle: string | null;
   channel: {
     guildId: string;
     label: string;
@@ -78,10 +80,21 @@ export interface FailedLogConfessionResult {
   resetLogChannelId: string | null;
 }
 
-export interface LoggedConfessionResult {
+export interface LoggedConfessionWithoutAttachmentResult {
   logged: true;
-  durableAttachment: PersistableDurableAttachment | null;
+  attachmentId: null;
+  durableAttachment: null;
 }
+
+export interface LoggedConfessionWithAttachmentResult {
+  logged: true;
+  attachmentId: string;
+  durableAttachment: PersistableDurableAttachment;
+}
+
+export type LoggedConfessionResult =
+  | LoggedConfessionWithAttachmentResult
+  | LoggedConfessionWithoutAttachmentResult;
 
 export type LogConfessionResult = FailedLogConfessionResult | LoggedConfessionResult;
 
@@ -159,6 +172,7 @@ export function createPublicConfession(
     | 'createdAt'
     | 'parentMessageId'
     | 'pendingChannelThreadId'
+    | 'pendingThreadTitle'
     | 'publishChannelId'
     | 'thread'
   >,
@@ -172,6 +186,7 @@ export function createPublicConfession(
     content: confession.content,
     createdAt: confession.createdAt,
     parentMessageId: confession.parentMessageId,
+    pendingThreadTitle: confession.pendingThreadTitle,
     channel: {
       guildId: confession.channel.guildId,
       label: confession.channel.label,

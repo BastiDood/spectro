@@ -1,18 +1,21 @@
-import assert, { strictEqual } from 'node:assert/strict';
+import { strictEqual } from 'node:assert/strict';
 
 import { aliasedTable, eq } from 'drizzle-orm';
 
 import { APP_ICON_URL, Color } from '$lib/server/constants';
-import { assertSingle } from '$lib/assert';
 import {
+  approvedChannelThread,
   channel,
   confession,
   durableAttachment,
   ephemeralAttachment,
+  pendingChannelThread,
+  pendingChannelThreadTitle,
 } from '$lib/server/database/models';
+import { AssertionError, assertSingle } from '$lib/assert';
 import { ConfessionApprovalEvent } from '$lib/server/inngest/functions/dispatch-approval/schema';
 import type { CreateMessageAttachment } from '$lib/server/models/discord/message';
-import { db } from '$lib/server/database';
+import { db, type Transaction } from '$lib/server/database';
 import { type Embed, EmbedField, EmbedImage, EmbedType } from '$lib/server/models/discord/embed';
 import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
@@ -119,6 +122,278 @@ interface ApprovalVerdictAttachment {
   width: number | null;
 }
 
+interface ApprovalVerdictConfessionAttachment {
+  ephemeralId: bigint;
+  durable: ApprovalVerdictAttachment | null;
+}
+
+interface ApprovalVerdictThread {
+  title: string;
+  threadId: bigint | null;
+}
+
+interface ApprovalVerdictConfession {
+  disabledAt: Date | null;
+  label: string;
+  guildId: bigint;
+  channelId: bigint;
+  authorId: bigint;
+  approvedAt: Date | null;
+  content: string;
+  confessionId: bigint;
+  parentMessageId: bigint | null;
+  thread: ApprovalVerdictThread | null;
+  attachment: ApprovalVerdictConfessionAttachment | null;
+}
+
+interface FlatApprovalVerdictConfessionRow {
+  disabledAt: Date | null;
+  label: string;
+  guildId: bigint;
+  channelId: bigint;
+  authorId: bigint;
+  approvedAt: Date | null;
+  content: string;
+  confessionId: bigint;
+  parentMessageId: bigint | null;
+  ephemeralAttachmentId: bigint | null;
+  durableAttachmentId: bigint | null;
+  attachmentFilename: string | null;
+  attachmentContentType: string | null;
+  attachmentUrl: string | null;
+  attachmentHeight: number | null;
+  attachmentWidth: number | null;
+  pendingChannelThreadId: bigint | null;
+  requestedThreadTitle: string | null;
+  threadPendingChannelThreadId: bigint | null;
+  threadParentMessageId: bigint | null;
+  approvedPendingChannelThreadId: bigint | null;
+  approvedThreadTitle: string | null;
+  approvedThreadId: bigint | null;
+}
+
+type ApprovalVerdictAttachmentRow = Pick<
+  FlatApprovalVerdictConfessionRow,
+  | 'attachmentContentType'
+  | 'attachmentFilename'
+  | 'attachmentHeight'
+  | 'attachmentUrl'
+  | 'attachmentWidth'
+  | 'durableAttachmentId'
+  | 'ephemeralAttachmentId'
+>;
+
+type ApprovalVerdictThreadRow = Pick<
+  FlatApprovalVerdictConfessionRow,
+  | 'approvedPendingChannelThreadId'
+  | 'approvedThreadId'
+  | 'approvedThreadTitle'
+  | 'pendingChannelThreadId'
+  | 'requestedThreadTitle'
+  | 'threadParentMessageId'
+  | 'threadPendingChannelThreadId'
+>;
+
+function createApprovalVerdictAttachment(row: ApprovalVerdictAttachmentRow) {
+  if (row.ephemeralAttachmentId === null) {
+    if (row.durableAttachmentId !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan durable attachment');
+    if (row.attachmentFilename !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan attachment filename');
+    if (row.attachmentContentType !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan attachment content type');
+    if (row.attachmentUrl !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan attachment url');
+    if (row.attachmentHeight !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan attachment height');
+    if (row.attachmentWidth !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan attachment width');
+    return null;
+  }
+
+  if (row.durableAttachmentId === null) {
+    if (row.attachmentFilename !== null)
+      AssertionError.throwNew('invalid approval verdict row: durable filename without id');
+    if (row.attachmentContentType !== null)
+      AssertionError.throwNew('invalid approval verdict row: durable content type without id');
+    if (row.attachmentUrl !== null)
+      AssertionError.throwNew('invalid approval verdict row: durable url without id');
+    if (row.attachmentHeight !== null)
+      AssertionError.throwNew('invalid approval verdict row: durable height without id');
+    if (row.attachmentWidth !== null)
+      AssertionError.throwNew('invalid approval verdict row: durable width without id');
+    return { ephemeralId: row.ephemeralAttachmentId, durable: null };
+  }
+
+  if (row.attachmentFilename === null)
+    AssertionError.throwNew('invalid approval verdict row: durable attachment missing filename');
+  if (row.attachmentUrl === null)
+    AssertionError.throwNew('invalid approval verdict row: durable attachment missing url');
+
+  return {
+    ephemeralId: row.ephemeralAttachmentId,
+    durable: {
+      id: row.durableAttachmentId.toString(),
+      filename: row.attachmentFilename,
+      contentType: row.attachmentContentType,
+      url: row.attachmentUrl,
+      height: row.attachmentHeight,
+      width: row.attachmentWidth,
+    },
+  };
+}
+
+function createApprovalVerdictThread(row: ApprovalVerdictThreadRow) {
+  if (row.pendingChannelThreadId === null) {
+    if (row.threadPendingChannelThreadId !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan pending thread row');
+    if (row.threadParentMessageId !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan thread parent message');
+    if (row.requestedThreadTitle !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan requested thread title');
+    if (row.approvedPendingChannelThreadId !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan approved thread owner');
+    if (row.approvedThreadTitle !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan approved thread title');
+    if (row.approvedThreadId !== null)
+      AssertionError.throwNew('invalid approval verdict row: orphan approved thread id');
+    return null;
+  }
+
+  if (row.threadPendingChannelThreadId === null)
+    AssertionError.throwNew('invalid approval verdict row: pending thread row missing');
+  if (row.threadPendingChannelThreadId !== row.pendingChannelThreadId)
+    AssertionError.throwNew('invalid approval verdict row: pending thread id mismatch');
+  if (row.requestedThreadTitle === null)
+    AssertionError.throwNew('invalid approval verdict row: requested thread title missing');
+
+  if (row.approvedThreadId === null) {
+    if (row.approvedPendingChannelThreadId !== null)
+      AssertionError.throwNew('invalid approval verdict row: approved owner without thread id');
+    if (row.approvedThreadTitle !== null)
+      AssertionError.throwNew('invalid approval verdict row: approved title without thread id');
+    return {
+      title: row.requestedThreadTitle,
+      threadId: null,
+    };
+  }
+
+  if (row.approvedPendingChannelThreadId === null)
+    AssertionError.throwNew('invalid approval verdict row: approved thread owner missing');
+  if (row.approvedPendingChannelThreadId !== row.pendingChannelThreadId)
+    AssertionError.throwNew('invalid approval verdict row: approved thread owner mismatch');
+  if (row.approvedThreadTitle === null)
+    AssertionError.throwNew('invalid approval verdict row: approved thread title missing');
+
+  return {
+    title: row.requestedThreadTitle,
+    threadId: row.approvedThreadId,
+  };
+}
+
+function createApprovalVerdictConfession(
+  row: FlatApprovalVerdictConfessionRow,
+): ApprovalVerdictConfession {
+  return {
+    disabledAt: row.disabledAt,
+    label: row.label,
+    guildId: row.guildId,
+    channelId: row.channelId,
+    authorId: row.authorId,
+    approvedAt: row.approvedAt,
+    content: row.content,
+    confessionId: row.confessionId,
+    parentMessageId: row.parentMessageId,
+    thread: createApprovalVerdictThread(row),
+    attachment: createApprovalVerdictAttachment(row),
+  };
+}
+
+async function loadApprovalVerdictConfession(tx: Transaction, internalId: bigint) {
+  return await tracer.asyncSpan('load-approval-verdict-confession', async span => {
+    span.setAttribute('confession.internal.id', internalId.toString());
+
+    const lockedConfession = aliasedTable(confession, 'confession');
+    const requestedTitle = aliasedTable(pendingChannelThreadTitle, 'requested_title');
+    const approvedTitle = aliasedTable(pendingChannelThreadTitle, 'approved_title');
+    const approvedThreadForPending = tx
+      .select({
+        approvedPendingChannelThreadId: approvedTitle.pendingChannelThreadId,
+        approvedThreadTitle: approvedTitle.title,
+        approvedThreadId: approvedChannelThread.threadId,
+      })
+      .from(approvedChannelThread)
+      .innerJoin(
+        approvedTitle,
+        eq(approvedChannelThread.confessionInternalId, approvedTitle.confessionInternalId),
+      )
+      .as('approved_thread_for_pending');
+
+    const row = await tx
+      .select({
+        disabledAt: channel.disabledAt,
+        label: channel.label,
+        guildId: channel.guildId,
+        channelId: lockedConfession.channelId,
+        authorId: lockedConfession.authorId,
+        approvedAt: lockedConfession.approvedAt,
+        content: lockedConfession.content,
+        confessionId: lockedConfession.confessionId,
+        parentMessageId: lockedConfession.parentMessageId,
+        ephemeralAttachmentId: ephemeralAttachment.id,
+        durableAttachmentId: durableAttachment.id,
+        attachmentFilename: durableAttachment.filename,
+        attachmentContentType: durableAttachment.contentType,
+        attachmentUrl: durableAttachment.url,
+        attachmentHeight: durableAttachment.height,
+        attachmentWidth: durableAttachment.width,
+        pendingChannelThreadId: requestedTitle.pendingChannelThreadId,
+        requestedThreadTitle: requestedTitle.title,
+        threadPendingChannelThreadId: pendingChannelThread.id,
+        threadParentMessageId: pendingChannelThread.parentMessageId,
+        approvedPendingChannelThreadId: approvedThreadForPending.approvedPendingChannelThreadId,
+        approvedThreadTitle: approvedThreadForPending.approvedThreadTitle,
+        approvedThreadId: approvedThreadForPending.approvedThreadId,
+      })
+      .from(lockedConfession)
+      .innerJoin(channel, eq(lockedConfession.channelId, channel.id))
+      .leftJoin(
+        requestedTitle,
+        eq(lockedConfession.internalId, requestedTitle.confessionInternalId),
+      )
+      .leftJoin(
+        pendingChannelThread,
+        eq(requestedTitle.pendingChannelThreadId, pendingChannelThread.id),
+      )
+      .leftJoin(
+        approvedThreadForPending,
+        eq(
+          requestedTitle.pendingChannelThreadId,
+          approvedThreadForPending.approvedPendingChannelThreadId,
+        ),
+      )
+      .leftJoin(
+        ephemeralAttachment,
+        eq(lockedConfession.internalId, ephemeralAttachment.confessionInternalId),
+      )
+      .leftJoin(
+        durableAttachment,
+        eq(ephemeralAttachment.id, durableAttachment.ephemeralAttachmentId),
+      )
+      .where(eq(lockedConfession.internalId, internalId))
+      .limit(1)
+      .for('update', { of: lockedConfession })
+      .then(assertSingle);
+
+    logger.debug('confession details fetched', {
+      'confession.id': row.confessionId.toString(),
+      label: row.label,
+    });
+
+    return createApprovalVerdictConfession(row);
+  });
+}
+
 /**
  * @throws {InsufficientPermissionsApprovalError}
  * @throws {DisabledChannelConfessError}
@@ -148,73 +423,23 @@ async function submitVerdict(
 
     return await db.transaction(
       async tx => {
-        const result = await tracer.asyncSpan('select-confession-details', async span => {
-          span.setAttribute('confession.internal.id', internalId.toString());
-
-          const lockedConfession = aliasedTable(confession, 'confession');
-          const result = await tx
-            .select({
-              disabledAt: channel.disabledAt,
-              label: channel.label,
-              authorId: lockedConfession.authorId,
-              approvedAt: lockedConfession.approvedAt,
-              content: lockedConfession.content,
-              confessionId: lockedConfession.confessionId,
-              ephemeralAttachmentId: ephemeralAttachment.id,
-              durableAttachmentId: durableAttachment.id,
-              attachmentFilename: durableAttachment.filename,
-              attachmentContentType: durableAttachment.contentType,
-              attachmentUrl: durableAttachment.url,
-              attachmentHeight: durableAttachment.height,
-              attachmentWidth: durableAttachment.width,
-            })
-            .from(lockedConfession)
-            .innerJoin(channel, eq(lockedConfession.channelId, channel.id))
-            .leftJoin(
-              ephemeralAttachment,
-              eq(lockedConfession.internalId, ephemeralAttachment.confessionInternalId),
-            )
-            .leftJoin(
-              durableAttachment,
-              eq(ephemeralAttachment.id, durableAttachment.ephemeralAttachmentId),
-            )
-            .where(eq(lockedConfession.internalId, internalId))
-            .limit(1)
-            .for('update', { of: lockedConfession })
-            .then(assertSingle);
-
-          logger.debug('confession details fetched', {
-            'confession.id': result.confessionId.toString(),
-            label: result.label,
-          });
-
-          return result;
-        });
+        const result = await loadApprovalVerdictConfession(tx, internalId);
         const { approvedAt, disabledAt, authorId, confessionId, label, content } = result;
 
         let embedAttachment: ApprovalVerdictAttachment | null = null;
-        if (result.ephemeralAttachmentId !== null)
-          if (result.durableAttachmentId === null) {
+        if (result.attachment !== null)
+          if (result.attachment.durable === null) {
             if (isApproved) MissingDurableAttachmentApprovalError.throwNew();
             else
               logger.warn('durable attachment missing for rejected confession', {
-                'attachment.id': result.ephemeralAttachmentId.toString(),
+                'attachment.id': result.attachment.ephemeralId.toString(),
               });
           } else {
-            assert(result.attachmentFilename !== null);
-            assert(result.attachmentUrl !== null);
             logger.debug('attachment fetched', {
-              'attachment.filename': result.attachmentFilename,
+              'attachment.filename': result.attachment.durable.filename,
             });
 
-            embedAttachment = {
-              id: result.durableAttachmentId.toString(),
-              filename: result.attachmentFilename,
-              contentType: result.attachmentContentType,
-              url: result.attachmentUrl,
-              height: result.attachmentHeight,
-              width: result.attachmentWidth,
-            };
+            embedAttachment = result.attachment.durable;
           }
 
         if (disabledAt !== null && disabledAt <= timestamp)
@@ -229,6 +454,23 @@ async function submitVerdict(
             inline: true,
           },
         ];
+
+        if (result.thread !== null) {
+          fields.push({ name: 'Parent Channel', value: `<#${result.channelId}>`, inline: true });
+          if (result.thread.threadId !== null)
+            fields.push({
+              name: 'Thread Channel',
+              value: `<#${result.thread.threadId}>`,
+              inline: true,
+            });
+        }
+
+        if (result.parentMessageId !== null)
+          fields.push({
+            name: 'Reply To',
+            value: `https://discord.com/channels/${result.guildId}/${result.channelId}/${result.parentMessageId}`,
+            inline: true,
+          });
 
         // eslint-disable-next-line @typescript-eslint/init-declarations
         let embed: Embed;
@@ -249,6 +491,9 @@ async function submitVerdict(
             value: `<@${moderatorId}>`,
             inline: true,
           });
+
+          if (result.thread !== null)
+            fields.push({ name: 'Thread Title', value: result.thread.title, inline: true });
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;
@@ -286,6 +531,9 @@ async function submitVerdict(
             value: `<@${moderatorId}>`,
             inline: true,
           });
+
+          if (result.thread !== null)
+            fields.push({ name: 'Thread Title', value: result.thread.title, inline: true });
 
           // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;
@@ -339,9 +587,9 @@ export async function handleApproval(
 ): Promise<InteractionResponse> {
   const [key, id, ...rest] = customId.split(':');
   strictEqual(rest.length, 0);
-  assert(typeof id !== 'undefined');
+  if (typeof key === 'undefined') MalformedCustomIdFormat.throwNew(customId);
+  if (typeof id === 'undefined') MalformedCustomIdFormat.throwNew(customId);
   const internalId = BigInt(id);
-  assert(typeof key !== 'undefined');
 
   // eslint-disable-next-line @typescript-eslint/init-declarations
   let isApproved: boolean;

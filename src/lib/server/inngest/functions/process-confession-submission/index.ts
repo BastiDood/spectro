@@ -1,5 +1,3 @@
-import assert from 'node:assert/strict';
-
 import { NonRetriableError } from 'inngest';
 
 import {
@@ -10,7 +8,12 @@ import {
   getThreadCreationErrorMessage,
   LogPayloadType,
 } from '$lib/server/confession';
-import { db, resetLogChannel, upsertDurableAttachmentData } from '$lib/server/database';
+import {
+  db,
+  resetLogChannel,
+  resolveApprovedChannelThread,
+  upsertDurableAttachmentData,
+} from '$lib/server/database';
 import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
 import { extractDurableAttachmentMetadata } from '$lib/server/attachment';
@@ -23,6 +26,7 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import {
   assertConfessionSubmissionChannel,
   createPublicConfession,
+  FatalConfessionSubmissionStateError,
   type LogConfessionResult,
   mapConfessionSubmissionChannel,
   type SerializedConfessionForProcess,
@@ -32,8 +36,6 @@ import {
 import { ConfessionSubmitEvent, ConfessionSubmitMode } from './schema';
 import {
   createConfessionSubmission,
-  ensureExistingThreadRegistration,
-  insertApprovedChannelThread,
   loadApprovedThreadTitle,
   loadConfessionSubmissionChannel,
 } from './query';
@@ -44,6 +46,18 @@ const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 const DISCORD_ATTACHMENT_MAX_BYTES = 8 * 1024 * 1024;
+
+interface CreatedThreadResult {
+  ok: true;
+  threadId: string;
+}
+
+interface FailedThreadCreationResult {
+  ok: false;
+  content: string;
+}
+
+type ThreadCreationResult = CreatedThreadResult | FailedThreadCreationResult;
 
 export const processConfessionSubmission = inngest.createFunction(
   {
@@ -74,33 +88,15 @@ export const processConfessionSubmission = inngest.createFunction(
             await loadConfessionSubmissionChannel(db, BigInt(data.channelId)),
             submittedAt,
           );
-
           if (typeof channel === 'string') return channel;
 
           switch (data.mode) {
             case ConfessionSubmitMode.Message:
-              if (data.threadId !== null) {
-                if (data.threadTitle === null)
-                  return 'Spectro cannot submit confessions in this thread without a thread name.';
-                const { channelId, threadId, threadTitle } = data;
-                return await db.transaction(
-                  async tx =>
-                    await ensureExistingThreadRegistration(
-                      tx,
-                      channel.isApprovalRequired,
-                      channelId,
-                      threadId,
-                      threadTitle,
-                    ),
-                  { isolationLevel: 'read committed' },
-                );
-              }
-              break;
+              if (data.threadId !== null && data.threadTitle === null)
+                return 'Spectro cannot submit confessions in this thread without a thread name.';
+            // falls through
             case ConfessionSubmitMode.NewThread:
-              break;
             case ConfessionSubmitMode.NewThreadReply:
-              if (channel.isApprovalRequired)
-                return 'This channel requires moderator approval, so Spectro cannot create an anonymous reply thread here yet.';
               break;
             default:
               throw new NonRetriableError('unknown confession submission mode');
@@ -171,7 +167,24 @@ export const processConfessionSubmission = inngest.createFunction(
               throw new NonRetriableError('unknown confession submission mode');
           }
 
-          const { internalId, confessionId, pendingChannelThreadId } = await db.transaction(
+          let newThreadTitle: string | null = null;
+          switch (data.mode) {
+            case ConfessionSubmitMode.NewThread:
+            case ConfessionSubmitMode.NewThreadReply:
+              newThreadTitle = data.threadTitle;
+            // falls through
+            default:
+              break;
+          }
+
+          let existingThreadId: bigint | null = null;
+          let existingThreadTitle: string | null = null;
+          if (threadId !== null) {
+            existingThreadId = BigInt(threadId);
+            existingThreadTitle = data.threadTitle;
+          }
+
+          const { internalId, confessionId, pendingThread } = await db.transaction(
             async tx =>
               await createConfessionSubmission(tx, {
                 createdAt,
@@ -182,38 +195,42 @@ export const processConfessionSubmission = inngest.createFunction(
                 isApprovalRequired: channel.isApprovalRequired,
                 parentMessageId: parentMessageId === null ? null : BigInt(parentMessageId),
                 attachment: serializeRequestedAttachment(data.attachment),
-                newThreadTitle:
-                  data.mode === ConfessionSubmitMode.NewThread ||
-                  data.mode === ConfessionSubmitMode.NewThreadReply
-                    ? data.threadTitle
-                    : null,
-                existingThreadId: threadId === null ? null : BigInt(threadId),
+                newThreadTitle,
+                existingThreadId,
+                existingThreadTitle,
               }),
             { isolationLevel: 'read committed' },
           );
 
-          const publishChannelId = threadId ?? data.channelId;
-          let thread = null;
-          if (threadId !== null) {
-            const title = await loadApprovedThreadTitle(
-              db,
-              BigInt(data.channelId),
-              BigInt(threadId),
-            );
-            thread = { id: threadId, title };
+          let publishChannelId = data.channelId;
+          let pendingChannelThreadId: string | null = null;
+          let pendingThreadTitle: string | null = null;
+          let thread: SerializedConfessionForProcess['thread'] = null;
+          if (pendingThread !== null) {
+            pendingChannelThreadId = pendingThread.id.toString();
+            pendingThreadTitle = pendingThread.title;
+            const { approved } = pendingThread;
+            if (approved !== null) {
+              publishChannelId = approved.threadId.toString();
+              thread = {
+                id: approved.threadId.toString(),
+                title: pendingThread.title,
+              };
+            }
           }
 
           return {
             internalId: internalId.toString(),
             confessionId: confessionId.toString(),
             channelId: data.channelId,
-            pendingChannelThreadId: pendingChannelThreadId?.toString() ?? null,
+            pendingChannelThreadId,
             publishChannelId,
             authorId: data.authorId,
             content: data.content,
             createdAt: createdAt.toISOString(),
             approvedAt: channel.isApprovalRequired ? null : createdAt.toISOString(),
             parentMessageId,
+            pendingThreadTitle,
             channel: {
               guildId: channel.guildId.toString(),
               label: channel.label,
@@ -237,54 +254,65 @@ export const processConfessionSubmission = inngest.createFunction(
       );
 
       let preparedConfession = createdConfession;
+      const { pendingChannelThreadId } = createdConfession;
       if (
-        (data.mode === ConfessionSubmitMode.NewThread ||
-          data.mode === ConfessionSubmitMode.NewThreadReply) &&
+        pendingChannelThreadId !== null &&
+        createdConfession.thread === null &&
         createdConfession.approvedAt !== null
       ) {
         const threadResult = await step.run(
           { id: 'create-discord-thread', name: 'Create Discord Thread' },
-          async (): Promise<SerializedConfessionForProcess | string> => {
-            assert(createdConfession.pendingChannelThreadId !== null);
-            const { pendingChannelThreadId } = createdConfession;
-
+          async (): Promise<ThreadCreationResult> => {
             try {
-              const thread =
-                data.mode === ConfessionSubmitMode.NewThread
-                  ? await DiscordClient.ENV.createPublicThread(data.channelId, data.threadTitle)
-                  : await DiscordClient.ENV.createPublicThreadFromMessage(
-                      data.channelId,
-                      data.parentMessageId,
-                      data.threadTitle,
-                    );
-
-              await insertApprovedChannelThread(
-                db,
-                BigInt(pendingChannelThreadId),
-                BigInt(thread.id),
-              );
-
-              return {
-                ...createdConfession,
-                publishChannelId: thread.id,
-                thread: {
-                  id: thread.id,
-                  title: data.threadTitle,
-                },
-              };
+              switch (data.mode) {
+                case ConfessionSubmitMode.NewThread: {
+                  const thread = await DiscordClient.ENV.createPublicThread(
+                    data.channelId,
+                    data.threadTitle,
+                  );
+                  return { ok: true, threadId: thread.id };
+                }
+                case ConfessionSubmitMode.NewThreadReply: {
+                  const thread = await DiscordClient.ENV.createPublicThreadFromMessage(
+                    data.channelId,
+                    data.parentMessageId,
+                    data.threadTitle,
+                  );
+                  return { ok: true, threadId: thread.id };
+                }
+                case ConfessionSubmitMode.Message:
+                  throw new NonRetriableError('message submission cannot create thread');
+                default:
+                  throw new NonRetriableError('unknown confession submission mode');
+              }
             } catch (error) {
               if (error instanceof DiscordError)
                 switch (error.code) {
+                  case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                    return data.mode === ConfessionSubmitMode.NewThreadReply
+                      ? {
+                          ok: true,
+                          threadId: data.parentMessageId,
+                        }
+                      : {
+                          ok: false,
+                          content: getThreadCreationErrorMessage(error.code, {
+                            label: createdConfession.channel.label,
+                            confessionId: createdConfession.confessionId,
+                          }),
+                        };
                   case DiscordErrorCode.UnknownChannel:
                   case DiscordErrorCode.MissingAccess:
                   case DiscordErrorCode.MissingPermissions:
-                  case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
                   case DiscordErrorCode.ThreadLocked:
                   case DiscordErrorCode.MaxActiveThreadsReached:
-                    return getThreadCreationErrorMessage(error.code, {
-                      label: createdConfession.channel.label,
-                      confessionId: createdConfession.confessionId,
-                    });
+                    return {
+                      ok: false,
+                      content: getThreadCreationErrorMessage(error.code, {
+                        label: createdConfession.channel.label,
+                        confessionId: createdConfession.confessionId,
+                      }),
+                    };
                   default:
                     break;
                 }
@@ -293,7 +321,7 @@ export const processConfessionSubmission = inngest.createFunction(
           },
         );
 
-        if (typeof threadResult === 'string') {
+        if (!threadResult.ok) {
           await step.run(
             {
               id: 'edit-original-interaction-response-after-thread',
@@ -304,9 +332,7 @@ export const processConfessionSubmission = inngest.createFunction(
                 await DiscordClient.editOriginalInteractionResponse(
                   applicationId,
                   interactionToken,
-                  {
-                    content: threadResult,
-                  },
+                  { content: threadResult.content },
                 );
               } catch (cause) {
                 if (cause instanceof DiscordError)
@@ -333,7 +359,36 @@ export const processConfessionSubmission = inngest.createFunction(
           return;
         }
 
-        preparedConfession = threadResult;
+        const threadId = await step.run(
+          { id: 'resolve-approved-thread', name: 'Resolve Approved Thread' },
+          async () => {
+            const approved = await db.transaction(
+              async tx =>
+                await resolveApprovedChannelThread(
+                  tx,
+                  BigInt(threadResult.threadId),
+                  BigInt(createdConfession.internalId),
+                ),
+              { isolationLevel: 'read committed' },
+            );
+            return approved.threadId.toString();
+          },
+        );
+
+        const title = await step.run(
+          { id: 'load-approved-thread-title', name: 'Load Approved Thread Title' },
+          async () => await loadApprovedThreadTitle(db, BigInt(data.channelId), BigInt(threadId)),
+        );
+
+        preparedConfession = {
+          ...createdConfession,
+          publishChannelId: threadId,
+          pendingThreadTitle: title,
+          thread: {
+            id: threadId,
+            title,
+          },
+        };
       }
 
       const logResult = await step.run(
@@ -415,13 +470,18 @@ export const processConfessionSubmission = inngest.createFunction(
             });
             return {
               logged: true,
+              attachmentId: null,
               durableAttachment: null,
             };
           }
 
           const uploadedAttachment = preparedConfession.attachment;
           const uploadedAttachmentUrl = parseDiscordAttachmentCdnUrl(uploadedAttachment.url);
-          assert(uploadedAttachmentUrl !== null);
+          if (uploadedAttachmentUrl === null)
+            FatalConfessionSubmissionStateError.throwNew('uploaded attachment url invalid', {
+              'attachment.id': uploadedAttachment.id,
+              'attachment.url': uploadedAttachment.url,
+            });
 
           const response = await fetch(uploadedAttachment.url);
           const file = await downloadDiscordAttachment(response, DISCORD_ATTACHMENT_MAX_BYTES);
@@ -516,6 +576,7 @@ export const processConfessionSubmission = inngest.createFunction(
 
           return {
             logged: true,
+            attachmentId: uploadedAttachment.id,
             durableAttachment,
           };
         },
@@ -568,18 +629,19 @@ export const processConfessionSubmission = inngest.createFunction(
       }
 
       const { durableAttachment } = logResult;
-      if (durableAttachment !== null) {
-        const { attachment } = preparedConfession;
-        assert(attachment !== null);
+      if (durableAttachment !== null)
         await step.run(
           {
             id: 'persist-durable-attachment',
             name: 'Persist Durable Attachment',
           },
           async () =>
-            await upsertDurableAttachmentData(db, BigInt(attachment.id), durableAttachment),
+            await upsertDurableAttachmentData(
+              db,
+              BigInt(logResult.attachmentId),
+              durableAttachment,
+            ),
         );
-      }
 
       if (preparedConfession.approvedAt === null) {
         await step.run(

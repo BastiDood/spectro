@@ -1,0 +1,3 @@
+ALTER TYPE "app"."pending_channel_thread_kind" ADD VALUE 'new-thread-reply';--> statement-breakpoint
+ALTER TABLE "app"."pending_channel_thread" ADD COLUMN "parent_message_id" bigint;--> statement-breakpoint
+CREATE UNIQUE INDEX "pending_channel_thread_reply_target_unique_idx" ON "app"."pending_channel_thread" USING btree ("channel_id","parent_message_id") WHERE "app"."pending_channel_thread"."parent_message_id" is not null;

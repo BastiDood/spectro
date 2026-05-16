@@ -25,23 +25,30 @@ export const guild = app.table('guild', {
 export type Guild = typeof guild.$inferSelect;
 export type NewGuild = typeof guild.$inferInsert;
 
-export const channel = app.table('channel', {
-  id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
-  guildId: bigint('guild_id', { mode: 'bigint' })
-    .notNull()
-    .references(() => guild.id, { onDelete: 'cascade' }),
-  // TODO: Eventually add the `notNull` constraint once all guilds have transitioned.
-  logChannelId: bigint('log_channel_id', { mode: 'bigint' }),
-  disabledAt: timestamp('disabled_at', { withTimezone: true }),
-  color: bit('color', { dimensions: 24 }),
-  isApprovalRequired: boolean('is_approval_required').notNull().default(false),
-  label: text('label').notNull().default('Confession'),
-});
+export const channel = app.table(
+  'channel',
+  {
+    id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
+    guildId: bigint('guild_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => guild.id, { onDelete: 'cascade' }),
+    // TODO: Eventually add the `notNull` constraint once all guilds have transitioned.
+    logChannelId: bigint('log_channel_id', { mode: 'bigint' }),
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    color: bit('color', { dimensions: 24 }),
+    isApprovalRequired: boolean('is_approval_required').notNull().default(false),
+    label: text('label').notNull().default('Confession'),
+  },
+  ({ guildId }) => [index('channel_guild_id_idx').on(guildId)],
+);
 
 export type Channel = typeof channel.$inferSelect;
 export type NewChannel = typeof channel.$inferInsert;
 
-export const pendingChannelThreadKind = app.enum('pending_channel_thread_kind', ['new-thread']);
+export const pendingChannelThreadKind = app.enum('pending_channel_thread_kind', [
+  'new-thread',
+  'new-thread-reply',
+]);
 export type PendingChannelThreadKind = (typeof pendingChannelThreadKind.enumValues)[number];
 
 export const pendingChannelThread = app.table(
@@ -52,26 +59,19 @@ export const pendingChannelThread = app.table(
       .notNull()
       .references(() => channel.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    parentMessageId: bigint('parent_message_id', { mode: 'bigint' }),
     kind: pendingChannelThreadKind('kind').notNull(),
-    title: text('title').notNull(),
   },
-  ({ channelId }) => [index('pending_channel_thread_channel_id_idx').on(channelId)],
+  ({ channelId, parentMessageId }) => [
+    index('pending_channel_thread_channel_id_idx').on(channelId),
+    uniqueIndex('pending_channel_thread_reply_target_unique_idx')
+      .on(channelId, parentMessageId)
+      .where(isNotNull(parentMessageId)),
+  ],
 );
 
 export type PendingChannelThread = typeof pendingChannelThread.$inferSelect;
 export type NewPendingChannelThread = typeof pendingChannelThread.$inferInsert;
-
-export const approvedChannelThread = app.table('approved_channel_thread', {
-  threadId: bigint('thread_id', { mode: 'bigint' }).notNull().primaryKey(),
-  pendingChannelThreadId: bigint('pending_channel_thread_id', { mode: 'bigint' })
-    .notNull()
-    .references(() => pendingChannelThread.id, { onDelete: 'cascade' })
-    .unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-export type ApprovedChannelThread = typeof approvedChannelThread.$inferSelect;
-export type NewApprovedChannelThread = typeof approvedChannelThread.$inferInsert;
 
 export const confession = app.table(
   'confession',
@@ -83,9 +83,6 @@ export const confession = app.table(
     channelId: bigint('channel_id', { mode: 'bigint' })
       .notNull()
       .references(() => channel.id),
-    pendingChannelThreadId: bigint('pending_channel_thread_id', { mode: 'bigint' }).references(
-      () => pendingChannelThread.id,
-    ),
     parentMessageId: bigint('parent_message_id', { mode: 'bigint' }),
     // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
     confessionId: bigint('confession_id', { mode: 'bigint' })
@@ -96,17 +93,46 @@ export const confession = app.table(
     authorId: bigint('author_id', { mode: 'bigint' }).notNull(),
     content: text('content').notNull(),
   },
-  ({ confessionId, channelId, pendingChannelThreadId }) => [
+  ({ confessionId, channelId }) => [
     index('confession_channel_id_idx').on(channelId),
-    index('confession_pending_channel_thread_id_idx')
-      .on(pendingChannelThreadId)
-      .where(isNotNull(pendingChannelThreadId)),
     uniqueIndex('confession_to_channel_unique_idx').on(confessionId, channelId),
   ],
 );
 
 export type Confession = typeof confession.$inferSelect;
 export type NewConfession = typeof confession.$inferInsert;
+
+export const pendingChannelThreadTitle = app.table(
+  'pending_channel_thread_title',
+  {
+    confessionInternalId: bigint('confession_internal_id', { mode: 'bigint' })
+      .notNull()
+      .primaryKey()
+      .references(() => confession.internalId, { onDelete: 'cascade' }),
+    pendingChannelThreadId: bigint('pending_channel_thread_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => pendingChannelThread.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+  },
+  ({ pendingChannelThreadId }) => [
+    index('pending_channel_thread_title_pending_channel_thread_id_idx').on(pendingChannelThreadId),
+  ],
+);
+
+export type PendingChannelThreadTitle = typeof pendingChannelThreadTitle.$inferSelect;
+export type NewPendingChannelThreadTitle = typeof pendingChannelThreadTitle.$inferInsert;
+
+export const approvedChannelThread = app.table('approved_channel_thread', {
+  threadId: bigint('thread_id', { mode: 'bigint' }).notNull().primaryKey(),
+  confessionInternalId: bigint('confession_internal_id', { mode: 'bigint' })
+    .notNull()
+    .references(() => pendingChannelThreadTitle.confessionInternalId, { onDelete: 'cascade' })
+    .unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type ApprovedChannelThread = typeof approvedChannelThread.$inferSelect;
+export type NewApprovedChannelThread = typeof approvedChannelThread.$inferInsert;
 
 export const ephemeralAttachment = app.table('ephemeral_attachment', {
   id: bigint('id', { mode: 'bigint' }).notNull().primaryKey(),
@@ -144,10 +170,6 @@ export type NewDurableAttachment = typeof durableAttachment.$inferInsert;
 
 export const confessionRelations = relations(confession, ({ one }) => ({
   channel: one(channel, { fields: [confession.channelId], references: [channel.id] }),
-  pendingChannelThread: one(pendingChannelThread, {
-    fields: [confession.pendingChannelThreadId],
-    references: [pendingChannelThread.id],
-  }),
   attachment: one(ephemeralAttachment, {
     fields: [confession.internalId],
     references: [ephemeralAttachment.confessionInternalId],
@@ -163,19 +185,33 @@ export const pendingChannelThreadRelations = relations(pendingChannelThread, ({ 
     fields: [pendingChannelThread.channelId],
     references: [channel.id],
   }),
-  approvedChannelThread: one(approvedChannelThread, {
-    fields: [pendingChannelThread.id],
-    references: [approvedChannelThread.pendingChannelThreadId],
-  }),
-  confessions: many(confession),
+  titles: many(pendingChannelThreadTitle),
 }));
 
 export const approvedChannelThreadRelations = relations(approvedChannelThread, ({ one }) => ({
-  pendingChannelThread: one(pendingChannelThread, {
-    fields: [approvedChannelThread.pendingChannelThreadId],
-    references: [pendingChannelThread.id],
+  pendingChannelThreadTitle: one(pendingChannelThreadTitle, {
+    fields: [approvedChannelThread.confessionInternalId],
+    references: [pendingChannelThreadTitle.confessionInternalId],
   }),
 }));
+
+export const pendingChannelThreadTitleRelations = relations(
+  pendingChannelThreadTitle,
+  ({ one }) => ({
+    confession: one(confession, {
+      fields: [pendingChannelThreadTitle.confessionInternalId],
+      references: [confession.internalId],
+    }),
+    pendingChannelThread: one(pendingChannelThread, {
+      fields: [pendingChannelThreadTitle.pendingChannelThreadId],
+      references: [pendingChannelThread.id],
+    }),
+    approvedChannelThread: one(approvedChannelThread, {
+      fields: [pendingChannelThreadTitle.confessionInternalId],
+      references: [approvedChannelThread.confessionInternalId],
+    }),
+  }),
+);
 
 export const ephemeralAttachmentRelations = relations(ephemeralAttachment, ({ one }) => ({
   confession: one(confession, {

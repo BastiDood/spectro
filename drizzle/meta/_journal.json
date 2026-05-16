@@ -99,6 +99,20 @@
       "when": 1778128583068,
       "tag": "0013_anonymous-thread-support",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1778919101610,
+      "tag": "0014_thread-reply-support",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1778927018607,
+      "tag": "0015_thread-support-overhaul",
+      "breakpoints": true
     }
   ]
 }

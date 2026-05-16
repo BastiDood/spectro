@@ -1,11 +1,10 @@
 import type { SerializedAttachment } from '$lib/server/confession';
 
-import type { ResendConfessionState } from './query';
-
 export interface SerializedConfessionForResend {
   confessionId: string;
   channelId: string;
   pendingChannelThreadId: string | null;
+  pendingThreadTitle: string | null;
   publishChannelId: string;
   authorId: string;
   content: string;
@@ -22,6 +21,50 @@ export interface SerializedConfessionForResend {
     title: string;
   } | null;
   attachment: SerializedAttachment | null;
+}
+
+interface DurableAttachmentState {
+  id: bigint;
+  filename: string;
+  contentType: string | null;
+  url: string;
+  proxyUrl: string;
+  height: number | null;
+  width: number | null;
+}
+
+interface AttachmentState {
+  id: bigint;
+  durable: DurableAttachmentState | null;
+}
+
+interface ApprovedThreadState {
+  threadId: bigint;
+}
+
+interface PendingThreadState {
+  id: bigint;
+  title: string;
+  parentMessageId: bigint | null;
+  approved: ApprovedThreadState | null;
+}
+
+export interface ResendConfessionState {
+  confessionId: bigint;
+  channelId: bigint;
+  authorId: bigint;
+  content: string;
+  createdAt: Date;
+  approvedAt: Date | null;
+  parentMessageId: bigint | null;
+  channel: {
+    guildId: bigint;
+    label: string;
+    color: string | null;
+    logChannelId: bigint | null;
+  };
+  pendingThread: PendingThreadState | null;
+  attachment: AttachmentState | null;
 }
 
 type ResendConfessionSource = Pick<
@@ -93,12 +136,21 @@ function serializeResendConfession(
   >,
 ): SerializedConfessionForResend {
   const { pendingThread } = confession;
-  const approvedThread = pendingThread?.approved ?? null;
+
+  let pendingChannelThreadId: string | null = null;
+  let pendingThreadTitle: string | null = null;
+  let approvedThread: ApprovedThreadState | null = null;
+  if (pendingThread !== null) {
+    pendingChannelThreadId = pendingThread.id.toString();
+    pendingThreadTitle = pendingThread.title;
+    approvedThread = pendingThread.approved;
+  }
 
   return {
     confessionId: confession.confessionId.toString(),
     channelId: confession.channelId.toString(),
-    pendingChannelThreadId: pendingThread?.id.toString() ?? null,
+    pendingChannelThreadId,
+    pendingThreadTitle,
     publishChannelId: approvedThread?.threadId.toString() ?? confession.channelId.toString(),
     authorId: confession.authorId.toString(),
     content: confession.content,
