@@ -19,6 +19,7 @@ services:
       timeout: 5s
       retries: 10
     restart: always
+
   inngest:
     image: inngest/inngest:v1.19.4
     ports:
@@ -30,6 +31,18 @@ services:
       - '--sdk-url'
       - 'http://host.docker.internal:5173/webhook/inngest' # Vite
     restart: always
+    healthcheck:
+      test:
+        - 'CMD'
+        - 'inngest'
+        - 'alpha'
+        - 'doctor'
+        - 'healthcheck'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   o2:
     image: public.ecr.aws/zinclabs/openobserve:v0.80.3
     environment:
