@@ -10,10 +10,11 @@ Spectro is a Discord bot for anonymous confessions with moderation logging. Buil
 After building features, you must run the following commands to ensure the codebase is consistent and follows the conventions:
 
 ```shell
-# Run auto-fixers for ESLint and Prettier
+# Run auto-fixers for ESLint and Prettier + unit tests
 pnpm lint:eslint --fix
 pnpm lint:svelte
 pnpm fmt:fix
+pnpm test
 ```
 
 ## Code Conventions
