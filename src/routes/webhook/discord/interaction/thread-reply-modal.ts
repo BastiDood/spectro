@@ -63,7 +63,6 @@ class MissingThreadReplyPermissionError extends ThreadReplyModalError {
   }
 
   static throwNew(type: MissingThreadReplyPermissionErrorType): never {
-    // eslint-disable-next-line @typescript-eslint/init-declarations
     let message: string;
     switch (type) {
       case MissingThreadReplyPermissionErrorType.SendMessages:

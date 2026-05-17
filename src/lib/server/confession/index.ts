@@ -29,12 +29,10 @@ export function createConfessionModal({
   threadId,
   parentMessageId,
 }: CreateConfessionModalOptions): InteractionResponseModal {
-  /* eslint-disable @typescript-eslint/init-declarations */
   let title: string;
   let label: string;
   let description: string;
   let placeholder: string;
-  /* eslint-enable @typescript-eslint/init-declarations */
 
   if (parentMessageId === null) {
     title = 'Submit Confession';
@@ -290,7 +288,6 @@ export function createConfessionPayload(
 ) {
   const attachment = deserializeAttachment(confession.attachment);
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let hex: number | undefined;
   if (confession.channel.color !== null) hex = Number.parseInt(confession.channel.color, 2);
 
@@ -360,7 +357,6 @@ export function createLogPayload(
   const threadTitle = confession.thread?.title ?? confession.pendingThreadTitle;
   if (threadTitle !== null) fields.push({ name: 'Thread Title', value: threadTitle, inline: true });
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let image: EmbedImage | undefined;
   if (
     ephemeralAttachment !== null &&
@@ -375,7 +371,6 @@ export function createLogPayload(
   // Regular non-image attachments will be attached literally above the embed.
   // There is no need to duplicate the attachment reference here.
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let color: Color;
   switch (mode.type) {
     case LogPayloadType.Pending:
@@ -391,7 +386,6 @@ export function createLogPayload(
       UnreachableCodeError.throwNew();
   }
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let timestamp: string;
   switch (mode.type) {
     case LogPayloadType.Resent:

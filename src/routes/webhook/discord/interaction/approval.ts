@@ -472,7 +472,6 @@ async function submitVerdict(
             inline: true,
           });
 
-        // eslint-disable-next-line @typescript-eslint/init-declarations
         let embed: Embed;
         let dispatch: ApprovalDispatch | null = null;
         if (isApproved) {
@@ -495,7 +494,6 @@ async function submitVerdict(
           if (result.thread !== null)
             fields.push({ name: 'Thread Title', value: result.thread.title, inline: true });
 
-          // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;
           if (embedAttachment !== null)
             if (embedAttachment.contentType?.startsWith('image/') === true)
@@ -535,7 +533,6 @@ async function submitVerdict(
           if (result.thread !== null)
             fields.push({ name: 'Thread Title', value: result.thread.title, inline: true });
 
-          // eslint-disable-next-line @typescript-eslint/init-declarations
           let image: EmbedImage | undefined;
           if (embedAttachment !== null)
             if (embedAttachment.contentType?.startsWith('image/') === true)
@@ -591,7 +588,6 @@ export async function handleApproval(
   if (typeof id === 'undefined') MalformedCustomIdFormat.throwNew(customId);
   const internalId = BigInt(id);
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let isApproved: boolean;
   switch (key) {
     case 'publish':
@@ -604,7 +600,6 @@ export async function handleApproval(
       MalformedCustomIdFormat.throwNew(key);
   }
 
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let result: SubmitVerdictResult;
   try {
     result = await submitVerdict(

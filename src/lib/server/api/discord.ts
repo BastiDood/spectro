@@ -56,7 +56,6 @@ export class DiscordClient {
       const nonce = await createDiscordNonce(idempotencySeed);
       logger.debug('created discord nonce', { 'idempotency.nonce': nonce });
 
-      // eslint-disable-next-line @typescript-eslint/init-declarations
       let response: Response;
       if (typeof files === 'undefined') {
         response = await fetch(`${DiscordClient.#API_BASE_URL}/channels/${channelId}/messages`, {

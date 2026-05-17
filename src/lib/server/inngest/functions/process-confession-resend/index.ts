@@ -104,7 +104,6 @@ export const processConfessionResend = inngest.createFunction(
       const logResult = await step.run(
         { id: 'log-resent-confession', name: 'Log Resent Confession' },
         async (): Promise<LogFailure | null> => {
-          // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
           try {
             message = await DiscordClient.ENV.createMessage(
@@ -221,7 +220,6 @@ export const processConfessionResend = inngest.createFunction(
       const resendResult = await step.run(
         { id: 'resend-confession', name: 'Resend Confession' },
         async () => {
-          // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
           try {
             message = await DiscordClient.ENV.createMessage(

@@ -24,7 +24,6 @@ function validateAttachmentNamespace(namespace: string) {
 }
 
 export function parseDiscordAttachmentCdnUrl(url: string) {
-  // eslint-disable-next-line @typescript-eslint/init-declarations
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(url);

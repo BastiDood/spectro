@@ -96,11 +96,9 @@ export async function handleModalSubmit(
     });
 
     type ModalComponent = ModalComponents[number];
-    /* eslint-disable @typescript-eslint/init-declarations */
     let contentLabel: ModalComponent;
     let attachmentLabel: ModalComponent;
     let disclaimerDisplay: ModalComponent;
-    /* eslint-enable @typescript-eslint/init-declarations */
 
     let threadTitle: string | null = null;
     switch (state.mode) {
@@ -214,7 +212,6 @@ export async function handleModalSubmit(
         UnreachableCodeError.throwNew();
     }
 
-    // eslint-disable-next-line @typescript-eslint/init-declarations
     let ids: string[];
     switch (state.mode) {
       case ConfessionSubmitMode.Message:

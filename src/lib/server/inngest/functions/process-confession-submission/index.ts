@@ -402,7 +402,6 @@ export const processConfessionSubmission = inngest.createFunction(
             : { type: LogPayloadType.Approved as const };
 
           if (preparedConfession.attachment === null) {
-            // eslint-disable-next-line @typescript-eslint/init-declarations
             let message: Message;
             try {
               message = await DiscordClient.ENV.createMessage(
@@ -486,7 +485,6 @@ export const processConfessionSubmission = inngest.createFunction(
           const response = await fetch(uploadedAttachment.url);
           const file = await downloadDiscordAttachment(response, DISCORD_ATTACHMENT_MAX_BYTES);
 
-          // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
           try {
             message = await DiscordClient.ENV.createMessage(
@@ -687,7 +685,6 @@ export const processConfessionSubmission = inngest.createFunction(
             durableAttachment === null ? null : serializeDurableAttachment(durableAttachment),
           );
 
-          // eslint-disable-next-line @typescript-eslint/init-declarations
           let message: Message;
           try {
             message = await DiscordClient.ENV.createMessage(
