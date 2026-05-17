@@ -55,7 +55,7 @@
     "daisyui": "^5.5.19",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.17.1",
     "globals": "^16.5.0",
