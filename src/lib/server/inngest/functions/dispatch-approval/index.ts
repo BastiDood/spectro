@@ -43,6 +43,10 @@ export const dispatchApproval = inngest.createFunction(
     id: 'discord/interaction.approve',
     name: 'Dispatch Approved Confession',
     triggers: ConfessionApprovalEvent,
+    singleton: {
+      key: 'event.data.internalId',
+      mode: 'skip',
+    },
   },
   async ({ event, step }) =>
     await tracer.asyncSpan('dispatch-approval-function', async span => {

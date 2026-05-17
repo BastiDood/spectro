@@ -18,6 +18,10 @@ export const processChannelLockdown = inngest.createFunction(
     id: 'discord/interaction.process-channel-lockdown',
     name: 'Process Channel Lockdown',
     triggers: ChannelLockdownEvent,
+    singleton: {
+      key: 'event.data.channelId',
+      mode: 'skip',
+    },
   },
   async ({ event, step }) =>
     await tracer.asyncSpan('process-channel-lockdown-function', async span => {
