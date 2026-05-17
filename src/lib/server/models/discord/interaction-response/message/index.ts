@@ -7,5 +7,5 @@ export interface InteractionResponseMessage {
     | InteractionResponseType.DeferredChannelMessageWithSource
     | InteractionResponseType.DeferredUpdateMessage
     | InteractionResponseType.UpdateMessage;
-  data: Partial<CreateMessage>;
+  data?: Partial<CreateMessage>;
 }

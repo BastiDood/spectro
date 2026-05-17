@@ -399,7 +399,7 @@ export const processConfessionSubmission = inngest.createFunction(
                 type: LogPayloadType.Pending as const,
                 internalId: BigInt(preparedConfession.internalId),
               }
-            : { type: LogPayloadType.Approved as const };
+            : { type: LogPayloadType.Published as const };
 
           if (preparedConfession.attachment === null) {
             let message: Message;

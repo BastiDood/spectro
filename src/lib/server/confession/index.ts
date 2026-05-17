@@ -191,8 +191,10 @@ export function createThreadReplyConfessionModal(
 
 export const enum LogPayloadType {
   Pending = 'pending',
-  Approved = 'approved',
+  Published = 'published',
   Resent = 'resent',
+  VerdictApproved = 'verdict-approved',
+  VerdictDeleted = 'verdict-deleted',
 }
 
 export interface PendingLogPayload {
@@ -200,8 +202,8 @@ export interface PendingLogPayload {
   internalId: bigint;
 }
 
-export interface ApprovedLogPayload {
-  type: LogPayloadType.Approved;
+export interface PublishedLogPayload {
+  type: LogPayloadType.Published;
 }
 
 export interface ResentLogPayload {
@@ -209,7 +211,24 @@ export interface ResentLogPayload {
   moderatorId: bigint;
 }
 
-export type LogPayloadMode = PendingLogPayload | ApprovedLogPayload | ResentLogPayload;
+export interface VerdictApprovedLogPayload {
+  type: LogPayloadType.VerdictApproved;
+  moderatorId: bigint;
+  timestamp: Date;
+}
+
+export interface VerdictDeletedLogPayload {
+  type: LogPayloadType.VerdictDeleted;
+  moderatorId: bigint;
+  timestamp: Date;
+}
+
+export type LogPayloadMode =
+  | PendingLogPayload
+  | PublishedLogPayload
+  | ResentLogPayload
+  | VerdictApprovedLogPayload
+  | VerdictDeletedLogPayload;
 
 export const enum ConfessionChannel {
   Confession = 'confession channel',
@@ -339,8 +358,19 @@ export function createLogPayload(
     { name: 'Authored by', value: `||<@${confession.authorId}>||`, inline: true },
   ];
 
-  if (mode.type === LogPayloadType.Resent)
-    fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
+  switch (mode.type) {
+    case LogPayloadType.Resent:
+      fields.push({ name: 'Resent by', value: `<@${mode.moderatorId}>`, inline: true });
+      break;
+    case LogPayloadType.VerdictApproved:
+      fields.push({ name: 'Approved by', value: `<@${mode.moderatorId}>`, inline: true });
+      break;
+    case LogPayloadType.VerdictDeleted:
+      fields.push({ name: 'Deleted by', value: `<@${mode.moderatorId}>`, inline: true });
+      break;
+    default:
+      break;
+  }
 
   if (confession.thread !== null)
     fields.push({ name: 'Parent Channel', value: `<#${confession.channelId}>`, inline: true });
@@ -376,11 +406,15 @@ export function createLogPayload(
     case LogPayloadType.Pending:
       color = Color.Pending;
       break;
-    case LogPayloadType.Approved:
-      color = Color.Success;
-      break;
     case LogPayloadType.Resent:
       color = Color.Replay;
+      break;
+    case LogPayloadType.Published:
+    case LogPayloadType.VerdictApproved:
+      color = Color.Success;
+      break;
+    case LogPayloadType.VerdictDeleted:
+      color = Color.Failure;
       break;
     default:
       UnreachableCodeError.throwNew();
@@ -391,7 +425,11 @@ export function createLogPayload(
     case LogPayloadType.Resent:
       timestamp = new Date().toISOString();
       break;
-    case LogPayloadType.Approved:
+    case LogPayloadType.VerdictApproved:
+    case LogPayloadType.VerdictDeleted:
+      timestamp = mode.timestamp.toISOString();
+      break;
+    case LogPayloadType.Published:
     case LogPayloadType.Pending:
       timestamp = confession.createdAt;
       break;
@@ -416,30 +454,38 @@ export function createLogPayload(
     ],
   };
 
-  // Add approval buttons for pending mode
-  if (mode.type === LogPayloadType.Pending) {
-    const customId = mode.internalId.toString();
-    params.components = [
-      {
-        type: MessageComponentType.ActionRow,
-        components: [
-          {
-            type: MessageComponentType.Button,
-            style: MessageComponentButtonStyle.Success,
-            label: 'Publish',
-            emoji: { name: '✒️' },
-            custom_id: `publish:${customId}`,
-          },
-          {
-            type: MessageComponentType.Button,
-            style: MessageComponentButtonStyle.Danger,
-            label: 'Delete',
-            emoji: { name: '🗑️' },
-            custom_id: `delete:${customId}`,
-          },
-        ],
-      },
-    ];
+  switch (mode.type) {
+    case LogPayloadType.Pending: {
+      const customId = mode.internalId.toString();
+      params.components = [
+        {
+          type: MessageComponentType.ActionRow,
+          components: [
+            {
+              type: MessageComponentType.Button,
+              style: MessageComponentButtonStyle.Success,
+              label: 'Publish',
+              emoji: { name: '✒️' },
+              custom_id: `publish:${customId}`,
+            },
+            {
+              type: MessageComponentType.Button,
+              style: MessageComponentButtonStyle.Danger,
+              label: 'Delete',
+              emoji: { name: '🗑️' },
+              custom_id: `delete:${customId}`,
+            },
+          ],
+        },
+      ];
+      break;
+    }
+    case LogPayloadType.VerdictApproved:
+    case LogPayloadType.VerdictDeleted:
+      params.components = [];
+      break;
+    default:
+      break;
   }
 
   return params;

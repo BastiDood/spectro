@@ -26,7 +26,7 @@ The active flow is:
 8. When durable metadata is found, it is persisted in `durable_attachment`.
 9. The durable row points back to its source row through `durable_attachment.ephemeral_attachment_id`.
 10. If the confession is already approved, `process-confession-submission` posts the public confession using the durable attachment URL.
-11. If approval is required, the approval interaction later reads the durable attachment synchronously, queues `discord/confession.approve`, and returns an `UpdateMessage` response so Discord updates the moderator log message.
+11. If approval is required, the approval interaction queues `discord/confession.verdict` and returns a `DeferredUpdateMessage` response; `process-confession-verdict` later reads durable attachment state, applies the verdict, publishes approved confessions, and updates the moderator log message.
 12. Resend also reads from the durable attachment only; it does not redownload or reupload the file.
 
 The key design point is that the moderator log message is the persistence anchor for the file artifact.
@@ -273,9 +273,9 @@ Public confession messages remain simpler:
 
 1. The confession still goes through `process-confession-submission`.
 2. The durable upload still happens before the moderator review message exists.
-3. The approval interaction later reads `ephemeral_attachment -> durable_attachment`.
-4. The approval interaction updates the moderator log message from the durable attachment data and rejects approval if no durable row is linked.
-5. The later public dispatch triggered by `discord/confession.approve` also reads the durable attachment.
+3. The approval interaction only queues `discord/confession.verdict` and defers the message update.
+4. `process-confession-verdict` reads `ephemeral_attachment -> durable_attachment`, applies the moderator verdict, and rejects approval if no durable row is linked.
+5. Approved public dispatch uses the durable attachment data already loaded by `process-confession-verdict`.
 
 Approval does not redownload the original ephemeral attachment. That work is already complete by the time approval is possible.
 
@@ -335,9 +335,9 @@ For resend:
 
 For approval:
 
-- the approval interaction synchronously reads durable attachment state, queues `discord/confession.approve`, and returns an `UpdateMessage` response that updates the moderator log message
-- event: `discord/confession.approve`
-- function: `dispatch-approval`
+- the approval interaction queues `discord/confession.verdict` and returns a `DeferredUpdateMessage` response; `process-confession-verdict` reads durable attachment state, applies the verdict, and updates the moderator log message
+- event: `discord/confession.verdict`
+- function: `process-confession-verdict`
 
 The transport layer is intentionally thin for submit and resend. Approval remains a synchronous exception path with an async post-dispatch worker.
 
@@ -430,7 +430,7 @@ If you touch attachment-related code, preserve the following mental model:
 - `process-confession-submission` is the only place where ephemeral download and durable upgrade should happen
 - post-log rendering should read durable attachment data only
 - resend and approval are not reupload paths
-- approval is a split flow: synchronous durable-attachment lookup and moderator-log update in the interaction handler, followed by async public dispatch in `dispatch-approval`
+- approval is a deferred flow: the interaction handler queues the verdict, then `process-confession-verdict` reads durable attachment state, applies the verdict, optionally publishes, and updates the moderator log message
 
 When evaluating a proposed change, ask:
 

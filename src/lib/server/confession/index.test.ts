@@ -100,7 +100,7 @@ describe('createLogPayload', () => {
           title: 'A thread title',
         },
       },
-      { type: LogPayloadType.Approved },
+      { type: LogPayloadType.Published },
     );
 
     expect(payload.embeds?.[0]?.fields).toEqual([
@@ -210,7 +210,7 @@ describe('createLogPayload', () => {
   });
 
   it('omits thread-only fields for channel logs', () => {
-    const payload = createLogPayload(logConfession, { type: LogPayloadType.Approved });
+    const payload = createLogPayload(logConfession, { type: LogPayloadType.Published });
 
     expect(payload.embeds?.[0]?.fields).toEqual([
       {
@@ -221,6 +221,81 @@ describe('createLogPayload', () => {
       {
         name: 'Thread Channel',
         value: '<#100000000000000002>',
+        inline: true,
+      },
+    ]);
+  });
+
+  it('orders verdict channel log fields', () => {
+    const payload = createLogPayload(logConfession, {
+      type: LogPayloadType.VerdictDeleted,
+      moderatorId: 100000000000000006n,
+      timestamp: new Date('2026-05-15T01:00:00.000Z'),
+    });
+
+    expect(payload.components).toEqual([]);
+    expect(payload.embeds?.[0]?.timestamp).toBe('2026-05-15T01:00:00.000Z');
+    expect(payload.embeds?.[0]?.fields).toEqual([
+      {
+        name: 'Authored by',
+        value: '||<@100000000000000003>||',
+        inline: true,
+      },
+      {
+        name: 'Deleted by',
+        value: '<@100000000000000006>',
+        inline: true,
+      },
+      {
+        name: 'Thread Channel',
+        value: '<#100000000000000002>',
+        inline: true,
+      },
+    ]);
+  });
+
+  it('orders verdict thread log fields with the resolved thread channel', () => {
+    const payload = createLogPayload(
+      {
+        ...logConfession,
+        publishChannelId: '100000000000000008',
+        thread: {
+          id: '100000000000000008',
+          title: 'A thread title',
+        },
+      },
+      {
+        type: LogPayloadType.VerdictApproved,
+        moderatorId: 100000000000000006n,
+        timestamp: new Date('2026-05-15T01:00:00.000Z'),
+      },
+    );
+
+    expect(payload.components).toEqual([]);
+    expect(payload.embeds?.[0]?.fields).toEqual([
+      {
+        name: 'Authored by',
+        value: '||<@100000000000000003>||',
+        inline: true,
+      },
+      {
+        name: 'Approved by',
+        value: '<@100000000000000006>',
+        inline: true,
+      },
+      {
+        name: 'Parent Channel',
+        value: '<#100000000000000001>',
+        inline: true,
+      },
+      {
+        name: 'Thread Channel',
+        value: '<#100000000000000008>',
+        inline: true,
+      },
+      {
+        name: 'Thread Title',
+        value: 'A thread title',
         inline: true,
       },
     ]);
