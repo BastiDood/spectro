@@ -106,7 +106,7 @@ async function handleInteraction(
             case 'setup':
               assert(typeof interaction.data.resolved?.channels !== 'undefined');
               assert(typeof interaction.guild_id !== 'undefined');
-              assert(typeof interaction.channel_id !== 'undefined');
+              assert(typeof interaction.channel !== 'undefined');
               assert(typeof interaction.member?.user?.id !== 'undefined');
               assert(typeof interaction.member?.permissions !== 'undefined');
               assert(hasAllFlags(interaction.member.permissions, MANAGE_CHANNELS));
@@ -117,7 +117,8 @@ async function handleInteraction(
                 interaction.id,
                 interaction.data.resolved.channels,
                 interaction.guild_id,
-                interaction.channel_id,
+                interaction.channel.id,
+                resolveConfessionChannelId(interaction.channel),
                 interaction.member.user.id,
                 interaction.data.options ?? [],
               );

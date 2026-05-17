@@ -26,6 +26,7 @@ export async function handleSetup(
   resolvedChannels: Record<string, Pick<Channel, 'type'>>,
   guildId: Snowflake,
   channelId: Snowflake,
+  defaultTargetChannelId: Snowflake,
   moderatorId: Snowflake,
   options: InteractionApplicationCommandChatInputOption[],
 ): Promise<InteractionResponse> {
@@ -77,7 +78,7 @@ export async function handleSetup(
       }
 
     assert(logChannelId !== null);
-    const effectiveTargetChannelId = targetChannelId ?? channelId;
+    const effectiveTargetChannelId = targetChannelId ?? defaultTargetChannelId;
 
     const logChannel = resolvedChannels[logChannelId];
     assert(typeof logChannel !== 'undefined');
