@@ -11,8 +11,6 @@ minimumReleaseAgeStrict: true
 patchedDependencies:
   '@inngest/ai': patches/@inngest__ai.patch
 
-strictDepBuilds: true
-
 trustPolicy: no-downgrade
 
 trustPolicyExclude:
