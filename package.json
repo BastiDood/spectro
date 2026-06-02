@@ -19,7 +19,7 @@
     "fmt:fix": "prettier . --experimental-cli --write --cache-location .prettiercache",
     "lint": "pnpm --workspace-root run --parallel /lint:/",
     "lint:eslint": "eslint --cache --concurrency auto",
-    "lint:svelte": "svelte-check",
+    "lint:svelte": "svelte-check --fail-on-warnings",
     "test": "vitest"
   },
   "dependencies": {
