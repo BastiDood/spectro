@@ -8,8 +8,9 @@ engineStrict: true
 
 minimumReleaseAgeStrict: true
 
-patchedDependencies:
-  '@inngest/ai': patches/@inngest__ai.patch
+overrides:
+  '@inngest/ai@0.1.7>@types/node': '-'
+  '@inngest/ai@0.1.7>typescript': '-'
 
 trustPolicy: no-downgrade
 
