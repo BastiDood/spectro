@@ -21,5 +21,5 @@ registerOTel({
     new BatchSpanProcessor(new OTLPTraceExporter()),
     new InngestSpanProcessor(inngest),
   ],
-  logRecordProcessors: [new BatchLogRecordProcessor(new OTLPLogExporter())],
+  logRecordProcessors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],
 });
