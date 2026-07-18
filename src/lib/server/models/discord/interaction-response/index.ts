@@ -3,6 +3,4 @@ import type { InteractionResponseModal } from './modal';
 import type { InteractionResponsePing } from './ping';
 
 export type InteractionResponse =
-  | InteractionResponsePing
-  | InteractionResponseMessage
-  | InteractionResponseModal;
+  InteractionResponsePing | InteractionResponseMessage | InteractionResponseModal;

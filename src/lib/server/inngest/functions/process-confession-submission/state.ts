@@ -93,8 +93,7 @@ export interface LoggedConfessionWithAttachmentResult {
 }
 
 export type LoggedConfessionResult =
-  | LoggedConfessionWithAttachmentResult
-  | LoggedConfessionWithoutAttachmentResult;
+  LoggedConfessionWithAttachmentResult | LoggedConfessionWithoutAttachmentResult;
 
 export type LogConfessionResult = FailedLogConfessionResult | LoggedConfessionResult;
 

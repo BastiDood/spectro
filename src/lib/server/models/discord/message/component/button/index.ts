@@ -4,9 +4,7 @@ import type { CreateButtonPremium, MessageComponentButtonPremium } from './premi
 
 /** Outbound type for any button variant. */
 export type MessageComponentButton =
-  | MessageComponentButtonNormal
-  | MessageComponentButtonLink
-  | MessageComponentButtonPremium;
+  MessageComponentButtonNormal | MessageComponentButtonLink | MessageComponentButtonPremium;
 
 /** Alias type for creating any button type (outbound). */
 export type CreateButton = CreateButtonNormal | CreateButtonLink | CreateButtonPremium;

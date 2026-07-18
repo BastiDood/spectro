@@ -38,8 +38,7 @@ export type LabelChildComponent = InferOutput<typeof LabelChildComponent>;
  * Used for creating modal components.
  */
 export type CreateLabelChildComponent =
-  | CreateMessageComponentTextInput
-  | CreateMessageComponentFileUpload;
+  CreateMessageComponentTextInput | CreateMessageComponentFileUpload;
 
 /**
  * Inbound schema for Label component from modal submissions.
