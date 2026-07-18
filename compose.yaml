@@ -2,7 +2,7 @@ name: spectro
 
 services:
   db:
-    image: postgres:18.4-alpine3.23
+    image: postgres:18.4-alpine3.24
     environment:
       # Development-only credentials!
       POSTGRES_PASSWORD: password
@@ -21,7 +21,7 @@ services:
     restart: always
 
   inngest:
-    image: inngest/inngest:v1.24.0
+    image: inngest/inngest:v1.37.0
     ports:
       - 8288:8288
     command:
@@ -44,7 +44,7 @@ services:
       start_period: 40s
 
   o2:
-    image: public.ecr.aws/zinclabs/openobserve:v0.90.3
+    image: public.ecr.aws/zinclabs/openobserve:v0.91.2
     environment:
       ZO_DATA_DIR: /data
       # Development-only credentials!
