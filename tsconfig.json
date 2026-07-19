@@ -11,6 +11,5 @@
     "skipLibCheck": true,
     "moduleDetection": "force",
     "resolveJsonModule": true,
-    "plugins": [{ "name": "typescript-svelte-plugin" }],
   },
 }
