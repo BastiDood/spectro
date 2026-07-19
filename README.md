@@ -83,14 +83,17 @@ curl --request 'PUT' --header 'Content-Type: application/json' --header "Authori
 
 Spectro requires some environment variables to run correctly. If the following table is outdated, a canonical list of variables can be found in the [`src/lib/server/env/*.ts`](./src/lib/server/env/) files for app-specific server config. Inngest reads its runtime auth values directly from the deployment environment.
 
-| **Name**                  | **Description**                                                                                                     | **Default** |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `DISCORD_PUBLIC_KEY`      | The public key of the Discord application that will be used for the verification of incoming webhooks.              |             |
-| `DISCORD_BOT_TOKEN`       | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows. |             |
-| `INNGEST_EVENT_KEY`       | The event key used to send events to Inngest.                                                                       |             |
-| `INNGEST_SIGNING_KEY`     | The signing key used to verify incoming webhook requests from Inngest.                                              |             |
-| `POSTGRES_DATABASE_URL`   | The URL connection string for the PostgreSQL production database.                                                   |             |
-| `SPECTRO_DATABASE_DRIVER` | The database driver to use. Accepts `pg` for the standard driver or `neon` for the Neon serverless driver.          | `pg`        |
+| **Name**                  | **Description**                                                                                                                      | **Default** |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| `DISCORD_PUBLIC_KEY`      | The public key of the Discord application that will be used for the verification of incoming webhooks.                               |             |
+| `DISCORD_BOT_TOKEN`       | The secret key of the Discord application that will be used for the verification of OAuth2 client credential flows.                  |             |
+| `INNGEST_EVENT_KEY`       | The event key used to send events to Inngest.                                                                                        |             |
+| `INNGEST_SIGNING_KEY`     | The signing key used to verify incoming webhook requests from Inngest.                                                               |             |
+| `POSTGRES_DATABASE_URL`   | The URL connection string for the PostgreSQL production database.                                                                    |             |
+| `SPECTRO_DATABASE_DRIVER` | The database driver included at build time. Required; accepts `pg` for the standard driver or `neon` for the Neon serverless driver. |             |
+
+> [!WARNING]
+> `SPECTRO_DATABASE_DRIVER` is compiled into each build. Changing it in the runtime environment does not change the selected driver. Rebuild the application with the new value instead.
 
 The following variables are optional in development, but _highly_ recommended in production for [OpenTelemetry](#opentelemetry-instrumentation) integration:
 
@@ -169,7 +172,7 @@ Spectro supports [OpenTelemetry](https://opentelemetry.io/) for distributed trac
 
 - **Trace exporters**: Traces are exported through a manually configured OTLP HTTP/protobuf span processor and mirrored to Inngest extended traces.
 - **Logs**: Structured logs are exported through the OTLP HTTP log exporter.
-- **Instrumentations**: PostgreSQL auto-instrumentation is enabled when `SPECTRO_DATABASE_DRIVER=pg`, and request-level `vercel.*` attributes still come from `@vercel/otel`.
+- **Instrumentations**: PostgreSQL auto-instrumentation is included in builds created with `SPECTRO_DATABASE_DRIVER=pg`, and request-level `vercel.*` attributes still come from `@vercel/otel`.
 
 For local development, [OpenObserve](https://openobserve.ai/) is included in the Docker Compose setup (port `5080`) as a web UI for visualizing traces and logs.
 

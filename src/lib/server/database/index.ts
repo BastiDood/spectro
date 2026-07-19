@@ -1,10 +1,6 @@
 import process from 'node:process';
 
 import { aliasedTable, and, eq, sql } from 'drizzle-orm';
-import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
-import { drizzle as pgDrizzle } from 'drizzle-orm/node-postgres';
-import { Pool as NeonPool } from '@neondatabase/serverless';
-import { Pool as PgPool } from 'pg';
 
 import { AssertionError, assertSingle, UnreachableCodeError } from '$lib/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
@@ -21,38 +17,45 @@ const SERVICE_NAME = 'database';
 const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
-function init() {
-  switch (SPECTRO_DATABASE_DRIVER) {
-    case 'pg': {
-      const pool = new PgPool({ connectionString: POSTGRES_DATABASE_URL });
-      process.once(
-        'sveltekit:shutdown',
-        async () =>
-          await tracer.asyncSpan('shutdown-pg-database', async () => {
-            await pool.end();
-            logger.debug('database shutdown');
-          }),
-      );
-      return pgDrizzle(pool, { schema });
-    }
-    case 'neon': {
-      const pool = new NeonPool({ connectionString: POSTGRES_DATABASE_URL });
-      process.once(
-        'sveltekit:shutdown',
-        async () =>
-          await tracer.asyncSpan('shutdown-neon-database', async () => {
-            await pool.end();
-            logger.debug('database shutdown');
-          }),
-      );
-      return neonDrizzle(pool, { schema });
-    }
-    default:
-      UnreachableCodeError.throwNew();
+async function init() {
+  if (SPECTRO_DATABASE_DRIVER === 'pg') {
+    const [{ drizzle }, { Pool }] = await Promise.all([
+      import('drizzle-orm/node-postgres'),
+      import('pg'),
+    ]);
+    const pool = new Pool({ connectionString: POSTGRES_DATABASE_URL });
+    process.once(
+      'sveltekit:shutdown',
+      async () =>
+        await tracer.asyncSpan('shutdown-pg-database', async () => {
+          await pool.end();
+          logger.debug('database shutdown');
+        }),
+    );
+    return drizzle(pool, { schema });
   }
+
+  if (SPECTRO_DATABASE_DRIVER === 'neon') {
+    const [{ drizzle }, { Pool }] = await Promise.all([
+      import('drizzle-orm/neon-serverless'),
+      import('@neondatabase/serverless'),
+    ]);
+    const pool = new Pool({ connectionString: POSTGRES_DATABASE_URL });
+    process.once(
+      'sveltekit:shutdown',
+      async () =>
+        await tracer.asyncSpan('shutdown-neon-database', async () => {
+          await pool.end();
+          logger.debug('database shutdown');
+        }),
+    );
+    return drizzle(pool, { schema });
+  }
+
+  return UnreachableCodeError.throwNew();
 }
 
-export const db = init();
+export const db = await init();
 export type Database = typeof db;
 export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type Interface = Database | Transaction;
