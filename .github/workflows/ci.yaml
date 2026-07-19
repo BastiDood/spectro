@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PUBLIC_ORIGIN: https://example.com
-      SPECTRO_DATABASE_DRIVER: pg
+      SPECTRO_DATABASE_DRIVER: neon
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -34,9 +34,5 @@ jobs:
         run: pnpm lint
       - name: Run Unit Tests
         run: pnpm test
-      - name: Build Website with PostgreSQL
-        run: pnpm build
-      - name: Build Website with Neon
-        env:
-          SPECTRO_DATABASE_DRIVER: neon
+      - name: Build Website
         run: pnpm build
