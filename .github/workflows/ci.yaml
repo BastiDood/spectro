@@ -15,11 +15,11 @@ jobs:
       SPECTRO_DATABASE_DRIVER: neon
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Install pnpm
         uses: pnpm/action-setup@v6
       - name: Install Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
