@@ -1,28 +1,14 @@
 import {
   type AnyValueMap,
   type Logger as OTelLogger,
+  type LogRecord,
   logs,
   SeverityNumber,
 } from '@opentelemetry/api-logs';
-import { context, type Exception, type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 
-/**
- * Traverses the full chain of error causes until a certain depth.
- * Sets the span status to `ERROR` at the end of the scope.
- */
-function recordExceptionChain(span: Span, exception: Exception, depth = 10) {
-  let error = exception;
-  for (let i = 0; i < depth; ++i) {
-    span.recordException(error);
-    if (
-      error instanceof Error &&
-      typeof error.cause !== 'undefined' &&
-      error.cause instanceof Error
-    )
-      error = error.cause;
-    else break; // stop the error chain
-  }
-}
+import { version } from '$app/environment';
+
+import { serializeErrorToException } from './exception';
 
 export class Logger {
   #logger: OTelLogger;
@@ -32,56 +18,89 @@ export class Logger {
   }
 
   static byName(name: string) {
-    return new Logger(logs.getLogger(name));
+    return new Logger(logs.getLogger(name, version));
   }
 
-  trace(body: string, attributes?: AnyValueMap) {
-    this.#logger.emit({
-      severityNumber: SeverityNumber.TRACE,
+  static #createLogRecord(
+    severityNumber: SeverityNumber,
+    body: string,
+    eventName: string,
+    attributes?: AnyValueMap | undefined,
+    error?: Error | undefined,
+  ) {
+    const logRecord: LogRecord = {
+      severityNumber,
       body,
+      eventName,
       attributes,
-    });
+    };
+    if (typeof error !== 'undefined') logRecord.exception = serializeErrorToException(error);
+    return logRecord;
   }
 
-  debug(body: string, attributes?: AnyValueMap) {
-    this.#logger.emit({
-      severityNumber: SeverityNumber.DEBUG,
-      body,
-      attributes,
-    });
+  trace(
+    body: string,
+    eventName: string,
+    attributes?: AnyValueMap | undefined,
+    error?: Error | undefined,
+  ) {
+    this.#logger.emit(
+      Logger.#createLogRecord(SeverityNumber.TRACE, body, eventName, attributes, error),
+    );
   }
 
-  info(body: string, attributes?: AnyValueMap) {
-    this.#logger.emit({
-      severityNumber: SeverityNumber.INFO,
-      body,
-      attributes,
-    });
+  debug(
+    body: string,
+    eventName: string,
+    attributes?: AnyValueMap | undefined,
+    error?: Error | undefined,
+  ) {
+    this.#logger.emit(
+      Logger.#createLogRecord(SeverityNumber.DEBUG, body, eventName, attributes, error),
+    );
   }
 
-  warn(body: string, attributes?: AnyValueMap) {
-    this.#logger.emit({
-      severityNumber: SeverityNumber.WARN,
-      body,
-      attributes,
-    });
+  info(
+    body: string,
+    eventName: string,
+    attributes?: AnyValueMap | undefined,
+    error?: Error | undefined,
+  ) {
+    this.#logger.emit(
+      Logger.#createLogRecord(SeverityNumber.INFO, body, eventName, attributes, error),
+    );
   }
 
-  /** Logs an error with an exception chain. */
-  error(body: string, error?: Exception, attributes?: AnyValueMap) {
-    const span = trace.getSpan(context.active());
-    if (typeof span !== 'undefined' && typeof error !== 'undefined')
-      recordExceptionChain(span, error);
-    this.#logger.emit({ severityNumber: SeverityNumber.ERROR, body, attributes });
+  warn(
+    body: string,
+    eventName: string,
+    attributes?: AnyValueMap | undefined,
+    error?: Error | undefined,
+  ) {
+    this.#logger.emit(
+      Logger.#createLogRecord(SeverityNumber.WARN, body, eventName, attributes, error),
+    );
   }
 
-  /** Same semantics as {@link error}, but sets the span status to {@link SpanStatusCode.ERROR}. */
-  fatal(body: string, error?: Exception, attributes?: AnyValueMap) {
-    const span = trace.getSpan(context.active());
-    if (typeof span !== 'undefined') {
-      if (typeof error !== 'undefined') recordExceptionChain(span, error);
-      span.setStatus({ code: SpanStatusCode.ERROR });
-    }
-    this.#logger.emit({ severityNumber: SeverityNumber.FATAL, body, attributes });
+  error(
+    body: string,
+    eventName: string,
+    attributes?: AnyValueMap | undefined,
+    error?: Error | undefined,
+  ) {
+    this.#logger.emit(
+      Logger.#createLogRecord(SeverityNumber.ERROR, body, eventName, attributes, error),
+    );
+  }
+
+  fatal(
+    body: string,
+    eventName: string,
+    attributes?: AnyValueMap | undefined,
+    error?: Error | undefined,
+  ) {
+    this.#logger.emit(
+      Logger.#createLogRecord(SeverityNumber.FATAL, body, eventName, attributes, error),
+    );
   }
 }

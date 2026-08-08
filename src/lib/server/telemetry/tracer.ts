@@ -1,10 +1,15 @@
-import { type Span, type Tracer as OTelTracer, trace } from '@opentelemetry/api';
+import { ATTR_ERROR_TYPE } from '@opentelemetry/semantic-conventions';
+import {
+  type Span,
+  type SpanStatus,
+  SpanStatusCode,
+  type Tracer as OTelTracer,
+  trace,
+} from '@opentelemetry/api';
 
-import { Logger } from './logger';
+import { version } from '$app/environment';
 
 export class Tracer {
-  static #LOGGER = Logger.byName('tracer');
-
   #tracer: OTelTracer;
 
   constructor(tracer: OTelTracer) {
@@ -12,15 +17,26 @@ export class Tracer {
   }
 
   static byName(name: string) {
-    return new Tracer(trace.getTracer(name));
+    return new Tracer(trace.getTracer(name, version));
+  }
+
+  static #recordErrorSpan(span: Span, error: unknown) {
+    const spanStatus: SpanStatus = { code: SpanStatusCode.ERROR };
+    if (Error.isError(error)) {
+      span.setAttribute(ATTR_ERROR_TYPE, error.name);
+      spanStatus.message = error.message;
+    }
+    span.setStatus(spanStatus);
   }
 
   span<T>(name: string, fn: (span: Span) => T) {
     return this.#tracer.startActiveSpan(name, span => {
       try {
-        return fn(span);
+        const result = fn(span);
+        span.setStatus({ code: SpanStatusCode.OK });
+        return result;
       } catch (error) {
-        if (error instanceof Error) Tracer.#LOGGER.fatal('unhandled error', error);
+        Tracer.#recordErrorSpan(span, error);
         throw error;
       } finally {
         span.end();
@@ -31,9 +47,11 @@ export class Tracer {
   async asyncSpan<T>(name: string, fn: (span: Span) => Promise<T>) {
     return await this.#tracer.startActiveSpan(name, async span => {
       try {
-        return await fn(span);
+        const result = await fn(span);
+        span.setStatus({ code: SpanStatusCode.OK });
+        return result;
       } catch (error) {
-        if (error instanceof Error) Tracer.#LOGGER.fatal('unhandled error', error);
+        Tracer.#recordErrorSpan(span, error);
         throw error;
       } finally {
         span.end();
