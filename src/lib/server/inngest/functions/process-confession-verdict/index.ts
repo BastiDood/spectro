@@ -26,10 +26,11 @@ import {
   type ApprovedConfession,
   ConfessionVerdictError,
   DisabledChannelConfessError,
-  FatalConfessionVerdictStateError,
   MissingDurableAttachmentApprovalError,
+  MissingVerdictDispatchConfessionError,
   serializeDeletedLogConfession,
   serializeLoadedApprovedConfession,
+  UnavailableApprovedThreadDestinationError,
 } from './state';
 import { ConfessionVerdict, ConfessionVerdictEvent } from './schema';
 import { loadApprovedConfession, loadVerdictConfession } from './query';
@@ -59,10 +60,10 @@ async function submitConfessionVerdict(
   try {
     return await tracer.asyncSpan('submit-verdict', async span => {
       span.setAttributes({
-        timestamp: timestamp.toISOString(),
-        'confession.verdict': verdict,
-        'confession.internal.id': internalId.toString(),
-        'moderator.id': moderatorId,
+        'spectro.confession.verdict_at': timestamp.toISOString(),
+        'spectro.confession.verdict': verdict,
+        'spectro.confession.internal.id': internalId.toString(),
+        'spectro.moderator.id': moderatorId,
       });
 
       return await db.transaction(
@@ -73,9 +74,13 @@ async function submitConfessionVerdict(
             MissingDurableAttachmentApprovalError.throwNew();
 
           if (confession.missingAttachmentId !== null)
-            logger.warn('durable attachment missing for rejected confession', {
-              'attachment.id': confession.missingAttachmentId.toString(),
-            });
+            logger.warn(
+              'Durable attachment is missing for rejected confession',
+              'spectro.inngest.confession_verdict.durable_attachment_missing',
+              {
+                'spectro.attachment.id': confession.missingAttachmentId.toString(),
+              },
+            );
 
           if (confession.disabledAt !== null && confession.disabledAt <= timestamp)
             DisabledChannelConfessError.throwNew(confession.disabledAt);
@@ -90,8 +95,13 @@ async function submitConfessionVerdict(
                 .set({ approvedAt: timestamp })
                 .where(eq(schema.confession.internalId, internalId));
               strictEqual(rowCount, 1);
-              logger.info('confession approved', {
-                'confession.id': confession.confessionId.toString(),
+              span.setAttributes({
+                'spectro.confession.id': confession.confessionId.toString(),
+                'spectro.confession.verdict_applied': true,
+                'spectro.database.affected_row_count': rowCount,
+              });
+              logger.info('Confession approved', 'spectro.inngest.confession_verdict.approved', {
+                'spectro.confession.id': confession.confessionId.toString(),
               });
               return null;
             }
@@ -101,8 +111,13 @@ async function submitConfessionVerdict(
                 .delete(schema.confession)
                 .where(eq(schema.confession.internalId, internalId));
               strictEqual(rowCount, 1);
-              logger.info('confession rejected', {
-                'confession.id': confession.confessionId.toString(),
+              span.setAttributes({
+                'spectro.confession.id': confession.confessionId.toString(),
+                'spectro.confession.verdict_applied': true,
+                'spectro.database.affected_row_count': rowCount,
+              });
+              logger.info('Confession rejected', 'spectro.inngest.confession_verdict.rejected', {
+                'spectro.confession.id': confession.confessionId.toString(),
               });
               return deleted;
             }
@@ -114,7 +129,15 @@ async function submitConfessionVerdict(
       );
     });
   } catch (error) {
-    if (error instanceof ConfessionVerdictError) return error.message;
+    if (error instanceof ConfessionVerdictError) {
+      logger.warn(
+        'Confession verdict failure returned to the moderator',
+        'spectro.inngest.confession_verdict.failure_recovered',
+        void 0,
+        error,
+      );
+      return error.message;
+    }
     throw error;
   }
 }
@@ -132,13 +155,13 @@ export const processConfessionVerdict = inngest.createFunction(
   async ({ event, step }) =>
     await tracer.asyncSpan('process-confession-verdict-function', async span => {
       span.setAttributes({
-        'inngest.event.id': event.id,
-        'inngest.event.name': event.name,
-        'inngest.event.ts': event.ts,
-        'inngest.event.data.internalId': event.data.internalId,
-        'inngest.event.data.applicationId': event.data.applicationId,
-        'inngest.event.data.interactionId': event.data.interactionId,
-        'confession.verdict': event.data.verdict,
+        'spectro.inngest.event.id': event.id,
+        'spectro.inngest.event.name': event.name,
+        'spectro.inngest.event.timestamp': event.ts,
+        'spectro.inngest.event.data.internal_id': event.data.internalId,
+        'spectro.inngest.event.data.application_id': event.data.applicationId,
+        'spectro.inngest.event.data.interaction_id': event.data.interactionId,
+        'spectro.confession.verdict': event.data.verdict,
       });
 
       const verdictResult = await step.run(
@@ -157,7 +180,7 @@ export const processConfessionVerdict = inngest.createFunction(
           { id: 'send-verdict-failure-follow-up', name: 'Send Verdict Failure Follow-up' },
           async () => {
             try {
-              const message = await DiscordClient.createFollowupMessage(
+              await DiscordClient.createFollowupMessage(
                 event.data.applicationId,
                 event.data.interactionToken,
                 {
@@ -165,11 +188,6 @@ export const processConfessionVerdict = inngest.createFunction(
                   flags: MessageFlags.Ephemeral,
                 },
               );
-              logger.info('verdict failure follow-up sent', {
-                'discord.message.id': message.id,
-                'discord.channel.id': message.channel_id,
-                'discord.message.timestamp': message.timestamp,
-              });
             } catch (cause) {
               if (cause instanceof DiscordError)
                 switch (cause.code) {
@@ -179,10 +197,14 @@ export const processConfessionVerdict = inngest.createFunction(
                       'discord rejected verdict failure follow-up',
                       { cause },
                     );
-                    logger.error('discord rejected verdict failure follow-up', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected verdict failure follow-up',
+                      'spectro.inngest.confession_verdict.failure_followup_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -222,10 +244,14 @@ export const processConfessionVerdict = inngest.createFunction(
                       'discord rejected rejection log message edit',
                       { cause },
                     );
-                    logger.error('discord rejected rejection log message edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected rejection log message edit',
+                      'spectro.inngest.confession_verdict.log_message_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -243,15 +269,7 @@ export const processConfessionVerdict = inngest.createFunction(
         async () => {
           const loaded = await loadApprovedConfession(db, BigInt(event.data.internalId));
           if (typeof loaded === 'undefined')
-            FatalConfessionVerdictStateError.throwNew('confession not found for dispatch');
-
-          logger.debug('fetched confession', {
-            'confession.created': loaded.createdAt.toISOString(),
-            'confession.approved': loaded.approvedAt.toISOString(),
-            'confession.id': loaded.confessionId.toString(),
-            'confession.channel.id': loaded.channelId.toString(),
-            'confession.parent.message.id': loaded.parentMessageId?.toString() ?? null,
-          });
+            MissingVerdictDispatchConfessionError.throwNew(event.data.internalId);
 
           return serializeLoadedApprovedConfession(loaded);
         },
@@ -288,6 +306,12 @@ export const processConfessionVerdict = inngest.createFunction(
                 if (error instanceof DiscordError)
                   switch (error.code) {
                     case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                      logger.warn(
+                        `Recovered Discord thread creation failure code ${error.code}.`,
+                        'spectro.inngest.confession_verdict.thread_creation_failure_recovered',
+                        { 'spectro.discord.error.code': error.code },
+                        error,
+                      );
                       if (pendingThread.parentMessageId !== null)
                         return {
                           ok: true,
@@ -305,6 +329,12 @@ export const processConfessionVerdict = inngest.createFunction(
                     case DiscordErrorCode.MissingPermissions:
                     case DiscordErrorCode.ThreadLocked:
                     case DiscordErrorCode.MaxActiveThreadsReached:
+                      logger.warn(
+                        `Recovered Discord thread creation failure code ${error.code}.`,
+                        'spectro.inngest.confession_verdict.thread_creation_failure_recovered',
+                        { 'spectro.discord.error.code': error.code },
+                        error,
+                      );
                       return {
                         ok: false,
                         content: getThreadCreationErrorMessage(error.code, {
@@ -321,10 +351,7 @@ export const processConfessionVerdict = inngest.createFunction(
           );
 
           if (!threadResult.ok)
-            FatalConfessionVerdictStateError.throwNew('approved thread destination unavailable', {
-              'confession.id': loaded.confessionId,
-              'failure.message': threadResult.content,
-            });
+            UnavailableApprovedThreadDestinationError.throwNew(loaded.confessionId.toString());
 
           resolvedThreadId = await step.run(
             { id: 'resolve-approved-thread', name: 'Resolve Approved Thread' },
@@ -367,22 +394,21 @@ export const processConfessionVerdict = inngest.createFunction(
       const result = await step.run(
         { id: 'process-confession-verdict', name: 'Process Confession Verdict' },
         async () =>
-          await tracer.asyncSpan('process-confession-verdict-step', async () => {
+          await tracer.asyncSpan('process-confession-verdict-step', async span => {
+            span.setAttributes({
+              'spectro.confession.id': confession.confessionId,
+              'spectro.discord.channel.id': confession.publishChannelId,
+            });
             try {
               const message = await DiscordClient.ENV.createMessage(
                 confession.publishChannelId,
                 createConfessionPayload(confession),
                 `${event.id}:approval`,
               );
-
-              logger.info('approved confession dispatched', {
-                confessionId: confession.confessionId,
-              });
-
-              logger.trace('approved confession dispatched', {
-                'discord.message.id': message.id,
-                'discord.channel.id': message.channel_id,
-                'discord.message.timestamp': message.timestamp,
+              span.setAttributes({
+                'spectro.discord.message.id': message.id,
+                'spectro.discord.channel.id': message.channel_id,
+                'spectro.discord.message.timestamp': message.timestamp,
               });
 
               return null;
@@ -395,18 +421,24 @@ export const processConfessionVerdict = inngest.createFunction(
                       { cause: error },
                     );
                     logger.error(
-                      'discord nonce validation failed in process-confession-verdict',
-                      wrapped,
+                      'Discord nonce validation failed while processing confession verdict',
+                      'spectro.inngest.confession_verdict.discord_message_exception',
                       {
-                        'discord.error.code': error.code,
-                        'discord.error.message': error.message,
+                        'spectro.discord.error.code': error.code,
                       },
+                      wrapped,
                     );
                     throw wrapped;
                   }
                   case DiscordErrorCode.UnknownChannel:
                   case DiscordErrorCode.MissingAccess:
                   case DiscordErrorCode.MissingPermissions:
+                    logger.warn(
+                      `Recovered Discord publish failure code ${error.code}.`,
+                      'spectro.inngest.confession_verdict.discord_message_failure_recovered',
+                      { 'spectro.discord.error.code': error.code },
+                      error,
+                    );
                     return getConfessionErrorMessage(error.code, {
                       label: confession.channel.label,
                       confessionId: confession.confessionId,
@@ -448,10 +480,14 @@ export const processConfessionVerdict = inngest.createFunction(
                       'discord rejected approval log message edit',
                       { cause },
                     );
-                    logger.error('discord rejected approval log message edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected approval log message edit',
+                      'spectro.inngest.confession_verdict.log_message_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -493,10 +529,14 @@ export const processConfessionVerdict = inngest.createFunction(
                     'discord rejected failed approval log message edit',
                     { cause },
                   );
-                  logger.error('discord rejected failed approval log message edit', wrapped, {
-                    'discord.error.code': cause.code,
-                    'discord.error.message': cause.message,
-                  });
+                  logger.error(
+                    'Discord rejected failed approval log message edit',
+                    'spectro.inngest.confession_verdict.log_message_exception',
+                    {
+                      'spectro.discord.error.code': cause.code,
+                    },
+                    wrapped,
+                  );
                   throw wrapped;
                 }
                 default:
@@ -509,7 +549,7 @@ export const processConfessionVerdict = inngest.createFunction(
 
       await step.run({ id: 'send-failure-follow-up', name: 'Send Failure Follow-up' }, async () => {
         try {
-          const message = await DiscordClient.createFollowupMessage(
+          await DiscordClient.createFollowupMessage(
             event.data.applicationId,
             event.data.interactionToken,
             {
@@ -517,11 +557,6 @@ export const processConfessionVerdict = inngest.createFunction(
               flags: MessageFlags.Ephemeral,
             },
           );
-          logger.info('failure follow-up sent', {
-            'discord.message.id': message.id,
-            'discord.channel.id': message.channel_id,
-            'discord.message.timestamp': message.timestamp,
-          });
         } catch (cause) {
           if (cause instanceof DiscordError)
             switch (cause.code) {
@@ -531,10 +566,14 @@ export const processConfessionVerdict = inngest.createFunction(
                   'discord rejected approval failure follow-up',
                   { cause },
                 );
-                logger.error('discord rejected approval failure follow-up', wrapped, {
-                  'discord.error.code': cause.code,
-                  'discord.error.message': cause.message,
-                });
+                logger.error(
+                  'Discord rejected approval failure follow-up',
+                  'spectro.inngest.confession_verdict.failure_followup_exception',
+                  {
+                    'spectro.discord.error.code': cause.code,
+                  },
+                  wrapped,
+                );
                 throw wrapped;
               }
               default:

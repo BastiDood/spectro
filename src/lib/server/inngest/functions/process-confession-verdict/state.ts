@@ -1,4 +1,3 @@
-import type { AnyValueMap } from '@opentelemetry/api-logs';
 import { NonRetriableError } from 'inngest';
 
 import { Logger } from '$lib/server/telemetry/logger';
@@ -7,10 +6,38 @@ import type { SerializedAttachment } from '$lib/server/confession';
 const SERVICE_NAME = 'inngest.process-confession-verdict.state';
 const logger = Logger.byName(SERVICE_NAME);
 
-export class FatalConfessionVerdictStateError extends NonRetriableError {
-  static throwNew(message: string, attributes?: AnyValueMap): never {
-    const error = new FatalConfessionVerdictStateError(message);
-    logger.fatal(message, error, attributes);
+export class MissingVerdictDispatchConfessionError extends NonRetriableError {
+  constructor(public readonly internalId: string) {
+    super(`Confession ${internalId} was not found for dispatch.`);
+    this.name = 'MissingVerdictDispatchConfessionError';
+  }
+
+  static throwNew(internalId: string): never {
+    const error = new MissingVerdictDispatchConfessionError(internalId);
+    logger.error(
+      error.message,
+      'spectro.inngest.confession_verdict.dispatch_confession_missing',
+      { 'spectro.confession.internal.id': error.internalId },
+      error,
+    );
+    throw error;
+  }
+}
+
+export class UnavailableApprovedThreadDestinationError extends NonRetriableError {
+  constructor(public readonly confessionId: string) {
+    super(`Approved thread destination is unavailable for confession ${confessionId}.`);
+    this.name = 'UnavailableApprovedThreadDestinationError';
+  }
+
+  static throwNew(confessionId: string): never {
+    const error = new UnavailableApprovedThreadDestinationError(confessionId);
+    logger.error(
+      error.message,
+      'spectro.inngest.confession_verdict.approved_thread_destination_unavailable',
+      { 'spectro.confession.id': error.confessionId },
+      error,
+    );
     throw error;
   }
 }
@@ -23,33 +50,49 @@ export abstract class ConfessionVerdictError extends Error {
 }
 
 export class DisabledChannelConfessError extends ConfessionVerdictError {
-  constructor(public disabledAt: Date) {
+  readonly disabledAt: string;
+
+  constructor(disabledAt: Date) {
     const timestamp = Math.floor(disabledAt.valueOf() / 1000);
     super(`The confession channel has been temporarily disabled since <t:${timestamp}:R>.`);
+    this.disabledAt = disabledAt.toISOString();
     this.name = 'DisabledChannelConfessError';
   }
 
   static throwNew(disabledAt: Date): never {
     const error = new DisabledChannelConfessError(disabledAt);
-    logger.fatal('channel disabled for approval', error, {
-      'error.disabled.at': disabledAt.toISOString(),
-    });
+    logger.error(
+      error.message,
+      'spectro.inngest.confession_verdict.channel_disabled',
+      {
+        'spectro.channel.disabled_at': error.disabledAt,
+      },
+      error,
+    );
     throw error;
   }
 }
 
 export class AlreadyApprovedApprovalError extends ConfessionVerdictError {
-  constructor(public approvedAt: Date) {
+  readonly approvedAt: string;
+
+  constructor(approvedAt: Date) {
     const timestamp = Math.floor(approvedAt.valueOf() / 1000);
     super(`This confession has already been approved since <t:${timestamp}:R>.`);
+    this.approvedAt = approvedAt.toISOString();
     this.name = 'AlreadyApprovedApprovalError';
   }
 
   static throwNew(approvedAt: Date): never {
     const error = new AlreadyApprovedApprovalError(approvedAt);
-    logger.fatal('confession already approved', error, {
-      'error.approved.at': approvedAt.toISOString(),
-    });
+    logger.error(
+      error.message,
+      'spectro.inngest.confession_verdict.already_approved',
+      {
+        'spectro.confession.approved_at': error.approvedAt,
+      },
+      error,
+    );
     throw error;
   }
 }
@@ -64,7 +107,12 @@ export class MissingDurableAttachmentApprovalError extends ConfessionVerdictErro
 
   static throwNew(): never {
     const error = new MissingDurableAttachmentApprovalError();
-    logger.fatal('missing durable attachment for approval', error);
+    logger.error(
+      error.message,
+      'spectro.inngest.confession_verdict.durable_attachment_missing',
+      void 0,
+      error,
+    );
     throw error;
   }
 }

@@ -3,13 +3,11 @@ import { aliasedTable, eq } from 'drizzle-orm';
 import * as schema from '$lib/server/database/models';
 import { AssertionError, assertOptional, assertSingle } from '$lib/assert';
 import type { Interface, Transaction } from '$lib/server/database';
-import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import type { ApprovedConfessionState, ConfessionVerdictConfessionState } from './state';
 
 const SERVICE_NAME = 'inngest.process-confession-verdict.query';
-const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 interface FlatConfessionVerdictConfessionRow {
@@ -382,7 +380,7 @@ function createApprovedConfession(row: FlatApprovedConfessionRow): ApprovedConfe
 
 export async function loadVerdictConfession(tx: Transaction, internalId: bigint) {
   return await tracer.asyncSpan('load-verdict-confession', async span => {
-    span.setAttribute('confession.internal.id', internalId.toString());
+    span.setAttribute('spectro.confession.internal.id', internalId.toString());
 
     const lockedConfession = aliasedTable(schema.confession, 'confession');
     const requestedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'requested_title');
@@ -458,9 +456,11 @@ export async function loadVerdictConfession(tx: Transaction, internalId: bigint)
       .for('update', { of: lockedConfession })
       .then(assertSingle);
 
-    logger.debug('confession details fetched', {
-      'confession.id': row.confessionId.toString(),
-      label: row.label,
+    span.setAttributes({
+      'spectro.confession.id': row.confessionId.toString(),
+      'spectro.discord.channel.id': row.channelId.toString(),
+      'spectro.confession.approved': row.approvedAt !== null,
+      'spectro.confession.attachment.present': row.ephemeralAttachmentId !== null,
     });
 
     return createConfessionVerdictConfession(row);
@@ -469,7 +469,7 @@ export async function loadVerdictConfession(tx: Transaction, internalId: bigint)
 
 export async function loadApprovedConfession(db: Interface, internalId: bigint) {
   return await tracer.asyncSpan('load-approved-confession', async span => {
-    span.setAttribute('confession.internal.id', internalId.toString());
+    span.setAttribute('spectro.confession.internal.id', internalId.toString());
 
     const requestedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'requested_title');
     const approvedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'approved_title');
@@ -546,7 +546,16 @@ export async function loadApprovedConfession(db: Interface, internalId: bigint) 
       .where(eq(schema.confession.internalId, internalId))
       .limit(1)
       .then(assertOptional);
-    if (typeof row === 'undefined') return;
+    if (typeof row === 'undefined') {
+      span.setAttribute('spectro.confession.found', false);
+      return;
+    }
+
+    span.setAttributes({
+      'spectro.confession.found': true,
+      'spectro.confession.id': row.confessionId.toString(),
+      'spectro.discord.channel.id': row.channelId.toString(),
+    });
 
     return createApprovedConfession(row);
   });

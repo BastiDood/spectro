@@ -1,4 +1,3 @@
-import type { AnyValueMap } from '@opentelemetry/api-logs';
 import { NonRetriableError } from 'inngest';
 
 import type { InsertableAttachment, PersistableDurableAttachment } from '$lib/server/database';
@@ -10,10 +9,38 @@ import type { loadConfessionSubmissionChannel } from './query';
 const SERVICE_NAME = 'inngest.process-confession-submission.state';
 const logger = Logger.byName(SERVICE_NAME);
 
-export class FatalConfessionSubmissionStateError extends NonRetriableError {
-  static throwNew(message: string, attributes?: AnyValueMap): never {
-    const error = new FatalConfessionSubmissionStateError(message);
-    logger.fatal(message, error, attributes);
+export class InvalidSubmissionChannelStateError extends NonRetriableError {
+  constructor(public readonly channelId: string) {
+    super(`Confession channel ${channelId} is invalid for creation.`);
+    this.name = 'InvalidSubmissionChannelStateError';
+  }
+
+  static throwNew(channelId: string): never {
+    const error = new InvalidSubmissionChannelStateError(channelId);
+    logger.error(
+      error.message,
+      'spectro.inngest.confession_submission.channel_invalid',
+      { 'spectro.channel.id': error.channelId },
+      error,
+    );
+    throw error;
+  }
+}
+
+export class InvalidUploadedAttachmentStateError extends NonRetriableError {
+  constructor(public readonly attachmentId: string) {
+    super(`Uploaded attachment ${attachmentId} has an invalid URL.`);
+    this.name = 'InvalidUploadedAttachmentStateError';
+  }
+
+  static throwNew(attachmentId: string): never {
+    const error = new InvalidUploadedAttachmentStateError(attachmentId);
+    logger.error(
+      error.message,
+      'spectro.inngest.confession_submission.uploaded_attachment_invalid',
+      { 'spectro.attachment.id': error.attachmentId },
+      error,
+    );
     throw error;
   }
 }
@@ -126,10 +153,7 @@ export function assertConfessionSubmissionChannel(
   channelId: string,
 ) {
   const channel = mapConfessionSubmissionChannel(row, submittedAt);
-  if (typeof channel === 'string')
-    return FatalConfessionSubmissionStateError.throwNew('confession channel invalid for create', {
-      'channel.id': channelId,
-    });
+  if (typeof channel === 'string') return InvalidSubmissionChannelStateError.throwNew(channelId);
   return channel;
 }
 

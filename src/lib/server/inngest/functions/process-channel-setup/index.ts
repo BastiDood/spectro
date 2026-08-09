@@ -30,13 +30,13 @@ export const processChannelSetup = inngest.createFunction(
       const { applicationId, interactionToken } = data;
 
       span.setAttributes({
-        'inngest.event.id': event.id,
-        'inngest.event.name': event.name,
-        'inngest.event.ts': event.ts,
-        'channel.id': data.channelId,
-        'guild.id': data.guildId,
-        'log.channel.id': data.logChannelId,
-        'target.channel.id': data.targetChannelId,
+        'spectro.inngest.event.id': event.id,
+        'spectro.inngest.event.name': event.name,
+        'spectro.inngest.event.timestamp': event.ts,
+        'spectro.channel.id': data.channelId,
+        'spectro.guild.id': data.guildId,
+        'spectro.log.channel.id': data.logChannelId,
+        'spectro.target.channel.id': data.targetChannelId,
       });
 
       const content = await step.run({ id: 'process-setup', name: 'Process Setup' }, async () => {
@@ -75,7 +75,7 @@ export const processChannelSetup = inngest.createFunction(
           .onConflictDoUpdate({ target: channel.id, set })
           .returning({ label: channel.label, isApprovalRequired: channel.isApprovalRequired })
           .then(assertSingle);
-        logger.info('confessions enabled');
+        logger.info('Confessions enabled', 'spectro.inngest.channel_setup.confessions_enabled');
 
         return configured.isApprovalRequired
           ? `Only approved confessions (labelled **${configured.label}**) are now enabled for <#${data.targetChannelId}>.`
@@ -98,10 +98,12 @@ export const processChannelSetup = inngest.createFunction(
                     'discord rejected original interaction response edit',
                     { cause },
                   );
-                  logger.error('discord rejected original interaction response edit', wrapped, {
-                    'discord.error.code': cause.code,
-                    'discord.error.message': cause.message,
-                  });
+                  logger.error(
+                    'Discord rejected original interaction response edit',
+                    'spectro.inngest.channel_setup.interaction_response_exception',
+                    { 'spectro.discord.error.code': cause.code },
+                    wrapped,
+                  );
                   throw wrapped;
                 }
                 default:
@@ -111,5 +113,6 @@ export const processChannelSetup = inngest.createFunction(
           }
         },
       );
+      span.setAttribute('spectro.discord.interaction_response.edited', true);
     }),
 );

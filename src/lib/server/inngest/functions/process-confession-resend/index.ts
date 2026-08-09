@@ -14,7 +14,6 @@ import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/error
 import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
-import type { Message } from '$lib/server/models/discord/message';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import { ConfessionResendEvent } from './schema';
@@ -42,14 +41,14 @@ export const processConfessionResend = inngest.createFunction(
       const { applicationId, interactionId, interactionToken } = data;
 
       span.setAttributes({
-        'inngest.event.id': eventId,
-        'inngest.event.name': event.name,
-        'inngest.event.ts': event.ts,
-        'inngest.event.data.applicationId': applicationId,
-        'inngest.event.data.interactionId': interactionId,
-        'channel.id': data.channelId,
-        'moderator.id': data.moderatorId,
-        'confession.id': data.confessionId,
+        'spectro.inngest.event.id': eventId,
+        'spectro.inngest.event.name': event.name,
+        'spectro.inngest.event.timestamp': event.ts,
+        'spectro.inngest.event.data.application_id': applicationId,
+        'spectro.inngest.event.data.interaction_id': interactionId,
+        'spectro.channel.id': data.channelId,
+        'spectro.moderator.id': data.moderatorId,
+        'spectro.confession.id': data.confessionId,
       });
 
       const confessionId = BigInt(data.confessionId);
@@ -85,10 +84,14 @@ export const processConfessionResend = inngest.createFunction(
                       'discord rejected original interaction response edit',
                       { cause },
                     );
-                    logger.error('discord rejected original interaction response edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected original interaction response edit',
+                      'spectro.inngest.confession_resend.interaction_response_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -104,9 +107,8 @@ export const processConfessionResend = inngest.createFunction(
       const logResult = await step.run(
         { id: 'log-resent-confession', name: 'Log Resent Confession' },
         async (): Promise<LogFailure | null> => {
-          let message: Message;
           try {
-            message = await DiscordClient.ENV.createMessage(
+            await DiscordClient.ENV.createMessage(
               confession.channel.logChannelId,
               createLogPayload(confession, {
                 type: LogPayloadType.Resent,
@@ -125,16 +127,22 @@ export const processConfessionResend = inngest.createFunction(
                     },
                   );
                   logger.error(
-                    'discord nonce validation failed in process-confession-resend',
-                    wrapped,
+                    'Discord nonce validation failed while resending confession',
+                    'spectro.inngest.confession_resend.discord_message_exception',
                     {
-                      'discord.error.code': error.code,
-                      'discord.error.message': error.message,
+                      'spectro.discord.error.code': error.code,
                     },
+                    wrapped,
                   );
                   throw wrapped;
                 }
                 case DiscordErrorCode.UnknownChannel:
+                  logger.warn(
+                    `Recovered Discord log-channel failure code ${error.code}.`,
+                    'spectro.inngest.confession_resend.log_channel_failure_recovered',
+                    { 'spectro.discord.error.code': error.code },
+                    error,
+                  );
                   return {
                     content: getConfessionErrorMessage(error.code, {
                       label: confession.channel.label,
@@ -146,6 +154,12 @@ export const processConfessionResend = inngest.createFunction(
                   };
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
+                  logger.warn(
+                    `Recovered Discord log-message failure code ${error.code}.`,
+                    'spectro.inngest.confession_resend.log_message_failure_recovered',
+                    { 'spectro.discord.error.code': error.code },
+                    error,
+                  );
                   return {
                     content: getConfessionErrorMessage(error.code, {
                       label: confession.channel.label,
@@ -161,11 +175,6 @@ export const processConfessionResend = inngest.createFunction(
             throw error;
           }
 
-          logger.info('resent confession logged', {
-            'discord.message.id': message.id,
-            'discord.channel.id': message.channel_id,
-            'discord.message.timestamp': message.timestamp,
-          });
           return null;
         },
       );
@@ -177,7 +186,10 @@ export const processConfessionResend = inngest.createFunction(
             { id: 'reset-log-channel-after-log-failure', name: 'Reset Log Channel' },
             async () => {
               await resetLogChannel(db, BigInt(resetLogChannelId));
-              logger.warn('log channel reset');
+              logger.warn(
+                'Log channel reset',
+                'spectro.inngest.confession_resend.log_channel_reset',
+              );
             },
           );
         }
@@ -201,10 +213,14 @@ export const processConfessionResend = inngest.createFunction(
                       'discord rejected original interaction response edit',
                       { cause },
                     );
-                    logger.error('discord rejected original interaction response edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected original interaction response edit',
+                      'spectro.inngest.confession_resend.interaction_response_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -220,9 +236,8 @@ export const processConfessionResend = inngest.createFunction(
       const resendResult = await step.run(
         { id: 'resend-confession', name: 'Resend Confession' },
         async () => {
-          let message: Message;
           try {
-            message = await DiscordClient.ENV.createMessage(
+            await DiscordClient.ENV.createMessage(
               confession.publishChannelId,
               createConfessionPayload(confession),
               `${eventId}:post`,
@@ -238,18 +253,24 @@ export const processConfessionResend = inngest.createFunction(
                     },
                   );
                   logger.error(
-                    'discord nonce validation failed in process-confession-resend',
-                    wrapped,
+                    'Discord nonce validation failed while resending confession',
+                    'spectro.inngest.confession_resend.discord_message_exception',
                     {
-                      'discord.error.code': error.code,
-                      'discord.error.message': error.message,
+                      'spectro.discord.error.code': error.code,
                     },
+                    wrapped,
                   );
                   throw wrapped;
                 }
                 case DiscordErrorCode.UnknownChannel:
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
+                  logger.warn(
+                    `Recovered Discord publish failure code ${error.code}.`,
+                    'spectro.inngest.confession_resend.publish_failure_recovered',
+                    { 'spectro.discord.error.code': error.code },
+                    error,
+                  );
                   return getConfessionErrorMessage(error.code, {
                     label: confession.channel.label,
                     confessionId: confession.confessionId,
@@ -262,11 +283,6 @@ export const processConfessionResend = inngest.createFunction(
             throw error;
           }
 
-          logger.info('confession resent', {
-            'discord.message.id': message.id,
-            'discord.message.channel.id': message.channel_id,
-            'discord.message.timestamp': message.timestamp,
-          });
           return null;
         },
       );
@@ -291,10 +307,14 @@ export const processConfessionResend = inngest.createFunction(
                       'discord rejected original interaction response edit',
                       { cause },
                     );
-                    logger.error('discord rejected original interaction response edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected original interaction response edit',
+                      'spectro.inngest.confession_resend.interaction_response_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -319,17 +339,25 @@ export const processConfessionResend = inngest.createFunction(
             if (cause instanceof DiscordError)
               switch (cause.code) {
                 case DiscordErrorCode.UnknownWebhook: {
-                  logger.error('original interaction response webhook already gone', cause, {
-                    'discord.error.code': cause.code,
-                    'discord.error.message': cause.message,
-                  });
+                  logger.warn(
+                    'Original interaction response webhook is already gone',
+                    'spectro.inngest.confession_resend.interaction_response_missing',
+                    {
+                      'spectro.discord.error.code': cause.code,
+                    },
+                    cause,
+                  );
                   return;
                 }
                 case DiscordErrorCode.InvalidWebhookToken: {
-                  logger.fatal('discord rejected original interaction response deletion', cause, {
-                    'discord.error.code': cause.code,
-                    'discord.error.message': cause.message,
-                  });
+                  logger.error(
+                    'Discord rejected original interaction response deletion',
+                    'spectro.inngest.confession_resend.interaction_response_exception',
+                    {
+                      'spectro.discord.error.code': cause.code,
+                    },
+                    cause,
+                  );
                   throw cause;
                 }
                 default:

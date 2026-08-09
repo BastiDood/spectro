@@ -26,7 +26,7 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import {
   assertConfessionSubmissionChannel,
   createPublicConfession,
-  FatalConfessionSubmissionStateError,
+  InvalidUploadedAttachmentStateError,
   type LogConfessionResult,
   mapConfessionSubmissionChannel,
   type SerializedConfessionForProcess,
@@ -71,13 +71,13 @@ export const processConfessionSubmission = inngest.createFunction(
       const { applicationId, interactionId, interactionToken } = data;
 
       span.setAttributes({
-        'inngest.event.id': eventId,
-        'inngest.event.name': event.name,
-        'inngest.event.ts': event.ts,
-        'inngest.event.data.applicationId': applicationId,
-        'inngest.event.data.interactionId': interactionId,
-        'channel.id': data.channelId,
-        'author.id': data.authorId,
+        'spectro.inngest.event.id': eventId,
+        'spectro.inngest.event.name': event.name,
+        'spectro.inngest.event.timestamp': event.ts,
+        'spectro.inngest.event.data.application_id': applicationId,
+        'spectro.inngest.event.data.interaction_id': interactionId,
+        'spectro.channel.id': data.channelId,
+        'spectro.author.id': data.authorId,
       });
 
       const preparationError = await step.run(
@@ -126,10 +126,14 @@ export const processConfessionSubmission = inngest.createFunction(
                       'discord rejected original interaction response edit',
                       { cause },
                     );
-                    logger.error('discord rejected original interaction response edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected original interaction response edit',
+                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -289,6 +293,12 @@ export const processConfessionSubmission = inngest.createFunction(
               if (error instanceof DiscordError)
                 switch (error.code) {
                   case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                    logger.warn(
+                      `Recovered Discord thread creation failure code ${error.code}.`,
+                      'spectro.inngest.confession_submission.thread_creation_failure_recovered',
+                      { 'spectro.discord.error.code': error.code },
+                      error,
+                    );
                     return data.mode === ConfessionSubmitMode.NewThreadReply
                       ? {
                           ok: true,
@@ -306,6 +316,12 @@ export const processConfessionSubmission = inngest.createFunction(
                   case DiscordErrorCode.MissingPermissions:
                   case DiscordErrorCode.ThreadLocked:
                   case DiscordErrorCode.MaxActiveThreadsReached:
+                    logger.warn(
+                      `Recovered Discord thread creation failure code ${error.code}.`,
+                      'spectro.inngest.confession_submission.thread_creation_failure_recovered',
+                      { 'spectro.discord.error.code': error.code },
+                      error,
+                    );
                     return {
                       ok: false,
                       content: getThreadCreationErrorMessage(error.code, {
@@ -343,10 +359,14 @@ export const processConfessionSubmission = inngest.createFunction(
                         'discord rejected original interaction response edit',
                         { cause },
                       );
-                      logger.error('discord rejected original interaction response edit', wrapped, {
-                        'discord.error.code': cause.code,
-                        'discord.error.message': cause.message,
-                      });
+                      logger.error(
+                        'Discord rejected original interaction response edit',
+                        'spectro.inngest.confession_submission.interaction_response_exception',
+                        {
+                          'spectro.discord.error.code': cause.code,
+                        },
+                        wrapped,
+                      );
                       throw wrapped;
                     }
                     default:
@@ -402,9 +422,8 @@ export const processConfessionSubmission = inngest.createFunction(
             : { type: LogPayloadType.Published as const };
 
           if (preparedConfession.attachment === null) {
-            let message: Message;
             try {
-              message = await DiscordClient.ENV.createMessage(
+              await DiscordClient.ENV.createMessage(
                 preparedConfession.channel.logChannelId,
                 createLogPayload(preparedConfession, mode),
                 `${eventId}:log`,
@@ -420,16 +439,22 @@ export const processConfessionSubmission = inngest.createFunction(
                       },
                     );
                     logger.error(
-                      'discord nonce validation failed in process-confession-submission',
-                      wrapped,
+                      'Discord nonce validation failed while processing confession submission',
+                      'spectro.inngest.confession_submission.discord_message_exception',
                       {
-                        'discord.error.code': error.code,
-                        'discord.error.message': error.message,
+                        'spectro.discord.error.code': error.code,
                       },
+                      wrapped,
                     );
                     throw wrapped;
                   }
                   case DiscordErrorCode.UnknownChannel:
+                    logger.warn(
+                      `Recovered Discord log-channel failure code ${error.code}.`,
+                      'spectro.inngest.confession_submission.log_channel_failure_recovered',
+                      { 'spectro.discord.error.code': error.code },
+                      error,
+                    );
                     return {
                       logged: false,
                       content: getConfessionErrorMessage(error.code, {
@@ -444,6 +469,12 @@ export const processConfessionSubmission = inngest.createFunction(
                     };
                   case DiscordErrorCode.MissingAccess:
                   case DiscordErrorCode.MissingPermissions:
+                    logger.warn(
+                      `Recovered Discord log-message failure code ${error.code}.`,
+                      'spectro.inngest.confession_submission.log_message_failure_recovered',
+                      { 'spectro.discord.error.code': error.code },
+                      error,
+                    );
                     return {
                       logged: false,
                       content: getConfessionErrorMessage(error.code, {
@@ -462,11 +493,6 @@ export const processConfessionSubmission = inngest.createFunction(
               throw error;
             }
 
-            logger.info('confession logged', {
-              'discord.message.id': message.id,
-              'discord.channel.id': message.channel_id,
-              'discord.message.timestamp': message.timestamp,
-            });
             return {
               logged: true,
               attachmentId: null,
@@ -477,10 +503,7 @@ export const processConfessionSubmission = inngest.createFunction(
           const uploadedAttachment = preparedConfession.attachment;
           const uploadedAttachmentUrl = parseDiscordAttachmentCdnUrl(uploadedAttachment.url);
           if (uploadedAttachmentUrl === null)
-            FatalConfessionSubmissionStateError.throwNew('uploaded attachment url invalid', {
-              'attachment.id': uploadedAttachment.id,
-              'attachment.url': uploadedAttachment.url,
-            });
+            InvalidUploadedAttachmentStateError.throwNew(uploadedAttachment.id);
 
           const response = await fetch(uploadedAttachment.url);
           const file = await downloadDiscordAttachment(response, DISCORD_ATTACHMENT_MAX_BYTES);
@@ -514,16 +537,22 @@ export const processConfessionSubmission = inngest.createFunction(
                     },
                   );
                   logger.error(
-                    'discord nonce validation failed in process-confession-submission',
-                    wrapped,
+                    'Discord nonce validation failed while processing confession submission',
+                    'spectro.inngest.confession_submission.discord_message_exception',
                     {
-                      'discord.error.code': error.code,
-                      'discord.error.message': error.message,
+                      'spectro.discord.error.code': error.code,
                     },
+                    wrapped,
                   );
                   throw wrapped;
                 }
                 case DiscordErrorCode.UnknownChannel:
+                  logger.warn(
+                    `Recovered Discord log-channel failure code ${error.code}.`,
+                    'spectro.inngest.confession_submission.log_channel_failure_recovered',
+                    { 'spectro.discord.error.code': error.code },
+                    error,
+                  );
                   return {
                     logged: false,
                     content: getConfessionErrorMessage(error.code, {
@@ -538,6 +567,12 @@ export const processConfessionSubmission = inngest.createFunction(
                   };
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
+                  logger.warn(
+                    `Recovered Discord log-message failure code ${error.code}.`,
+                    'spectro.inngest.confession_submission.log_message_failure_recovered',
+                    { 'spectro.discord.error.code': error.code },
+                    error,
+                  );
                   return {
                     logged: false,
                     content: getConfessionErrorMessage(error.code, {
@@ -559,18 +594,16 @@ export const processConfessionSubmission = inngest.createFunction(
           const durableAttachment = extractDurableAttachmentMetadata(message);
           if (durableAttachment === null) {
             const error = new NonRetriableError('durable attachment not found');
-            logger.fatal('durable attachment not found after log upload', error, {
-              'confession.internal.id': preparedConfession.internalId,
-              'attachment.id': uploadedAttachment.id,
-            });
+            logger.error(
+              'Durable attachment was not found after log upload',
+              'spectro.inngest.confession_submission.durable_attachment_missing',
+              {
+                'spectro.confession.internal.id': preparedConfession.internalId,
+                'spectro.attachment.id': uploadedAttachment.id,
+              },
+            );
             throw error;
           }
-
-          logger.info('confession logged', {
-            'discord.message.id': message.id,
-            'discord.channel.id': message.channel_id,
-            'discord.message.timestamp': message.timestamp,
-          });
 
           return {
             logged: true,
@@ -587,7 +620,10 @@ export const processConfessionSubmission = inngest.createFunction(
             { id: 'reset-log-channel-after-log-failure', name: 'Reset Log Channel' },
             async () => {
               await resetLogChannel(db, BigInt(resetLogChannelId));
-              logger.warn('log channel reset');
+              logger.warn(
+                'Log channel reset',
+                'spectro.inngest.confession_submission.log_channel_reset',
+              );
             },
           );
         }
@@ -610,10 +646,14 @@ export const processConfessionSubmission = inngest.createFunction(
                       'discord rejected original interaction response edit',
                       { cause },
                     );
-                    logger.error('discord rejected original interaction response edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected original interaction response edit',
+                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -661,10 +701,14 @@ export const processConfessionSubmission = inngest.createFunction(
                       'discord rejected original interaction response edit',
                       { cause },
                     );
-                    logger.error('discord rejected original interaction response edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected original interaction response edit',
+                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -685,9 +729,8 @@ export const processConfessionSubmission = inngest.createFunction(
             durableAttachment === null ? null : serializeDurableAttachment(durableAttachment),
           );
 
-          let message: Message;
           try {
-            message = await DiscordClient.ENV.createMessage(
+            await DiscordClient.ENV.createMessage(
               publicConfession.publishChannelId,
               createConfessionPayload(publicConfession),
               `${eventId}:post`,
@@ -703,18 +746,24 @@ export const processConfessionSubmission = inngest.createFunction(
                     },
                   );
                   logger.error(
-                    'discord nonce validation failed in process-confession-submission',
-                    wrapped,
+                    'Discord nonce validation failed while processing confession submission',
+                    'spectro.inngest.confession_submission.discord_message_exception',
                     {
-                      'discord.error.code': error.code,
-                      'discord.error.message': error.message,
+                      'spectro.discord.error.code': error.code,
                     },
+                    wrapped,
                   );
                   throw wrapped;
                 }
                 case DiscordErrorCode.UnknownChannel:
                 case DiscordErrorCode.MissingAccess:
                 case DiscordErrorCode.MissingPermissions:
+                  logger.warn(
+                    `Recovered Discord publish failure code ${error.code}.`,
+                    'spectro.inngest.confession_submission.publish_failure_recovered',
+                    { 'spectro.discord.error.code': error.code },
+                    error,
+                  );
                   return getConfessionErrorMessage(error.code, {
                     label: publicConfession.channel.label,
                     confessionId: publicConfession.confessionId,
@@ -727,11 +776,6 @@ export const processConfessionSubmission = inngest.createFunction(
             throw error;
           }
 
-          logger.info('confession published', {
-            'discord.message.id': message.id,
-            'discord.message.channel.id': message.channel_id,
-            'discord.message.timestamp': message.timestamp,
-          });
           return null;
         },
       );
@@ -756,10 +800,14 @@ export const processConfessionSubmission = inngest.createFunction(
                       'discord rejected original interaction response edit',
                       { cause },
                     );
-                    logger.error('discord rejected original interaction response edit', wrapped, {
-                      'discord.error.code': cause.code,
-                      'discord.error.message': cause.message,
-                    });
+                    logger.error(
+                      'Discord rejected original interaction response edit',
+                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      {
+                        'spectro.discord.error.code': cause.code,
+                      },
+                      wrapped,
+                    );
                     throw wrapped;
                   }
                   default:
@@ -784,17 +832,25 @@ export const processConfessionSubmission = inngest.createFunction(
             if (cause instanceof DiscordError)
               switch (cause.code) {
                 case DiscordErrorCode.UnknownWebhook: {
-                  logger.error('original interaction response webhook already gone', cause, {
-                    'discord.error.code': cause.code,
-                    'discord.error.message': cause.message,
-                  });
+                  logger.warn(
+                    'Original interaction response webhook is already gone',
+                    'spectro.inngest.confession_submission.interaction_response_missing',
+                    {
+                      'spectro.discord.error.code': cause.code,
+                    },
+                    cause,
+                  );
                   return;
                 }
                 case DiscordErrorCode.InvalidWebhookToken: {
-                  logger.fatal('discord rejected original interaction response deletion', cause, {
-                    'discord.error.code': cause.code,
-                    'discord.error.message': cause.message,
-                  });
+                  logger.error(
+                    'Discord rejected original interaction response deletion',
+                    'spectro.inngest.confession_submission.interaction_response_exception',
+                    {
+                      'spectro.discord.error.code': cause.code,
+                    },
+                    cause,
+                  );
                   throw cause;
                 }
                 default:

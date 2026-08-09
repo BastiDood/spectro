@@ -190,8 +190,8 @@ function createResendConfession(row: FlatResendConfessionRow): ResendConfessionS
 export async function loadResendConfession(db: Interface, channelId: bigint, confessionId: bigint) {
   return await tracer.asyncSpan('load-resend-confession', async span => {
     span.setAttributes({
-      'channel.id': channelId.toString(),
-      'confession.id': confessionId.toString(),
+      'spectro.channel.id': channelId.toString(),
+      'spectro.confession.id': confessionId.toString(),
     });
 
     const requestedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'requested_title');
@@ -275,7 +275,16 @@ export async function loadResendConfession(db: Interface, channelId: bigint, con
       )
       .limit(1)
       .then(assertOptional);
-    if (typeof row === 'undefined') return;
+    if (typeof row === 'undefined') {
+      span.setAttribute('spectro.confession.found', false);
+      return;
+    }
+
+    span.setAttributes({
+      'spectro.confession.found': true,
+      'spectro.confession.approved': row.approvedAt !== null,
+      'spectro.confession.attachment.present': row.attachmentId !== null,
+    });
 
     return createResendConfession(row);
   });

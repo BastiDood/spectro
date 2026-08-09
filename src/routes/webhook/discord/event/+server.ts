@@ -36,9 +36,7 @@ async function handleWebhook(timestamp: Date, webhook: Webhook) {
           logger.warn(
             'User installed application',
             'spectro.discord.webhook_event.user_installed',
-            {
-              [ATTR_ENDUSER_ID]: webhook.event.data.user.id,
-            },
+            { [ATTR_ENDUSER_ID]: webhook.event.data.user.id },
           );
           break;
         default:

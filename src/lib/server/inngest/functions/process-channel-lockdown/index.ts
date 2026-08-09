@@ -25,10 +25,10 @@ export const processChannelLockdown = inngest.createFunction(
       const { applicationId, interactionToken } = data;
 
       span.setAttributes({
-        'inngest.event.id': event.id,
-        'inngest.event.name': event.name,
-        'inngest.event.ts': event.ts,
-        'channel.id': data.channelId,
+        'spectro.inngest.event.id': event.id,
+        'spectro.inngest.event.name': event.name,
+        'spectro.inngest.event.timestamp': event.ts,
+        'spectro.channel.id': data.channelId,
       });
 
       const content = await step.run(
@@ -42,7 +42,10 @@ export const processChannelLockdown = inngest.createFunction(
 
           if (!disabled) return 'This has not yet been set up for confessions.';
 
-          logger.info('confessions disabled');
+          logger.info(
+            'Confessions disabled',
+            'spectro.inngest.channel_lockdown.confessions_disabled',
+          );
           return 'Confessions have been temporarily disabled for this channel.';
         },
       );
@@ -63,10 +66,12 @@ export const processChannelLockdown = inngest.createFunction(
                     'discord rejected original interaction response edit',
                     { cause },
                   );
-                  logger.error('discord rejected original interaction response edit', wrapped, {
-                    'discord.error.code': cause.code,
-                    'discord.error.message': cause.message,
-                  });
+                  logger.error(
+                    'Discord rejected original interaction response edit',
+                    'spectro.inngest.channel_lockdown.interaction_response_exception',
+                    { 'spectro.discord.error.code': cause.code },
+                    wrapped,
+                  );
                   throw wrapped;
                 }
                 default:
@@ -76,5 +81,6 @@ export const processChannelLockdown = inngest.createFunction(
           }
         },
       );
+      span.setAttribute('spectro.discord.interaction_response.edited', true);
     }),
 );
