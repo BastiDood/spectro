@@ -238,13 +238,19 @@ async function handleInteraction(
 export async function POST({ request }) {
   const ed25519 = request.headers.get('X-Signature-Ed25519');
   if (ed25519 === null) {
-    logger.error('missing Ed25519 signature header');
+    logger.error(
+      'Missing Ed25519 signature header',
+      'spectro.discord.interaction.signature_header_missing',
+    );
     error(400);
   }
 
   const timestamp = request.headers.get('X-Signature-Timestamp');
   if (timestamp === null) {
-    logger.error('missing timestamp header');
+    logger.error(
+      'Missing timestamp header',
+      'spectro.discord.interaction.timestamp_header_missing',
+    );
     error(400);
   }
 
@@ -252,7 +258,7 @@ export async function POST({ request }) {
 
   const contentType = request.headers.get('Content-Type');
   if (contentType === null || contentType !== 'application/json') {
-    logger.error('invalid content type header');
+    logger.error('Invalid content type header', 'spectro.discord.interaction.content_type_invalid');
     error(400);
   }
 
@@ -264,17 +270,18 @@ export async function POST({ request }) {
     const interaction = parse(Interaction, JSON.parse(text));
     const response = await tracer.asyncSpan('handle-interaction', async span => {
       span.setAttributes({
-        'interaction.type': interaction.type,
-        'interaction.id': interaction.id.toString(),
-        'interaction.application.id': interaction.application_id.toString(),
+        'spectro.discord.interaction.type': interaction.type,
+        'spectro.discord.interaction.id': interaction.id.toString(),
+        'spectro.discord.application.id': interaction.application_id.toString(),
       });
-      return await handleInteraction(datetime, interaction);
+      const handled = await handleInteraction(datetime, interaction);
+      span.setAttribute('spectro.discord.interaction.response.type', handled.type);
+      return handled;
     });
-    logger.debug('interaction processed');
 
     return json(response);
   }
 
-  logger.error('invalid signature');
+  logger.error('Invalid signature', 'spectro.discord.interaction.invalid_signature');
   error(401);
 }

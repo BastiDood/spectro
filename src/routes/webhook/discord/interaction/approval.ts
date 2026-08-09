@@ -8,7 +8,6 @@ import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { Logger } from '$lib/server/telemetry/logger';
 import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
@@ -17,7 +16,6 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import { MalformedCustomIdFormat } from './errors';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
-const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 function parseVerdict(key: string) {
@@ -48,9 +46,9 @@ export async function handleApproval(
 
     const verdict = parseVerdict(key);
     span.setAttributes({
-      'confession.internal.id': internalId,
-      'moderator.id': userId,
-      'confession.verdict': verdict,
+      'spectro.confession.internal.id': internalId,
+      'spectro.moderator.id': userId,
+      'spectro.confession.verdict': verdict,
     });
 
     if (!hasAllFlags(permissions, MANAGE_MESSAGES))
@@ -75,7 +73,7 @@ export async function handleApproval(
         { id: interactionId, ts: timestamp.valueOf() },
       ),
     );
-    logger.debug('confession verdict queued', { 'inngest.events.id': ids });
+    span.setAttribute('spectro.inngest.event.ids', ids);
 
     return { type: InteractionResponseType.DeferredUpdateMessage };
   });

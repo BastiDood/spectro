@@ -1,5 +1,6 @@
 import { strictEqual } from 'node:assert/strict';
 
+import { ATTR_ENDUSER_ID } from '@opentelemetry/semantic-conventions/incubating';
 import { error } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
@@ -24,7 +25,6 @@ const tracer = Tracer.byName(SERVICE_NAME);
 async function handleWebhook(timestamp: Date, webhook: Webhook) {
   switch (webhook.type) {
     case WebhookType.Ping:
-      logger.info('ping');
       break;
     case WebhookType.Event:
       strictEqual(webhook.event.type, WebhookEventType.ApplicationAuthorized);
@@ -33,7 +33,13 @@ async function handleWebhook(timestamp: Date, webhook: Webhook) {
           await handleApplicationAuthorized(timestamp, webhook.event.data.guild.id);
           break;
         case IntegrationType.User:
-          logger.warn('user installed application', { 'user.id': webhook.event.data.user.id });
+          logger.warn(
+            'User installed application',
+            'spectro.discord.webhook_event.user_installed',
+            {
+              [ATTR_ENDUSER_ID]: webhook.event.data.user.id,
+            },
+          );
           break;
         default:
           UnreachableCodeError.throwNew();
@@ -47,13 +53,19 @@ async function handleWebhook(timestamp: Date, webhook: Webhook) {
 export async function POST({ request }) {
   const ed25519 = request.headers.get('X-Signature-Ed25519');
   if (ed25519 === null) {
-    logger.error('missing Ed25519 signature header');
+    logger.error(
+      'Missing Ed25519 signature header',
+      'spectro.discord.webhook_event.signature_header_missing',
+    );
     error(400);
   }
 
   const timestamp = request.headers.get('X-Signature-Timestamp');
   if (timestamp === null) {
-    logger.error('missing timestamp header');
+    logger.error(
+      'Missing timestamp header',
+      'spectro.discord.webhook_event.timestamp_header_missing',
+    );
     error(400);
   }
 
@@ -61,7 +73,10 @@ export async function POST({ request }) {
 
   const contentType = request.headers.get('Content-Type');
   if (contentType === null || contentType !== 'application/json') {
-    logger.error('invalid content type header', void 0, { 'error.content.type': contentType });
+    logger.error(
+      'Invalid content type header',
+      'spectro.discord.webhook_event.content_type_invalid',
+    );
     error(400);
   }
 
@@ -74,16 +89,16 @@ export async function POST({ request }) {
 
     await tracer.asyncSpan('handle-webhook', async span => {
       span.setAttributes({
-        'event.type': event.type,
-        'event.application.id': event.application_id.toString(),
+        'spectro.discord.webhook.event.type': event.type,
+        'spectro.discord.application.id': event.application_id.toString(),
       });
       await handleWebhook(datetime, event);
+      span.setAttribute('spectro.discord.webhook.handled', true);
     });
-    logger.debug('webhook event processed');
 
     return new Response(null, { status: 204 });
   }
 
-  logger.error('invalid signature');
+  logger.error('Invalid signature', 'spectro.discord.webhook_event.invalid_signature');
   error(401);
 }

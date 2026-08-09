@@ -30,14 +30,19 @@ export interface ConfessionThreadDestination {
 export type ConfessionDestination = ConfessionChannelDestination | ConfessionThreadDestination;
 
 export class UnsupportedConfessionChannelError extends Error {
-  constructor(channelType: ChannelType) {
-    super(`This ${channelType} is not supported for confessions.`);
+  constructor(public readonly channelType: ChannelType) {
+    super(`Confession channel type ${channelType} is not supported.`);
     this.name = 'UnsupportedConfessionChannelError';
   }
 
   static throwNew(channelType: ChannelType): never {
     const error = new UnsupportedConfessionChannelError(channelType);
-    logger.fatal('unsupported confession channel', error, { 'error.channel.type': channelType });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.confession_channel.unsupported',
+      { 'spectro.discord.channel.type': error.channelType },
+      error,
+    );
     throw error;
   }
 }

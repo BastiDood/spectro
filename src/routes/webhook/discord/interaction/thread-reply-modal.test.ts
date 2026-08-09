@@ -50,7 +50,8 @@ describe('handleThreadReplyModal', () => {
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
         flags: MessageFlags.Ephemeral,
-        content: 'Spectro cannot determine the target channel for this anonymous reply.',
+        content:
+          'Thread reply channel 1012345678900020080 does not match target channel 4012345678900020080.',
       },
     });
   });
@@ -71,7 +72,8 @@ describe('handleThreadReplyModal', () => {
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
         flags: MessageFlags.Ephemeral,
-        content: 'You do not have permission to send anonymous replies in this channel.',
+        content:
+          'Permission failure send-messages: You do not have permission to send anonymous replies in this channel.',
       },
     });
   });
@@ -92,7 +94,8 @@ describe('handleThreadReplyModal', () => {
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
         flags: MessageFlags.Ephemeral,
-        content: 'You do not have permission to create public threads in this channel.',
+        content:
+          'Permission failure create-public-threads: You do not have permission to create public threads in this channel.',
       },
     });
   });
@@ -113,7 +116,8 @@ describe('handleThreadReplyModal', () => {
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
         flags: MessageFlags.Ephemeral,
-        content: 'You do not have permission to send messages in threads.',
+        content:
+          'Permission failure send-messages-in-threads: You do not have permission to send messages in threads.',
       },
     });
   });

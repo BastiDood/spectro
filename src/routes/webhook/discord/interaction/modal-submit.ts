@@ -16,7 +16,6 @@ import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { Logger } from '$lib/server/telemetry/logger';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { ModalComponents } from '$lib/server/models/discord/message/component/modal';
@@ -24,7 +23,6 @@ import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'webhook.interaction.confess-submit';
-const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 interface MessageModalState {
@@ -90,9 +88,9 @@ export async function handleModalSubmit(
   return await tracer.asyncSpan('handle-confess-submit', async span => {
     const state = parseModalState(customId);
     span.setAttributes({
-      'channel.id': state.channelId,
-      'author.id': authorId,
-      'confession.mode': state.mode,
+      'spectro.discord.channel.id': state.channelId,
+      'spectro.author.id': authorId,
+      'spectro.confession.mode': state.mode,
     });
 
     type ModalComponent = ModalComponents[number];
@@ -153,7 +151,7 @@ export async function handleModalSubmit(
           },
         };
     } else {
-      span.setAttribute('thread.id', state.threadId);
+      span.setAttribute('spectro.discord.thread.id', state.threadId);
       if (!hasAllFlags(permissions, SEND_MESSAGES_IN_THREADS))
         return {
           type: InteractionResponseType.ChannelMessageWithSource,
@@ -278,7 +276,7 @@ export async function handleModalSubmit(
         UnreachableCodeError.throwNew();
     }
 
-    logger.debug('confession submission queued', { 'inngest.events.id': ids });
+    span.setAttribute('spectro.inngest.event.ids', ids);
     return {
       type: InteractionResponseType.DeferredChannelMessageWithSource,
       data: { flags: MessageFlags.Ephemeral },

@@ -21,8 +21,8 @@ export function handleThread(
 ): InteractionResponse {
   return tracer.span('handle-thread', span => {
     span.setAttributes({
-      'channel.id': channelId,
-      'author.id': authorId,
+      'spectro.discord.channel.id': channelId,
+      'spectro.author.id': authorId,
     });
 
     if (isThread)

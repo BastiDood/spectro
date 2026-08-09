@@ -3,7 +3,6 @@ import { strictEqual } from 'node:assert/strict';
 import { APP_WEBSITE } from '$lib/server/constants';
 import type { CreateMessage } from '$lib/server/models/discord/message';
 import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
-import { Logger } from '$lib/server/telemetry/logger';
 import type { MessageComponent } from '$lib/server/models/discord/message/component';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
@@ -13,7 +12,6 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import { parsePublic } from './util';
 
 const SERVICE_NAME = 'webhook.interaction.info';
-const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 export function handleInfo([
@@ -24,9 +22,7 @@ export function handleInfo([
     strictEqual(otherArgs.length, 0);
 
     const isPublic = parsePublic(arg);
-    span.setAttribute('public', isPublic);
-    logger.info('info page summoned');
-
+    span.setAttribute('spectro.response.public', isPublic);
     const components: MessageComponent[] = [
       {
         type: MessageComponentType.Container,

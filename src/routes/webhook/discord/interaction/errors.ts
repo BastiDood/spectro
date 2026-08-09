@@ -7,121 +7,145 @@ const SERVICE_NAME = 'webhook.interaction.error';
 const logger = Logger.byName(SERVICE_NAME);
 
 export class UnexpectedApplicationCommandChatInputNameError extends Error {
-  constructor(public commandName: string) {
-    super(`unexpected application command chat input name ${commandName}`);
+  constructor(public readonly commandName: string) {
+    super(`Unexpected application command chat input name: ${commandName}.`);
     this.name = 'UnexpectedApplicationCommandChatInputNameError';
   }
 
   static throwNew(commandName: string): never {
     const error = new UnexpectedApplicationCommandChatInputNameError(commandName);
-    logger.fatal('unexpected application command chat input name', error, {
-      'error.command.name': commandName,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.command_chat_input.unexpected',
+      { 'spectro.discord.command.name': error.commandName },
+      error,
+    );
     throw error;
   }
 }
 
 export class UnexpectedApplicationCommandMessageNameError extends Error {
-  constructor(public commandName: string) {
-    super(`unexpected interaction application command message name ${commandName}`);
+  constructor(public readonly commandName: string) {
+    super(`Unexpected interaction application command message name: ${commandName}.`);
     this.name = 'UnexpectedApplicationCommandMessageNameError';
   }
 
   static throwNew(commandName: string): never {
     const error = new UnexpectedApplicationCommandMessageNameError(commandName);
-    logger.fatal('unexpected interaction application command message name', error, {
-      'error.command.name': commandName,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.command_message.unexpected',
+      { 'spectro.discord.command.name': error.commandName },
+      error,
+    );
     throw error;
   }
 }
 
 export class UnexpectedApplicationCommandTypeError extends Error {
-  constructor(public commandType: InteractionApplicationCommandType) {
-    super(`unexpected interaction application command type ${commandType}`);
+  constructor(public readonly commandType: InteractionApplicationCommandType) {
+    super(`Unexpected interaction application command type: ${commandType}.`);
     this.name = 'UnexpectedApplicationCommandTypeError';
   }
 
   static throwNew(commandType: InteractionApplicationCommandType): never {
     const error = new UnexpectedApplicationCommandTypeError(commandType);
-    logger.fatal('unexpected interaction application command type', error, {
-      'error.command.type': commandType,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.command_type.unexpected',
+      { 'spectro.discord.command.type': error.commandType },
+      error,
+    );
     throw error;
   }
 }
 
 export class UnexpectedSetupArgumentError extends Error {
-  constructor(public argumentName: string) {
-    super(`unexpected setup argument ${argumentName}`);
+  constructor(public readonly argumentName: string) {
+    super(`Unexpected setup argument: ${argumentName}.`);
     this.name = 'UnexpectedSetupArgumentError';
   }
 
   static throwNew(argumentName: string): never {
     const error = new UnexpectedSetupArgumentError(argumentName);
-    logger.fatal('unexpected setup argument', error, {
-      'error.argument.name': argumentName,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.setup_argument.unexpected',
+      { 'spectro.discord.setup_argument.name': error.argumentName },
+      error,
+    );
     throw error;
   }
 }
 
 export class UnexpectedSetupOptionTypeError extends Error {
-  constructor(public optionType: InteractionApplicationCommandChatInputOptionType) {
-    super(`unexpected option type ${optionType} encountered`);
+  constructor(public readonly optionType: InteractionApplicationCommandChatInputOptionType) {
+    super(`Unexpected application command option type: ${optionType}.`);
     this.name = 'UnexpectedSetupOptionTypeError';
   }
 
   static throwNew(optionType: InteractionApplicationCommandChatInputOptionType): never {
     const error = new UnexpectedSetupOptionTypeError(optionType);
-    logger.fatal('unexpected option type encountered', error, {
-      'error.option.type': optionType,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.command_option_type.unexpected',
+      { 'spectro.discord.command_option.type': error.optionType },
+      error,
+    );
     throw error;
   }
 }
 
 export class UnexpectedDiscordErrorCode extends Error {
-  constructor(public code: number) {
-    super(`unexpected discord error code ${code}`);
+  constructor(public readonly code: number) {
+    super(`Unexpected Discord error code: ${code}.`);
     this.name = 'UnexpectedDiscordErrorCode';
   }
 
   static throwNew(code: number): never {
     const error = new UnexpectedDiscordErrorCode(code);
-    logger.fatal('unexpected discord error code', error, {
-      'error.code': code,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.discord_error_code.unexpected',
+      { 'spectro.discord.error.code': error.code },
+      error,
+    );
     throw error;
   }
 }
 
 export class UnexpectedMessageComponentButtonStyle extends Error {
-  constructor(public style: MessageComponentButtonStyle) {
-    super(`unexpected message component button style ${style}`);
+  constructor(public readonly style: MessageComponentButtonStyle) {
+    super(`Unexpected message component button style: ${style}.`);
     this.name = 'UnexpectedMessageComponentButtonStyle';
   }
 
   static throwNew(style: MessageComponentButtonStyle): never {
     const error = new UnexpectedMessageComponentButtonStyle(style);
-    logger.fatal('unexpected message component button style', error, {
-      'error.style': style,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.message_component_button_style.unexpected',
+      { 'spectro.discord.message_component_button.style': error.style },
+      error,
+    );
     throw error;
   }
 }
 
 export class MalformedCustomIdFormat extends Error {
-  constructor(public key: string) {
-    super(`malformed custom id has key ${key}`);
+  constructor(public readonly key: string) {
+    super(`Malformed custom ID contains key: ${key}.`);
     this.name = 'MalformedCustomIdFormat';
   }
 
   static throwNew(key: string): never {
     const error = new MalformedCustomIdFormat(key);
-    logger.fatal('malformed custom id format', error, {
-      'error.key': key,
-    });
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.custom_id.malformed',
+      { 'spectro.discord.custom_id.key': error.key },
+      error,
+    );
     throw error;
   }
 }

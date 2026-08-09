@@ -1,22 +1,21 @@
 import { db } from '$lib/server/database';
 import { guild } from '$lib/server/database/models';
-import { Logger } from '$lib/server/telemetry/logger';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'webhook.event.application-authorized';
-const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 export async function handleApplicationAuthorized(createdAt: Date, guildId: Snowflake) {
   return await tracer.asyncSpan('handle-application-authorized', async span => {
-    span.setAttribute('guild.id', guildId);
-    await tracer.asyncSpan('insert-guild', async () => {
+    span.setAttribute('spectro.discord.guild.id', guildId);
+    await tracer.asyncSpan('insert-guild', async span => {
+      span.setAttribute('spectro.discord.guild.id', guildId);
       const { rowCount } = await db
         .insert(guild)
         .values({ id: BigInt(guildId), createdAt })
         .onConflictDoNothing({ target: guild.id });
-      logger.info('guild authorized application', { 'row.count': rowCount });
+      if (rowCount !== null) span.setAttribute('spectro.database.affected_row_count', rowCount);
     });
   });
 }

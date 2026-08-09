@@ -34,8 +34,8 @@ export function handleConfess(
   try {
     return tracer.span('handle-confess', span => {
       span.setAttributes({
-        'channel.id': destination.channelId,
-        'author.id': authorId,
+        'spectro.discord.channel.id': destination.channelId,
+        'spectro.author.id': authorId,
       });
 
       let threadId: string | null = null;
@@ -52,7 +52,7 @@ export function handleConfess(
           break;
         case ConfessionDestinationType.Thread:
           ({ threadId } = destination);
-          span.setAttribute('thread.id', threadId);
+          span.setAttribute('spectro.discord.thread.id', threadId);
           if (!hasAllFlags(permissions, SEND_MESSAGES_IN_THREADS))
             return {
               type: InteractionResponseType.ChannelMessageWithSource,

@@ -35,25 +35,53 @@ abstract class ReplyModalError extends Error {
 }
 
 class ReplyChannelMismatchError extends ReplyModalError {
-  constructor() {
-    super('Spectro cannot determine the target channel for this anonymous reply.');
+  constructor(
+    public readonly channelId: Snowflake,
+    public readonly targetChannelId: Snowflake,
+  ) {
+    super(`Reply channel ${channelId} does not match target channel ${targetChannelId}.`);
     this.name = 'ReplyChannelMismatchError';
   }
 
   static throwNew(channelId: Snowflake, targetChannelId: Snowflake): never {
-    const error = new ReplyChannelMismatchError();
-    logger.fatal('reply target channel mismatch', error, {
-      'channel.id': channelId,
-      'target.channel.id': targetChannelId,
-    });
+    const error = new ReplyChannelMismatchError(channelId, targetChannelId);
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.reply_modal.channel_mismatch',
+      {
+        'spectro.discord.channel.id': error.channelId,
+        'spectro.discord.target_channel.id': error.targetChannelId,
+      },
+      error,
+    );
     throw error;
   }
 }
 
+const enum MissingReplyPermissionErrorType {
+  SendMessages = 'send-messages',
+  SendMessagesInThreads = 'send-messages-in-threads',
+  ManageThreads = 'manage-threads',
+}
+
 class MissingReplyPermissionError extends ReplyModalError {
-  constructor(message: string) {
-    super(message);
+  constructor(
+    public readonly type: MissingReplyPermissionErrorType,
+    message: string,
+  ) {
+    super(`Permission failure ${type}: ${message}`);
     this.name = 'MissingReplyPermissionError';
+  }
+
+  static throwNew(type: MissingReplyPermissionErrorType, message: string): never {
+    const error = new MissingReplyPermissionError(type, message);
+    logger.error(
+      error.message,
+      'spectro.discord.interaction.reply_modal.permission_missing',
+      { 'spectro.discord.permission.type': error.type },
+      error,
+    );
+    throw error;
   }
 }
 
@@ -67,8 +95,8 @@ function renderReplyModal(
 ) {
   return tracer.span('render-reply-modal', span => {
     span.setAttributes({
-      'channel.id': destination.channelId,
-      'message.id': messageId,
+      'spectro.discord.channel.id': destination.channelId,
+      'spectro.discord.message.id': messageId,
     });
 
     if (messageChannelId !== currentChannelId)
@@ -77,18 +105,21 @@ function renderReplyModal(
     switch (destination.type) {
       case ConfessionDestinationType.Channel:
         if (!hasAllFlags(permissions, SEND_MESSAGES))
-          throw new MissingReplyPermissionError(
+          MissingReplyPermissionError.throwNew(
+            MissingReplyPermissionErrorType.SendMessages,
             'You do not have permission to send anonymous replies in this channel.',
           );
         break;
       case ConfessionDestinationType.Thread:
-        span.setAttribute('thread.id', destination.threadId);
+        span.setAttribute('spectro.discord.thread.id', destination.threadId);
         if (!hasAllFlags(permissions, SEND_MESSAGES_IN_THREADS))
-          throw new MissingReplyPermissionError(
+          MissingReplyPermissionError.throwNew(
+            MissingReplyPermissionErrorType.SendMessagesInThreads,
             'You do not have permission to send anonymous replies in this thread.',
           );
         if (destination.isLocked && !hasAllFlags(permissions, MANAGE_THREADS))
-          throw new MissingReplyPermissionError(
+          MissingReplyPermissionError.throwNew(
+            MissingReplyPermissionErrorType.ManageThreads,
             'You do not have permission to reply anonymously in this locked thread.',
           );
         break;
@@ -96,7 +127,6 @@ function renderReplyModal(
         UnreachableCodeError.throwNew();
     }
 
-    logger.debug('reply modal prompted');
     return createConfessionModal({
       channelId: destination.channelId,
       threadId: destination.type === ConfessionDestinationType.Thread ? destination.threadId : null,
@@ -121,11 +151,18 @@ export function handleReplyModal(
       permissions,
     );
   } catch (error) {
-    if (error instanceof ReplyModalError)
+    if (error instanceof ReplyModalError) {
+      logger.warn(
+        'Reply modal failure returned to the user',
+        'spectro.discord.interaction.reply_modal.failure_recovered',
+        void 0,
+        error,
+      );
       return {
         type: InteractionResponseType.ChannelMessageWithSource,
         data: { flags: MessageFlags.Ephemeral, content: error.message },
       } satisfies InteractionResponseMessage;
+    }
     throw error;
   }
 }

@@ -7,7 +7,6 @@ import type { InteractionApplicationCommandChatInputOption } from '$lib/server/m
 import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
@@ -15,7 +14,6 @@ import { Tracer } from '$lib/server/telemetry/tracer';
 import { UnexpectedSetupArgumentError, UnexpectedSetupOptionTypeError } from './errors';
 
 const SERVICE_NAME = 'webhook.interaction.setup';
-const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 
 export async function handleSetup(
@@ -32,9 +30,9 @@ export async function handleSetup(
 ): Promise<InteractionResponse> {
   return await tracer.asyncSpan('handle-setup', async span => {
     span.setAttributes({
-      'guild.id': guildId,
-      'channel.id': channelId,
-      'moderator.id': moderatorId,
+      'spectro.discord.guild.id': guildId,
+      'spectro.discord.channel.id': channelId,
+      'spectro.moderator.id': moderatorId,
     });
 
     let logChannelId: Snowflake | null = null;
@@ -84,10 +82,11 @@ export async function handleSetup(
     assert(typeof logChannel !== 'undefined');
     strictEqual(logChannel.type, ChannelType.GuildText);
 
-    if (targetChannelId !== null) span.setAttribute('target.channel.id', targetChannelId);
+    if (targetChannelId !== null)
+      span.setAttribute('spectro.discord.target_channel.id', targetChannelId);
     span.setAttributes({
-      'log.channel.id': logChannelId,
-      'effective.channel.id': effectiveTargetChannelId,
+      'spectro.discord.log_channel.id': logChannelId,
+      'spectro.discord.effective_channel.id': effectiveTargetChannelId,
     });
 
     const { ids } = await inngest.send(
@@ -108,7 +107,7 @@ export async function handleSetup(
       ),
     );
 
-    logger.debug('channel setup queued', { 'inngest.events.id': ids });
+    span.setAttribute('spectro.inngest.event.ids', ids);
 
     return {
       type: InteractionResponseType.DeferredChannelMessageWithSource,
