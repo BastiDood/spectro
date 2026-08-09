@@ -11,7 +11,7 @@ export class UnreachableCodeError extends Error {
 
   static throwNew(): never {
     const error = new UnreachableCodeError();
-    logger.fatal(error.message, error);
+    logger.error(error.message, 'spectro.assertion.unreachable_code', void 0, error);
     throw error;
   }
 }
@@ -24,7 +24,7 @@ export class AssertionError extends Error {
 
   static throwNew(message?: string): never {
     const error = new AssertionError(message);
-    logger.fatal(error.message, error);
+    logger.error(error.message, 'spectro.assertion.failed', void 0, error);
     throw error;
   }
 }

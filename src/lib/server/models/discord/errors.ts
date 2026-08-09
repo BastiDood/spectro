@@ -33,16 +33,18 @@ export class DiscordError extends Error {
     public readonly code: number,
     message: string,
   ) {
-    super(message);
+    super(`Discord returned error code ${code}: ${message}`);
     this.name = 'DiscordError';
   }
 
   static throwNew(code: number, message: string): never {
     const error = new DiscordError(code, message);
-    logger.error('discord api error', error, {
-      'discord.error.code': code,
-      'discord.error.message': message,
-    });
+    logger.error(
+      `Discord returned error code ${error.code}.`,
+      'spectro.discord.api.response_rejected',
+      { 'spectro.discord.error.code': error.code },
+      error,
+    );
     throw error;
   }
 }

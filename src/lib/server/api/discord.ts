@@ -11,12 +11,10 @@ import {
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
 import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
-import { Logger } from '$lib/server/telemetry/logger';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'api.discord';
-const logger = Logger.byName(SERVICE_NAME);
 const tracer = Tracer.byName(SERVICE_NAME);
 const encoder = new TextEncoder();
 
@@ -49,12 +47,12 @@ export class DiscordClient {
   ) {
     return await tracer.asyncSpan('create-message', async span => {
       span.setAttributes({
-        'channel.id': channelId,
-        'idempotency.seed': idempotencySeed,
+        'spectro.discord.channel.id': channelId,
+        'spectro.idempotency.seed': idempotencySeed,
       });
 
       const nonce = await createDiscordNonce(idempotencySeed);
-      logger.debug('created discord nonce', { 'idempotency.nonce': nonce });
+      span.setAttribute('spectro.idempotency.nonce', nonce);
 
       let response: Response;
       if (typeof files === 'undefined') {
@@ -102,7 +100,7 @@ export class DiscordClient {
 
       if (response.status === 200) {
         const parsed = parse(Message, json);
-        logger.debug('message created', { 'message.id': parsed.id });
+        span.setAttribute('spectro.discord.message.id', parsed.id);
         return parsed;
       }
 
@@ -113,9 +111,7 @@ export class DiscordClient {
 
   async createPublicThread(channelId: Snowflake, name: string) {
     return await tracer.asyncSpan('create-public-thread', async span => {
-      span.setAttributes({
-        'channel.id': channelId,
-      });
+      span.setAttribute('spectro.discord.channel.id', channelId);
 
       const response = await fetch(`${DiscordClient.#API_BASE_URL}/channels/${channelId}/threads`, {
         body: JSON.stringify({
@@ -133,7 +129,7 @@ export class DiscordClient {
 
       if (response.status === 201) {
         const parsed = parse(Channel, json);
-        logger.debug('thread created', { 'thread.id': parsed.id });
+        span.setAttribute('spectro.discord.thread.id', parsed.id);
         return parsed;
       }
 
@@ -145,8 +141,8 @@ export class DiscordClient {
   async createPublicThreadFromMessage(channelId: Snowflake, messageId: Snowflake, name: string) {
     return await tracer.asyncSpan('create-public-thread-from-message', async span => {
       span.setAttributes({
-        'channel.id': channelId,
-        'message.id': messageId,
+        'spectro.discord.channel.id': channelId,
+        'spectro.discord.message.id': messageId,
       });
 
       const response = await fetch(
@@ -165,7 +161,7 @@ export class DiscordClient {
 
       if (response.status === 201) {
         const parsed = parse(Channel, json);
-        logger.debug('thread created from message', { 'thread.id': parsed.id });
+        span.setAttribute('spectro.discord.thread.id', parsed.id);
         return parsed;
       }
 
@@ -181,7 +177,7 @@ export class DiscordClient {
   ) {
     return await tracer.asyncSpan('create-followup-message', async span => {
       // Interaction token is too sensitive to log.
-      span.setAttribute('discord.application.id', applicationId);
+      span.setAttribute('spectro.discord.application.id', applicationId);
 
       const response = await fetch(
         `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}`,
@@ -195,7 +191,7 @@ export class DiscordClient {
       if (response.status === 200) {
         const json = await response.json();
         const parsed = parse(Message, json);
-        logger.debug('follow-up message created', { 'message.id': parsed.id });
+        span.setAttribute('spectro.discord.message.id', parsed.id);
         return parsed;
       }
 
@@ -212,7 +208,7 @@ export class DiscordClient {
   ) {
     return await tracer.asyncSpan('edit-original-interaction-response', async span => {
       // Interaction token is too sensitive to log.
-      span.setAttribute('discord.application.id', applicationId);
+      span.setAttribute('spectro.discord.application.id', applicationId);
 
       const response = await fetch(
         `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
@@ -226,7 +222,7 @@ export class DiscordClient {
       if (response.status === 200) {
         const json = await response.json();
         const parsed = parse(Message, json);
-        logger.debug('original interaction response edited', { 'message.id': parsed.id });
+        span.setAttribute('spectro.discord.message.id', parsed.id);
         return parsed;
       }
 
@@ -242,7 +238,7 @@ export class DiscordClient {
   ) {
     return await tracer.asyncSpan('delete-original-interaction-response', async span => {
       // Interaction token is too sensitive to log.
-      span.setAttribute('discord.application.id', applicationId);
+      span.setAttribute('spectro.discord.application.id', applicationId);
 
       const response = await fetch(
         `${DiscordClient.#API_BASE_URL}/webhooks/${applicationId}/${interactionToken}/messages/@original`,
@@ -250,9 +246,7 @@ export class DiscordClient {
       );
 
       if (response.status === 204) {
-        logger.debug('original interaction response deleted', {
-          'discord.application.id': applicationId,
-        });
+        span.setAttribute('spectro.discord.interaction_response.deleted', true);
         return;
       }
 

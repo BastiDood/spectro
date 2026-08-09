@@ -29,7 +29,6 @@ async function init() {
       async () =>
         await tracer.asyncSpan('shutdown-pg-database', async () => {
           await pool.end();
-          logger.debug('database shutdown');
         }),
     );
     return drizzle(pool, { schema });
@@ -46,7 +45,6 @@ async function init() {
       async () =>
         await tracer.asyncSpan('shutdown-neon-database', async () => {
           await pool.end();
-          logger.debug('database shutdown');
         }),
     );
     return drizzle(pool, { schema });
@@ -165,8 +163,8 @@ async function insertAttachmentData(
 ) {
   return await tracer.asyncSpan('insert-attachment', async span => {
     span.setAttributes({
-      'attachment.id': ephemeralAttachment.id,
-      'confession.internal.id': confessionInternalId.toString(),
+      'spectro.attachment.id': ephemeralAttachment.id,
+      'spectro.confession.internal.id': confessionInternalId.toString(),
     });
 
     const { rowCount } = await db.insert(schema.ephemeralAttachment).values({
@@ -177,6 +175,7 @@ async function insertAttachmentData(
       url: ephemeralAttachment.url,
       proxyUrl: ephemeralAttachment.proxy_url,
     });
+    if (rowCount !== null) span.setAttribute('spectro.database.affected_row_count', rowCount);
 
     switch (rowCount) {
       case null:
@@ -186,8 +185,6 @@ async function insertAttachmentData(
       default:
         return UnexpectedRowCountDatabaseError.throwNew(rowCount);
     }
-
-    logger.debug('attachment inserted');
   });
 }
 
@@ -198,12 +195,12 @@ export async function upsertDurableAttachmentData(
 ) {
   return await tracer.asyncSpan('upsert-durable-attachment', async span => {
     span.setAttributes({
-      'attachment.id': ephemeralAttachmentId.toString(),
-      'durable.attachment.id': durableAttachment.id,
-      'durable.message.id': durableAttachment.messageId,
-      'durable.channel.id': durableAttachment.channelId,
+      'spectro.attachment.id': ephemeralAttachmentId.toString(),
+      'spectro.durable.attachment.id': durableAttachment.id,
+      'spectro.durable.message.id': durableAttachment.messageId,
+      'spectro.durable.channel.id': durableAttachment.channelId,
     });
-    await db
+    const { rowCount } = await db
       .insert(schema.durableAttachment)
       .values({
         id: BigInt(durableAttachment.id),
@@ -231,6 +228,7 @@ export async function upsertDurableAttachmentData(
           width: sql`excluded.${sql.raw(schema.durableAttachment.width.name)}`,
         },
       });
+    if (rowCount !== null) span.setAttribute('spectro.database.affected_row_count', rowCount);
   });
 }
 
@@ -247,9 +245,9 @@ export async function insertConfession(
 ) {
   return await tracer.asyncSpan('insert-confession', async span => {
     span.setAttributes({
-      'guild.id': guildId.toString(),
-      'channel.id': channelId.toString(),
-      'author.id': authorId.toString(),
+      'spectro.guild.id': guildId.toString(),
+      'spectro.channel.id': channelId.toString(),
+      'spectro.author.id': authorId.toString(),
     });
 
     const { confessionId } = await db
@@ -275,9 +273,9 @@ export async function insertConfession(
 
     if (attachment !== null) await insertAttachmentData(db, internalId, attachment);
 
-    logger.debug('confession inserted', {
-      'internal.id': internalId.toString(),
-      'confession.id': confessionId.toString(),
+    span.setAttributes({
+      'spectro.confession.internal.id': internalId.toString(),
+      'spectro.confession.id': confessionId.toString(),
     });
 
     return { internalId, confessionId };
@@ -291,8 +289,9 @@ async function loadApprovedChannelThreadResolution(
 ) {
   return await tracer.asyncSpan('load-approved-channel-thread-resolution', async span => {
     span.setAttributes({
-      'pending.channel.thread.title.confession.internal.id': confessionInternalId.toString(),
-      'thread.id': threadId.toString(),
+      'spectro.pending.channel.thread.title.confession.internal.id':
+        confessionInternalId.toString(),
+      'spectro.thread.id': threadId.toString(),
     });
 
     const approvedTitle = aliasedTable(schema.pendingChannelThreadTitle, 'approved_title');
@@ -361,6 +360,8 @@ async function loadApprovedChannelThreadResolution(
       .limit(1)
       .then(assertSingle);
 
+    span.setAttribute('spectro.pending.channel.thread.id', row.pendingChannelThreadId.toString());
+
     return createApprovedChannelThreadResolution(row);
   });
 }
@@ -372,8 +373,9 @@ export async function resolveApprovedChannelThread(
 ) {
   return await tracer.asyncSpan('resolve-approved-channel-thread', async span => {
     span.setAttributes({
-      'pending.channel.thread.title.confession.internal.id': confessionInternalId.toString(),
-      'thread.id': threadId.toString(),
+      'spectro.pending.channel.thread.title.confession.internal.id':
+        confessionInternalId.toString(),
+      'spectro.thread.id': threadId.toString(),
     });
 
     const resolution = await loadApprovedChannelThreadResolution(
@@ -382,9 +384,12 @@ export async function resolveApprovedChannelThread(
       threadId,
     );
     const { pendingChannelThreadId } = resolution;
-    span.setAttribute('pending.channel.thread.id', pendingChannelThreadId.toString());
+    span.setAttribute('spectro.pending.channel.thread.id', pendingChannelThreadId.toString());
 
-    if (resolution.approvedForPending !== null) return resolution.approvedForPending;
+    if (resolution.approvedForPending !== null) {
+      span.setAttribute('spectro.approved_channel_thread.resolution', 'existing-pending');
+      return resolution.approvedForPending;
+    }
 
     await db.execute(sql`select pg_advisory_xact_lock(${pendingChannelThreadId})`);
 
@@ -393,22 +398,27 @@ export async function resolveApprovedChannelThread(
       confessionInternalId,
       threadId,
     );
-    if (resolutionAfterLock.approvedForPending !== null)
+    if (resolutionAfterLock.approvedForPending !== null) {
+      span.setAttribute('spectro.approved_channel_thread.resolution', 'existing-pending');
       return resolutionAfterLock.approvedForPending;
+    }
 
-    if (resolutionAfterLock.approvedForThread !== null)
+    if (resolutionAfterLock.approvedForThread !== null) {
+      span.setAttribute('spectro.approved_channel_thread.resolution', 'existing-thread');
       return resolutionAfterLock.approvedForThread;
+    }
 
     const { rowCount } = await db.insert(schema.approvedChannelThread).values({
       confessionInternalId,
       threadId,
     });
+    if (rowCount !== null) span.setAttribute('spectro.database.affected_row_count', rowCount);
 
     switch (rowCount) {
       case null:
         return UnexpectedRowCountDatabaseError.throwNew();
       case 1:
-        logger.debug('approved channel thread inserted');
+        span.setAttribute('spectro.approved_channel_thread.resolution', 'created');
         return {
           pendingChannelThreadId,
           confessionInternalId,
@@ -424,23 +434,28 @@ export async function resolveApprovedChannelThread(
 export async function disableConfessionChannel(db: Interface, channelId: bigint, disabledAt: Date) {
   return await tracer.asyncSpan('disable-confession-channel', async span => {
     span.setAttributes({
-      'channel.id': channelId.toString(),
-      'disabled.at': disabledAt.toISOString(),
+      'spectro.channel.id': channelId.toString(),
+      'spectro.channel.disabled_at': disabledAt.toISOString(),
     });
 
     const { rowCount } = await db
       .update(schema.channel)
       .set({ disabledAt })
       .where(eq(schema.channel.id, channelId));
+    if (rowCount !== null) span.setAttribute('spectro.database.affected_row_count', rowCount);
 
     switch (rowCount) {
       case null:
         return UnexpectedRowCountDatabaseError.throwNew();
       case 0:
-        logger.debug('confession channel not found for disable');
+        span.setAttribute('spectro.confession_channel.disabled', false);
+        logger.debug(
+          'Confession channel was not found for disable',
+          'spectro.database.confession_channel_disable_missing',
+        );
         return false;
       case 1:
-        logger.debug('confession channel disabled');
+        span.setAttribute('spectro.confession_channel.disabled', true);
         return true;
       default:
         return UnexpectedRowCountDatabaseError.throwNew(rowCount);
@@ -451,21 +466,26 @@ export async function disableConfessionChannel(db: Interface, channelId: bigint,
 /** @throws {UnexpectedRowCountDatabaseError} */
 export async function resetLogChannel(db: Interface, channelId: bigint) {
   return await tracer.asyncSpan('reset-log-channel', async span => {
-    span.setAttribute('channel.id', channelId.toString());
+    span.setAttribute('spectro.channel.id', channelId.toString());
 
     const { rowCount } = await db
       .update(schema.channel)
       .set({ logChannelId: null })
       .where(eq(schema.channel.id, channelId));
+    if (rowCount !== null) span.setAttribute('spectro.database.affected_row_count', rowCount);
 
     switch (rowCount) {
       case null:
         return UnexpectedRowCountDatabaseError.throwNew();
       case 0:
-        logger.debug('confession channel not found for log reset');
+        span.setAttribute('spectro.log_channel.reset', false);
+        logger.debug(
+          'Confession channel was not found for log reset',
+          'spectro.database.log_channel_reset_missing',
+        );
         return false;
       case 1:
-        logger.debug('log channel reset');
+        span.setAttribute('spectro.log_channel.reset', true);
         return true;
       default:
         return UnexpectedRowCountDatabaseError.throwNew(rowCount);
