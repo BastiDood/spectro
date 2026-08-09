@@ -84,11 +84,11 @@ describe('serializeErrorToException', () => {
     expect(serializeErrorToException(error)).toHaveProperty('stack', 'outer stack');
   });
 
-  it('includes a self-referential cause once before stopping', () => {
+  it('does not repeat a self-referential cause', () => {
     const error = new CharacterizedError('RequestError', 'Request failed', 'outer stack');
     error.cause = error;
 
-    expect(serializeErrorToException(error)).toHaveProperty('stack', 'outer stack\n\nouter stack');
+    expect(serializeErrorToException(error)).toHaveProperty('stack', 'outer stack');
   });
 
   it('stops at a repeated error in a longer cycle', () => {
@@ -103,9 +103,9 @@ describe('serializeErrorToException', () => {
     );
   });
 
-  it('includes ten causes and omits the eleventh', () => {
-    let cause = new CharacterizedError('Cause11', 'Cause 11 failed', 'cause 11 stack');
-    for (let index = 10; index > 0; --index)
+  it('includes the outer error and 15 causes and omits the 16th', () => {
+    let cause = new CharacterizedError('Cause17', 'Cause 17 failed', 'cause 17 stack');
+    for (let index = 16; index > 0; --index)
       cause = new CharacterizedError(
         `Cause${index}`,
         `Cause ${index} failed`,
@@ -118,9 +118,9 @@ describe('serializeErrorToException', () => {
     if (typeof exception === 'string') throw new TypeError('expected a structured exception');
     const { stack } = exception;
 
-    expect(stack).toContain('cause 10 stack');
-    expect(stack).not.toContain('cause 11 stack');
-    expect(stack?.match(/\n\n/gu)).toHaveLength(10);
+    expect(stack).toContain('cause 15 stack');
+    expect(stack).not.toContain('cause 16 stack');
+    expect(stack?.match(/\n\n/gu)).toHaveLength(15);
   });
 
   it('preserves a custom Error subclass name', () => {

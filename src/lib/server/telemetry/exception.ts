@@ -4,33 +4,28 @@ export interface ErrorWithCode extends Error {
   code?: string | number | undefined;
 }
 
-export function serializeErrorToException({
-  name,
-  message,
-  code,
-  stack,
-  cause,
-}: ErrorWithCode): Exception {
-  // Keep track of the visited errors to avoid cyclical error chains
-  const visitedErrors = new WeakSet<Error>();
+function* traverseErrorCauseChain(error: Error) {
+  const visitedErrors = new WeakSet<Error>([error]);
 
-  const causeStack: string[] = [];
-  if (typeof stack !== 'undefined') causeStack.push(stack);
+  let currentError = error;
+  while (true) {
+    yield currentError;
 
-  // Maximum cause depth of 10 is sufficient for most use cases
-  let currentCause = cause;
-  for (let i = 0; i < 10; ++i) {
-    // Avoid cyclical error chains
-    if (!Error.isError(currentCause) || visitedErrors.has(currentCause)) break;
-    visitedErrors.add(currentCause);
+    if (!Error.isError(currentError.cause) || visitedErrors.has(currentError.cause)) break;
+    visitedErrors.add(currentError);
 
-    // Skip errors without a stack trace to minimize context noise
-    if (typeof currentCause.stack !== 'undefined') causeStack.push(currentCause.stack);
-
-    // Traverse the cause chain forward
-    currentCause = currentCause.cause;
+    currentError = currentError.cause;
   }
+}
 
+export function serializeErrorToException(error: ErrorWithCode): Exception {
+  const causeStack: string[] = [];
+
+  for (const currentError of traverseErrorCauseChain(error).take(16))
+    // Skip errors without a stack trace to minimize context noise
+    if (typeof currentError.stack !== 'undefined') causeStack.push(currentError.stack);
+
+  const { name, message, code } = error;
   const exception: Exception = { name, message, code };
   if (causeStack.length > 0) exception.stack = causeStack.join('\n\n');
   return exception;
