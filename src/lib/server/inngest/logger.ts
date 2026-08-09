@@ -1,5 +1,3 @@
-import { format } from 'node:util';
-
 import * as v from 'valibot';
 import type { AnyValue, AnyValueMap } from '@opentelemetry/api-logs';
 
@@ -28,7 +26,7 @@ const InngestFields = v.objectWithRest(
 );
 type InngestFields = v.InferOutput<typeof InngestFields>;
 
-function parseInngestFields(value: unknown) {
+function parseInngestRecord(value: unknown) {
   let parsed: InngestFields;
   try {
     parsed = v.parse(InngestFields, value);
@@ -50,7 +48,6 @@ function parseInngestFields(value: unknown) {
   return { attributes, error: err };
 }
 
-/** Pino-compatible logger adapter. */
 export class InngestLogger {
   #attributes: AnyValueMap;
 
@@ -59,7 +56,7 @@ export class InngestLogger {
   }
 
   child(metadata: Record<string, unknown>) {
-    const fields = parseInngestFields(metadata);
+    const fields = parseInngestRecord(metadata);
     return typeof fields === 'undefined'
       ? this
       : new InngestLogger({ ...this.#attributes, ...fields.attributes });
@@ -82,24 +79,30 @@ export class InngestLogger {
   }
 
   #log(severity: InngestLogSeverity, args: readonly unknown[]) {
-    const [first] = args;
-    const fields =
-      typeof first !== 'undefined' && first !== null && !Error.isError(first)
-        ? parseInngestFields(first)
-        : { attributes: {}, error: Error.isError(first) ? first : void 0 };
-    if (typeof fields === 'undefined') return;
+    const attributes = structuredClone(this.#attributes);
+    const strings: string[] = [];
+    let error: Error | undefined;
 
-    const messageIndex = args.findIndex(argument => typeof argument === 'string');
-    const body =
-      messageIndex === -1
-        ? 'Inngest emitted a log'
-        : format(args[messageIndex], ...args.slice(messageIndex + 1));
+    for (const argument of args)
+      if (typeof argument === 'string') {
+        strings.push(argument);
+      } else if (Error.isError(argument)) {
+        error = argument;
+      } else if (typeof argument !== 'object' || argument === null) {
+        const record = parseInngestRecord(argument);
+        if (typeof record !== 'undefined') {
+          const { attributes: recordAttributes, error: recordError } = record;
+          if (typeof recordError !== 'undefined') error = recordError;
+          for (const [key, attribute] of Object.entries(recordAttributes))
+            attributes[key] = attribute;
+        }
+      }
 
     logger[severity](
-      body,
+      strings.length === 0 ? 'Inngest emitted a log' : strings.join('\n\n'),
       'spectro.inngest.log',
-      { ...this.#attributes, ...fields.attributes },
-      fields.error ?? args.find(Error.isError),
+      attributes,
+      error,
     );
   }
 }
