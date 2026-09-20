@@ -80,7 +80,13 @@ export async function handleSetup(
 
     const logChannel = resolvedChannels[logChannelId];
     assert(typeof logChannel !== 'undefined');
-    strictEqual(logChannel.type, ChannelType.GuildText);
+    switch (logChannel.type) {
+      case ChannelType.GuildText:
+      case ChannelType.GuildVoice:
+        break;
+      default:
+        strictEqual(logChannel.type, ChannelType.GuildText);
+    }
 
     if (targetChannelId !== null)
       span.setAttribute('spectro.discord.target_channel.id', targetChannelId);
