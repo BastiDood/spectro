@@ -49,7 +49,7 @@ services:
       ZO_DATA_DIR: /data
       # Development-only credentials!
       ZO_ROOT_USER_EMAIL: admin@example.com
-      ZO_ROOT_USER_PASSWORD: password
+      ZO_ROOT_USER_PASSWORD: Password123*
     ports:
       - 5080:5080
     volumes:

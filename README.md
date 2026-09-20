@@ -52,7 +52,7 @@ docker compose down
 Once running, OpenObserve is accessible at `http://localhost:5080` with the default development credentials:
 
 - **Email**: `admin@example.com`
-- **Password**: `password`
+- **Password**: `Password123*`
 
 ## Registering Callback Endpoints
 
@@ -97,10 +97,10 @@ Spectro requires some environment variables to run correctly. If the following t
 
 The following variables are optional in development, but _highly_ recommended in production for [OpenTelemetry](#opentelemetry-instrumentation) integration:
 
-| **Name**                      | **Description**                                                                         | **Recommended**                                                |
-| ----------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | The base OTLP endpoint URL for exporting logs and traces.                               | `http://localhost:5080/api/default`                            |
-| `OTEL_EXPORTER_OTLP_HEADERS`  | Extra percent-encoded HTTP headers used for exporting telemetry (e.g., authentication). | `Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D` |
+| **Name**                      | **Description**                                                                         | **Recommended**                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The base OTLP endpoint URL for exporting logs and traces.                               | `http://localhost:5080/api/default`                              |
+| `OTEL_EXPORTER_OTLP_HEADERS`  | Extra percent-encoded HTTP headers used for exporting telemetry (e.g., authentication). | `Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206UGFzc3dvcmQxMjMq` |
 
 > [!NOTE]
 > The "recommended" values are only applicable to the development environment with OpenObserve running in the background. See the [`compose.yaml`] for more details on the OpenObserve configuration.
@@ -121,7 +121,7 @@ To enable full observability in local development:
 
    ```bash
    export OTEL_EXPORTER_OTLP_ENDPOINT='http://localhost:5080/api/default'
-   export OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206cGFzc3dvcmQ%3D'
+   export OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206UGFzc3dvcmQxMjMq'
    pnpm dev
    ```
 
