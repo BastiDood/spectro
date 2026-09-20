@@ -72,7 +72,7 @@
       },
       {
         "type": 7,
-        "channel_types": [0],
+        "channel_types": [0, 2],
         "name": "confession-channel",
         "description": "Channel where anonymous confessions will be enabled."
       },

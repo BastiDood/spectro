@@ -16,6 +16,7 @@ import {
   type ConfessionChannelDestination,
   ConfessionDestinationType,
   type ConfessionThreadDestination,
+  type ConfessionVoiceDestination,
   UnsupportedConfessionChannelError,
 } from './channel-context';
 
@@ -24,7 +25,8 @@ const tracer = Tracer.byName(SERVICE_NAME);
 
 type ConfessionModalDestination =
   | Pick<ConfessionChannelDestination, 'channelId' | 'type'>
-  | Pick<ConfessionThreadDestination, 'channelId' | 'isLocked' | 'threadId' | 'type'>;
+  | Pick<ConfessionThreadDestination, 'channelId' | 'isLocked' | 'threadId' | 'type'>
+  | Pick<ConfessionVoiceDestination, 'channelId' | 'type'>;
 
 export function handleConfess(
   destination: ConfessionModalDestination,
@@ -41,6 +43,7 @@ export function handleConfess(
       let threadId: string | null = null;
       switch (destination.type) {
         case ConfessionDestinationType.Channel:
+        case ConfessionDestinationType.Voice:
           if (!hasAllFlags(permissions, SEND_MESSAGES))
             return {
               type: InteractionResponseType.ChannelMessageWithSource,

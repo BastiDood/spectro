@@ -49,6 +49,25 @@ describe('handleConfess', () => {
     });
   });
 
+  it('opens a voice channel confession modal', () => {
+    expect(
+      handleConfess(
+        {
+          type: ConfessionDestinationType.Voice,
+          channelId: '1012345678900020080',
+        },
+        '4012345678900020080',
+        SEND_MESSAGES,
+      ),
+    ).toMatchObject({
+      type: InteractionResponseType.Modal,
+      data: {
+        custom_id: 'confess:message:1012345678900020080::',
+        title: 'Submit Confession',
+      },
+    });
+  });
+
   it('rejects missing thread message permission', () => {
     expect(
       handleConfess(

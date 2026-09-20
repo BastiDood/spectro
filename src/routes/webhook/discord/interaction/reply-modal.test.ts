@@ -76,6 +76,27 @@ describe('handleReplyModal', () => {
     });
   });
 
+  it('opens a voice channel reply modal', () => {
+    expect(
+      handleReplyModal(
+        {
+          type: ConfessionDestinationType.Voice,
+          channelId: '1012345678900020080',
+        },
+        '1012345678900020080',
+        '3012345678900020080',
+        '1012345678900020080',
+        SEND_MESSAGES,
+      ),
+    ).toMatchObject({
+      type: InteractionResponseType.Modal,
+      data: {
+        custom_id: 'confess:message:1012345678900020080::3012345678900020080',
+        title: 'Reply to a Message',
+      },
+    });
+  });
+
   it('rejects missing thread message permission', () => {
     expect(
       handleReplyModal(

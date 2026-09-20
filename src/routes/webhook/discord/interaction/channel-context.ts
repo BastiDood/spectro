@@ -12,6 +12,7 @@ type ChannelRefInput = Pick<Channel, 'id' | 'parent_id' | 'type'>;
 export const enum ConfessionDestinationType {
   Channel = 'channel',
   Thread = 'thread',
+  Voice = 'voice',
 }
 
 export interface ConfessionChannelDestination {
@@ -27,7 +28,13 @@ export interface ConfessionThreadDestination {
   title: string;
 }
 
-export type ConfessionDestination = ConfessionChannelDestination | ConfessionThreadDestination;
+export interface ConfessionVoiceDestination {
+  type: ConfessionDestinationType.Voice;
+  channelId: Snowflake;
+}
+
+export type ConfessionDestination =
+  ConfessionChannelDestination | ConfessionThreadDestination | ConfessionVoiceDestination;
 
 export class UnsupportedConfessionChannelError extends Error {
   constructor(public readonly channelType: ChannelType) {
@@ -50,6 +57,7 @@ export class UnsupportedConfessionChannelError extends Error {
 export function resolveConfessionChannelId(channel: ChannelRefInput): Snowflake {
   switch (channel.type) {
     case ChannelType.GuildText:
+    case ChannelType.GuildVoice:
       return channel.id;
     case ChannelType.AnnouncementThread:
     case ChannelType.PublicThread:
@@ -62,19 +70,6 @@ export function resolveConfessionChannelId(channel: ChannelRefInput): Snowflake 
   }
 }
 
-export function isConfessionThreadChannel(channel: Pick<Channel, 'type'>) {
-  switch (channel.type) {
-    case ChannelType.GuildText:
-      return false;
-    case ChannelType.AnnouncementThread:
-    case ChannelType.PublicThread:
-    case ChannelType.PrivateThread:
-      return true;
-    default:
-      UnsupportedConfessionChannelError.throwNew(channel.type);
-  }
-}
-
 export function resolveConfessionDestination(
   channel: Pick<Channel, 'id' | 'name' | 'parent_id' | 'thread_metadata' | 'type'>,
 ): ConfessionDestination {
@@ -82,6 +77,11 @@ export function resolveConfessionDestination(
     case ChannelType.GuildText:
       return {
         type: ConfessionDestinationType.Channel,
+        channelId: resolveConfessionChannelId(channel),
+      };
+    case ChannelType.GuildVoice:
+      return {
+        type: ConfessionDestinationType.Voice,
         channelId: resolveConfessionChannelId(channel),
       };
     case ChannelType.AnnouncementThread:

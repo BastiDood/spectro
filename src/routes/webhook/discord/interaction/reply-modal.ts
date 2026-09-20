@@ -17,6 +17,7 @@ import {
   type ConfessionChannelDestination,
   ConfessionDestinationType,
   type ConfessionThreadDestination,
+  type ConfessionVoiceDestination,
 } from './channel-context';
 
 const SERVICE_NAME = 'webhook.interaction.reply-modal';
@@ -25,7 +26,8 @@ const tracer = Tracer.byName(SERVICE_NAME);
 
 type ReplyModalDestination =
   | Pick<ConfessionChannelDestination, 'channelId' | 'type'>
-  | Pick<ConfessionThreadDestination, 'channelId' | 'isLocked' | 'threadId' | 'type'>;
+  | Pick<ConfessionThreadDestination, 'channelId' | 'isLocked' | 'threadId' | 'type'>
+  | Pick<ConfessionVoiceDestination, 'channelId' | 'type'>;
 
 abstract class ReplyModalError extends Error {
   constructor(message?: string) {
@@ -104,6 +106,7 @@ function renderReplyModal(
 
     switch (destination.type) {
       case ConfessionDestinationType.Channel:
+      case ConfessionDestinationType.Voice:
         if (!hasAllFlags(permissions, SEND_MESSAGES))
           MissingReplyPermissionError.throwNew(
             MissingReplyPermissionErrorType.SendMessages,

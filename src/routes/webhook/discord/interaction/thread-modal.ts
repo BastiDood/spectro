@@ -9,30 +9,46 @@ import { InteractionResponseType } from '$lib/server/models/discord/interaction-
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
+import { UnreachableCodeError } from '$lib/assert';
+
+import { type ConfessionDestination, ConfessionDestinationType } from './channel-context';
 
 const SERVICE_NAME = 'webhook.interaction.thread';
 const tracer = Tracer.byName(SERVICE_NAME);
 
 export function handleThread(
-  channelId: Snowflake,
-  isThread: boolean,
+  destination: Pick<ConfessionDestination, 'channelId' | 'type'>,
   authorId: Snowflake,
   permissions: bigint,
 ): InteractionResponse {
   return tracer.span('handle-thread', span => {
     span.setAttributes({
-      'spectro.discord.channel.id': channelId,
+      'spectro.discord.channel.id': destination.channelId,
       'spectro.author.id': authorId,
     });
 
-    if (isThread)
-      return {
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: {
-          flags: MessageFlags.Ephemeral,
-          content: 'Use `/confess` to post anonymously inside this thread.',
-        },
-      };
+    switch (destination.type) {
+      case ConfessionDestinationType.Channel:
+        break;
+      case ConfessionDestinationType.Thread:
+        return {
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            flags: MessageFlags.Ephemeral,
+            content: 'Use `/confess` to post anonymously inside this thread.',
+          },
+        };
+      case ConfessionDestinationType.Voice:
+        return {
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            flags: MessageFlags.Ephemeral,
+            content: 'Anonymous threads are not supported in voice channels.',
+          },
+        };
+      default:
+        UnreachableCodeError.throwNew();
+    }
 
     if (!hasAllFlags(permissions, CREATE_PUBLIC_THREADS))
       return {
@@ -52,6 +68,6 @@ export function handleThread(
         },
       };
 
-    return createThreadConfessionModal(channelId);
+    return createThreadConfessionModal(destination.channelId);
   });
 }

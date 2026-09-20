@@ -30,11 +30,7 @@ import { handleResend } from './resend';
 import { handleSetup } from './setup';
 import { handleThread } from './thread-modal';
 import { handleThreadReplyModal } from './thread-reply-modal';
-import {
-  isConfessionThreadChannel,
-  resolveConfessionChannelId,
-  resolveConfessionDestination,
-} from './channel-context';
+import { resolveConfessionChannelId, resolveConfessionDestination } from './channel-context';
 import {
   UnexpectedApplicationCommandChatInputNameError,
   UnexpectedApplicationCommandMessageNameError,
@@ -93,8 +89,7 @@ async function handleInteraction(
               assert(typeof interaction.member?.user !== 'undefined');
               assert(typeof interaction.member.permissions !== 'undefined');
               return handleThread(
-                resolveConfessionChannelId(interaction.channel),
-                isConfessionThreadChannel(interaction.channel),
+                resolveConfessionDestination(interaction.channel),
                 interaction.member.user.id,
                 interaction.member.permissions,
               );

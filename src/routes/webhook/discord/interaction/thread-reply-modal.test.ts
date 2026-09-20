@@ -34,6 +34,27 @@ describe('handleThreadReplyModal', () => {
     });
   });
 
+  it('rejects thread replies in voice channels', () => {
+    expect(
+      handleThreadReplyModal(
+        {
+          type: ConfessionDestinationType.Voice,
+          channelId: '1012345678900020080',
+        },
+        '1012345678900020080',
+        '3012345678900020080',
+        '1012345678900020080',
+        THREAD_REPLY_PERMISSIONS,
+      ),
+    ).toEqual({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        flags: MessageFlags.Ephemeral,
+        content: 'Anonymous threads are not supported in voice channels.',
+      },
+    });
+  });
+
   it('rejects target channel mismatches', () => {
     expect(
       handleThreadReplyModal(

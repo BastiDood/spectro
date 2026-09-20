@@ -17,6 +17,7 @@ import {
   type ConfessionChannelDestination,
   ConfessionDestinationType,
   type ConfessionThreadDestination,
+  type ConfessionVoiceDestination,
 } from './channel-context';
 
 const SERVICE_NAME = 'webhook.interaction.thread-reply-modal';
@@ -25,7 +26,8 @@ const tracer = Tracer.byName(SERVICE_NAME);
 
 type ThreadReplyModalDestination =
   | Pick<ConfessionChannelDestination, 'channelId' | 'type'>
-  | Pick<ConfessionThreadDestination, 'channelId' | 'threadId' | 'type'>;
+  | Pick<ConfessionThreadDestination, 'channelId' | 'threadId' | 'type'>
+  | Pick<ConfessionVoiceDestination, 'channelId' | 'type'>;
 
 abstract class ThreadReplyModalError extends Error {
   constructor(message?: string) {
@@ -130,9 +132,22 @@ function renderThreadReplyModal(
       'spectro.discord.message.id': messageId,
     });
 
-    if (destination.type === ConfessionDestinationType.Thread) {
-      span.setAttribute('spectro.discord.thread.id', destination.threadId);
-      RecursiveThreadReplyError.throwNew();
+    switch (destination.type) {
+      case ConfessionDestinationType.Channel:
+        break;
+      case ConfessionDestinationType.Thread:
+        span.setAttribute('spectro.discord.thread.id', destination.threadId);
+        return RecursiveThreadReplyError.throwNew();
+      case ConfessionDestinationType.Voice:
+        return {
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            flags: MessageFlags.Ephemeral,
+            content: 'Anonymous threads are not supported in voice channels.',
+          },
+        } satisfies InteractionResponseMessage;
+      default:
+        UnreachableCodeError.throwNew();
     }
 
     if (messageChannelId !== currentChannelId)

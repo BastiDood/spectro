@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
+import { ConfessionDestinationType } from './channel-context';
 import { handleThread } from './thread-modal';
 
 const THREAD_PERMISSIONS = BigInt(309237645312);
@@ -12,7 +13,14 @@ const SEND_MESSAGES_IN_THREADS = 1n << 38n;
 describe('handleThread', () => {
   it('rejects thread creation inside threads', () => {
     expect(
-      handleThread('1012345678900020080', true, '4012345678900020080', THREAD_PERMISSIONS),
+      handleThread(
+        {
+          type: ConfessionDestinationType.Thread,
+          channelId: '1012345678900020080',
+        },
+        '4012345678900020080',
+        THREAD_PERMISSIONS,
+      ),
     ).toEqual({
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
@@ -22,9 +30,35 @@ describe('handleThread', () => {
     });
   });
 
+  it('rejects thread creation in voice channels', () => {
+    expect(
+      handleThread(
+        {
+          type: ConfessionDestinationType.Voice,
+          channelId: '1012345678900020080',
+        },
+        '4012345678900020080',
+        THREAD_PERMISSIONS,
+      ),
+    ).toEqual({
+      type: InteractionResponseType.ChannelMessageWithSource,
+      data: {
+        flags: MessageFlags.Ephemeral,
+        content: 'Anonymous threads are not supported in voice channels.',
+      },
+    });
+  });
+
   it('rejects missing public thread creation permission', () => {
     expect(
-      handleThread('1012345678900020080', false, '4012345678900020080', SEND_MESSAGES_IN_THREADS),
+      handleThread(
+        {
+          type: ConfessionDestinationType.Channel,
+          channelId: '1012345678900020080',
+        },
+        '4012345678900020080',
+        SEND_MESSAGES_IN_THREADS,
+      ),
     ).toEqual({
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
@@ -36,7 +70,14 @@ describe('handleThread', () => {
 
   it('rejects missing thread message permission', () => {
     expect(
-      handleThread('1012345678900020080', false, '4012345678900020080', CREATE_PUBLIC_THREADS),
+      handleThread(
+        {
+          type: ConfessionDestinationType.Channel,
+          channelId: '1012345678900020080',
+        },
+        '4012345678900020080',
+        CREATE_PUBLIC_THREADS,
+      ),
     ).toEqual({
       type: InteractionResponseType.ChannelMessageWithSource,
       data: {
@@ -48,7 +89,14 @@ describe('handleThread', () => {
 
   it('opens a thread confession modal in root channels', () => {
     expect(
-      handleThread('1012345678900020080', false, '4012345678900020080', THREAD_PERMISSIONS),
+      handleThread(
+        {
+          type: ConfessionDestinationType.Channel,
+          channelId: '1012345678900020080',
+        },
+        '4012345678900020080',
+        THREAD_PERMISSIONS,
+      ),
     ).toMatchObject({
       type: InteractionResponseType.Modal,
       data: {
