@@ -71,6 +71,14 @@ describe('downloadDiscordAttachment', () => {
     );
   });
 
+  it('rejects an unsafe-integer Content-Length header', async () => {
+    const response = createResponse([createChunk(1)], '9007199254740992');
+
+    await expect(downloadDiscordAttachment(response, 5)).rejects.toBeInstanceOf(
+      MissingContentLengthHeaderError,
+    );
+  });
+
   it('rejects over-limit Content-Length', async () => {
     const response = createResponse([createChunk(1)], '6');
 
@@ -80,7 +88,7 @@ describe('downloadDiscordAttachment', () => {
   });
 
   it('rejects when the stream exceeds the max size', async () => {
-    const response = createResponse([createChunk(3), createChunk(3)], '6');
+    const response = createResponse([createChunk(3), createChunk(3)], '5');
 
     await expect(downloadDiscordAttachment(response, 5)).rejects.toBeInstanceOf(
       AttachmentTooLargeError,

@@ -1,6 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { assertDefined, assertOptional, UnreachableCodeError } from '$lib/assert';
+import { assertDefined, assertOptional, UnreachableCodeError } from '$lib/server/assert';
 import {
   ATTACH_FILES,
   MANAGE_THREADS,

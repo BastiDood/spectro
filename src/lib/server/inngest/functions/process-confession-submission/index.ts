@@ -16,7 +16,6 @@ import {
 } from '$lib/server/database';
 import { DiscordClient } from '$lib/server/api/discord';
 import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
-import { extractDurableAttachmentMetadata } from '$lib/server/attachment';
 import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import type { Message } from '$lib/server/models/discord/message';
@@ -39,7 +38,9 @@ import {
   loadApprovedThreadTitle,
   loadConfessionSubmissionChannel,
 } from './query';
-import { downloadDiscordAttachment } from './download';
+
+import { downloadDiscordAttachment } from './attachment/download';
+import { extractDurableAttachmentMetadata } from './attachment/durable';
 
 const SERVICE_NAME = 'inngest.process-confession-submission';
 const logger = Logger.byName(SERVICE_NAME);

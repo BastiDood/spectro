@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { ConfessionDestinationType } from '$lib/server/interactions/confession-context';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
-import { ConfessionDestinationType } from './channel-context';
-import { handleThread } from './thread-modal';
+import { handleThread } from '.';
 
 const THREAD_PERMISSIONS = BigInt(309237645312);
 const CREATE_PUBLIC_THREADS = 1n << 35n;

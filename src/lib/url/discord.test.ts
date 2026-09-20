@@ -18,6 +18,9 @@ describe('parseDiscordAttachmentCdnUrl', () => {
       filename: 'my_image.png',
       namespace: DiscordAttachmentCdnNamespace.Durable,
     });
+    expect(parsed?.url.search).toBe(
+      '?ex=65d903de&is=65c68ede&hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f&',
+    );
   });
 
   it('parses signed Discord ephemeral attachment CDN URLs', () => {
@@ -61,6 +64,14 @@ describe('parseDiscordAttachmentCdnUrl', () => {
     expect(
       parseDiscordAttachmentCdnUrl(
         'https://cdn.discordapp.com/avatars/374495340902088704/aa236a66d815d3d204b28806e6305064.png',
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects unknown attachment namespaces', () => {
+    expect(
+      parseDiscordAttachmentCdnUrl(
+        'https://cdn.discordapp.com/permanent-attachments/1012345678900020080/1234567891233211234/my_image.png',
       ),
     ).toBeNull();
   });
@@ -142,16 +153,6 @@ describe('normalizeDiscordAttachmentUrl', () => {
       ),
     ).toBe(
       'https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png',
-    );
-  });
-
-  it('removes query parameters from ephemeral attachment URLs', () => {
-    expect(
-      normalizeDiscordAttachmentUrl(
-        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/my_image.png?ex=65d903de&is=65c68ede&hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f&',
-      ),
-    ).toBe(
-      'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/my_image.png',
     );
   });
 });

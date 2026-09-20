@@ -7,9 +7,8 @@ import type { MessageComponent } from '$lib/server/models/discord/message/compon
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
+import { parsePublic } from '$lib/server/interactions/response-visibility';
 import { Tracer } from '$lib/server/telemetry/tracer';
-
-import { parsePublic } from './util';
 
 const SERVICE_NAME = 'webhook.interaction.help';
 const tracer = Tracer.byName(SERVICE_NAME);

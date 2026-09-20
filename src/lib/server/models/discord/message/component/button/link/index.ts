@@ -1,4 +1,4 @@
-import type { Emoji } from '$lib/server/models/discord/emoji';
+import type { Emoji } from '$lib/server/models/discord/message/component/emoji';
 import { MessageComponentButtonStyle } from '$lib/server/models/discord/message/component/button/base';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
 

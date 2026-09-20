@@ -1,6 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { assertOptional } from '$lib/assert';
+import { assertOptional } from '$lib/server/assert';
 import { DiscordAttachmentCdnNamespace, parseDiscordAttachmentCdnUrl } from '$lib/url/discord';
 import type { Message } from '$lib/server/models/discord/message';
 

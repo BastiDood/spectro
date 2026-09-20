@@ -1,4 +1,8 @@
 import {
+  type ConfessionDestination,
+  ConfessionDestinationType,
+} from '$lib/server/interactions/confession-context';
+import {
   CREATE_PUBLIC_THREADS,
   SEND_MESSAGES_IN_THREADS,
 } from '$lib/server/models/discord/permission';
@@ -9,9 +13,7 @@ import { InteractionResponseType } from '$lib/server/models/discord/interaction-
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { UnreachableCodeError } from '$lib/assert';
-
-import { type ConfessionDestination, ConfessionDestinationType } from './channel-context';
+import { UnreachableCodeError } from '$lib/server/assert';
 
 const SERVICE_NAME = 'webhook.interaction.thread';
 const tracer = Tracer.byName(SERVICE_NAME);

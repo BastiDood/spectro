@@ -1,6 +1,6 @@
 import { type InferOutput, nullable, object, string } from 'valibot';
 
-import { Snowflake } from './snowflake';
+import { Snowflake } from '$lib/server/models/discord/snowflake';
 
 export const Guild = object({
   id: Snowflake,

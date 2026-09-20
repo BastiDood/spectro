@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { ConfessionDestinationType } from '$lib/server/interactions/confession-context';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 
-import { ConfessionDestinationType } from './channel-context';
-import { handleConfess } from './confess-modal';
+import { handleConfess } from '.';
 
 const SEND_MESSAGES = 1n << 11n;
 const SEND_MESSAGES_IN_THREADS = 1n << 38n;
@@ -106,6 +106,27 @@ describe('handleConfess', () => {
       data: {
         flags: MessageFlags.Ephemeral,
         content: 'You do not have permission to post anonymously in this locked thread.',
+      },
+    });
+  });
+
+  it('opens an unlocked thread confession modal with thread message permission', () => {
+    expect(
+      handleConfess(
+        {
+          type: ConfessionDestinationType.Thread,
+          channelId: '1012345678900020080',
+          threadId: '2012345678900020080',
+          isLocked: false,
+        },
+        '4012345678900020080',
+        SEND_MESSAGES_IN_THREADS,
+      ),
+    ).toMatchObject({
+      type: InteractionResponseType.Modal,
+      data: {
+        custom_id: 'confess:message:1012345678900020080:2012345678900020080:',
+        title: 'Submit Confession',
       },
     });
   });

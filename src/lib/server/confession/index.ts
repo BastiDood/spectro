@@ -16,7 +16,7 @@ import { MessageComponentType } from '$lib/server/models/discord/message/compone
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { MessageReferenceType } from '$lib/server/models/discord/message/reference/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { UnreachableCodeError } from '$lib/assert';
+import { UnreachableCodeError } from '$lib/server/assert';
 
 interface CreateConfessionModalOptions {
   channelId: Snowflake;

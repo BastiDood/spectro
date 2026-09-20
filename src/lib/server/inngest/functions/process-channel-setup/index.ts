@@ -2,7 +2,7 @@ import { NonRetriableError } from 'inngest';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-import { assertSingle } from '$lib/assert';
+import { assertSingle } from '$lib/server/assert';
 import { channel, type NewChannel } from '$lib/server/database/models';
 import { db } from '$lib/server/database';
 import { DiscordClient } from '$lib/server/api/discord';

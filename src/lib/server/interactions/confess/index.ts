@@ -1,3 +1,10 @@
+import {
+  type ConfessionChannelDestination,
+  ConfessionDestinationType,
+  type ConfessionThreadDestination,
+  type ConfessionVoiceDestination,
+  UnsupportedConfessionChannelError,
+} from '$lib/server/interactions/confession-context';
 import { createConfessionModal } from '$lib/server/confession';
 import { hasAllFlags } from '$lib/bits';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
@@ -10,15 +17,7 @@ import {
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { UnreachableCodeError } from '$lib/assert';
-
-import {
-  type ConfessionChannelDestination,
-  ConfessionDestinationType,
-  type ConfessionThreadDestination,
-  type ConfessionVoiceDestination,
-  UnsupportedConfessionChannelError,
-} from './channel-context';
+import { UnreachableCodeError } from '$lib/server/assert';
 
 const SERVICE_NAME = 'webhook.interaction.confess';
 const tracer = Tracer.byName(SERVICE_NAME);

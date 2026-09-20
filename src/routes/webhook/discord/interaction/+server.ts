@@ -7,6 +7,17 @@ import { verifyAsync } from '@noble/ed25519';
 
 import { type Channel, ChannelType } from '$lib/server/models/discord/channel';
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
+import { handleApproval } from '$lib/server/interactions/approval';
+import { handleConfess } from '$lib/server/interactions/confess';
+import { handleHelp } from '$lib/server/interactions/help';
+import { handleInfo } from '$lib/server/interactions/info';
+import { handleLockdown } from '$lib/server/interactions/lockdown';
+import { handleModalSubmit } from '$lib/server/interactions/confess/submit';
+import { handleReplyModal } from '$lib/server/interactions/reply';
+import { handleResend } from '$lib/server/interactions/resend';
+import { handleSetup } from '$lib/server/interactions/setup';
+import { handleThread } from '$lib/server/interactions/thread';
+import { handleThreadReplyModal } from '$lib/server/interactions/thread-reply';
 import { hasAllFlags } from '$lib/bits';
 import { Interaction } from '$lib/server/models/discord/interaction';
 import { InteractionApplicationCommandType } from '$lib/server/models/discord/interaction/application-command/base';
@@ -16,26 +27,17 @@ import { InteractionType } from '$lib/server/models/discord/interaction/base';
 import { Logger } from '$lib/server/telemetry/logger';
 import { MANAGE_CHANNELS, MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import {
+  resolveConfessionChannelId,
+  resolveConfessionDestination,
+} from '$lib/server/interactions/confession-context';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { UnreachableCodeError } from '$lib/assert';
-
-import { handleApproval } from './approval';
-import { handleConfess } from './confess-modal';
-import { handleHelp } from './help';
-import { handleInfo } from './info';
-import { handleLockdown } from './lockdown';
-import { handleModalSubmit } from './modal-submit';
-import { handleReplyModal } from './reply-modal';
-import { handleResend } from './resend';
-import { handleSetup } from './setup';
-import { handleThread } from './thread-modal';
-import { handleThreadReplyModal } from './thread-reply-modal';
-import { resolveConfessionChannelId, resolveConfessionDestination } from './channel-context';
 import {
   UnexpectedApplicationCommandChatInputNameError,
   UnexpectedApplicationCommandMessageNameError,
   UnexpectedApplicationCommandTypeError,
-} from './errors';
+} from '$lib/server/interactions/errors';
+import { UnreachableCodeError } from '$lib/server/assert';
 
 const SERVICE_NAME = 'webhook.interaction';
 const logger = Logger.byName(SERVICE_NAME);

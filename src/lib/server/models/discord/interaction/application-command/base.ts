@@ -1,6 +1,6 @@
 import { type InferOutput, object, optional, string } from 'valibot';
 
-import { Resolved } from '$lib/server/models/discord/resolved';
+import { Resolved } from '$lib/server/models/discord/interaction/resolved';
 
 export const enum InteractionApplicationCommandType {
   ChatInput = 1,

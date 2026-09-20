@@ -1,7 +1,7 @@
 import { aliasedTable, and, eq, sql } from 'drizzle-orm';
 
 import * as schema from '$lib/server/database/models';
-import { AssertionError, assertOptional, assertSingle } from '$lib/assert';
+import { AssertionError, assertOptional, assertSingle } from '$lib/server/assert';
 import {
   type InsertableAttachment,
   type Interface,

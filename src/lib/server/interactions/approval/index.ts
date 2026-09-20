@@ -8,12 +8,11 @@ import { hasAllFlags } from '$lib/bits';
 import { inngest } from '$lib/server/inngest/client';
 import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
 import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import { MalformedCustomIdFormat } from '$lib/server/interactions/errors';
 import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
-
-import { MalformedCustomIdFormat } from './errors';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
 const tracer = Tracer.byName(SERVICE_NAME);

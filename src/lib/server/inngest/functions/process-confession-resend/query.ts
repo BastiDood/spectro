@@ -1,7 +1,7 @@
 import { aliasedTable, and, eq } from 'drizzle-orm';
 
 import * as schema from '$lib/server/database/models';
-import { AssertionError, assertOptional } from '$lib/assert';
+import { AssertionError, assertOptional } from '$lib/server/assert';
 import type { Interface } from '$lib/server/database';
 import { Tracer } from '$lib/server/telemetry/tracer';
 

@@ -19,7 +19,7 @@ import { inngest } from '$lib/server/inngest/client';
 import { Logger } from '$lib/server/telemetry/logger';
 import { MessageFlags } from '$lib/server/models/discord/message/base';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { UnreachableCodeError } from '$lib/assert';
+import { UnreachableCodeError } from '$lib/server/assert';
 
 import {
   AlreadyApprovedApprovalError,

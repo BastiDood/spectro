@@ -11,7 +11,10 @@ import { MessageFlags } from '$lib/server/models/discord/message/base';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
-import { UnexpectedSetupArgumentError, UnexpectedSetupOptionTypeError } from './errors';
+import {
+  UnexpectedSetupArgumentError,
+  UnexpectedSetupOptionTypeError,
+} from '$lib/server/interactions/errors';
 
 const SERVICE_NAME = 'webhook.interaction.setup';
 const tracer = Tracer.byName(SERVICE_NAME);

@@ -6,6 +6,7 @@ import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
 import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
+import { handleApplicationAuthorized } from '$lib/server/events/application-authorized';
 import {
   IntegrationType,
   Webhook,
@@ -14,9 +15,7 @@ import {
 } from '$lib/server/models/discord/event';
 import { Logger } from '$lib/server/telemetry/logger';
 import { Tracer } from '$lib/server/telemetry/tracer';
-import { UnreachableCodeError } from '$lib/assert';
-
-import { handleApplicationAuthorized } from './application-authorized';
+import { UnreachableCodeError } from '$lib/server/assert';
 
 const SERVICE_NAME = 'webhook.event';
 const logger = Logger.byName(SERVICE_NAME);

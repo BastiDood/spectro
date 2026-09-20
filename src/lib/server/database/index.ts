@@ -2,7 +2,7 @@ import process from 'node:process';
 
 import { aliasedTable, and, eq, sql } from 'drizzle-orm';
 
-import { AssertionError, assertSingle, UnreachableCodeError } from '$lib/assert';
+import { AssertionError, assertSingle, UnreachableCodeError } from '$lib/server/assert';
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { Logger } from '$lib/server/telemetry/logger';
 import { normalizeDiscordAttachmentUrl } from '$lib/url/discord';
