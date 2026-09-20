@@ -3,7 +3,7 @@
 Spectro is a Discord bot for anonymous confessions with moderation logging. Built with SvelteKit + PostgreSQL + Inngest for background jobs.
 
 > [!IMPORTANT]
-> After building features, you MUST run `pnpm lint` followed by `pnpm fmt:fix` to uphold codebase conventions.
+> After building features, you MUST run `pnpm --recursive run --if-present lint` followed by `pnpm fmt:fix` to uphold codebase conventions.
 
 ## Development Workflow
 

@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee",
   "scripts": {
     "prepare": "svelte-kit sync",
     "env:dev": "dotenv -e .env.development --",
@@ -17,10 +16,10 @@
     "preview": "vite preview",
     "fmt": "prettier . --experimental-cli --check --cache-location .prettiercache",
     "fmt:fix": "prettier . --experimental-cli --write --cache-location .prettiercache",
-    "lint": "pnpm --workspace-root run --parallel /lint:/",
     "lint:eslint": "eslint --cache --concurrency auto",
     "lint:svelte": "svelte-check --fail-on-warnings",
-    "test": "vitest"
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@iconify-icons/ic": "^1.2.13",
@@ -42,6 +41,13 @@
     "pg": "^8.22.0",
     "svelte": "^5.56.8",
     "valibot": "^1.4.2"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^12.4.2",
+      "onFail": "download"
+    }
   },
   "devDependencies": {
     "@bastidood/eslint-plugin-imsort": "^0.12.0",

@@ -12,9 +12,18 @@ overrides:
   '@inngest/ai@0.1.7>@types/node': '-'
   '@inngest/ai@0.1.7>typescript': '-'
 
-trustPolicy: no-downgrade
+tasks:
+  ci:
+    dependsOn:
+      - fmt
+      - lint
+      - test:run
+  lint:
+    dependsOn:
+      - lint:eslint
+      - lint:svelte
 
+trustPolicy: no-downgrade
 trustPolicyExclude:
   - chokidar@4.0.3
   - ts-api-utils@2.3.0
-  - undici-types@6.21.0
