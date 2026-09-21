@@ -2,7 +2,7 @@ allowBuilds:
   esbuild: true
   protobufjs: false
 
-cleanupUnusedCatalogs: true
+catalogPrune: true
 
 engineStrict: true
 
