@@ -11,6 +11,10 @@ minimumReleaseAgeStrict: true
 overrides:
   '@inngest/ai@0.1.7>@types/node': '-'
   '@inngest/ai@0.1.7>typescript': '-'
+  'inngest@4.20.0>@opentelemetry/auto-instrumentations-node': '-'
+  'inngest@4.20.0>@opentelemetry/context-async-hooks': '-'
+  'inngest@4.20.0>@opentelemetry/instrumentation': '-'
+  'inngest@4.20.0>@traceloop/instrumentation-anthropic': '-'
 
 tasks:
   ci:
