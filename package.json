@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@iconify-icons/ic": "^2.0.0",
-    "@iconify-icons/simple-icons": "^2.0.3",
+    "@iconify-icons/simple-icons": "^2.0.4",
     "@iconify/svelte": "^5.2.2",
     "@neondatabase/serverless": "^1.1.0",
     "@noble/ed25519": "^3.2.0",
