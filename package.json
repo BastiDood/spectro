@@ -48,6 +48,11 @@
       "name": "pnpm",
       "version": "^12.15.0",
       "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "24.x",
+      "onFail": "download"
     }
   },
   "devDependencies": {

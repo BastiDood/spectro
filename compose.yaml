@@ -1,6 +1,110 @@
 name: spectro
 
+# Development-only credentials!
+x-postgres-database-url: &postgres-database-url postgres://postgres:password@db:5432/postgres
+
 services:
+  web:
+    build:
+      context: .
+      target: web
+    pull_policy: build
+    init: true
+    environment:
+      DISCORD_PUBLIC_KEY: ${DISCORD_PUBLIC_KEY:?Set DISCORD_PUBLIC_KEY in .env}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:?Set DISCORD_BOT_TOKEN in .env}
+      INNGEST_DEV: http://inngest:8288
+      ORIGIN: ${ORIGIN:?Set ORIGIN in .env}
+      # Development-only credentials!
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://o2:5080/api/default
+      OTEL_EXPORTER_OTLP_HEADERS: Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206UGFzc3dvcmQxMjMq
+      POSTGRES_DATABASE_URL: *postgres-database-url
+      SPECTRO_DATABASE_DRIVER: pg
+    ports:
+      - target: 5173
+        published: 5173
+        host_ip: 127.0.0.1
+    volumes:
+      - type: volume
+        source: svelte
+        target: /app/.svelte-kit
+      - type: volume
+        source: vite
+        target: /app/node_modules/.vite
+    depends_on:
+      db:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          initial_sync: true
+          ignore:
+            - Dockerfile
+            - .dockerignore
+            - package.json
+            - pnpm-lock.yaml
+            - pnpm-workspace.yaml
+            - vite.config.ts
+        - action: sync+restart
+          path: .
+          target: /app
+          initial_sync: true
+          include:
+            - vite.config.ts
+        - action: rebuild
+          path: .
+          include:
+            - Dockerfile
+            - .dockerignore
+            - package.json
+            - pnpm-lock.yaml
+            - pnpm-workspace.yaml
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    pull_policy: build
+    init: true
+    profiles:
+      - migrate
+    environment:
+      POSTGRES_DATABASE_URL: *postgres-database-url
+    depends_on:
+      db:
+        condition: service_healthy
+
+  studio:
+    build:
+      context: .
+      target: studio
+    pull_policy: build
+    init: true
+    profiles:
+      - studio
+    environment:
+      POSTGRES_DATABASE_URL: *postgres-database-url
+    ports:
+      - target: 4983
+        published: 4983
+        host_ip: 127.0.0.1
+    depends_on:
+      db:
+        condition: service_healthy
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.3
+    command:
+      - tunnel
+      - run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env}
+    depends_on:
+      - web
+    restart: always
+
   db:
     image: postgres:18.6-alpine3.24
     environment:
@@ -8,7 +112,9 @@ services:
       POSTGRES_PASSWORD: password
     user: postgres
     ports:
-      - 5432:5432
+      - target: 5432
+        published: 5432
+        host_ip: 127.0.0.1
     volumes:
       - postgres:/var/lib/postgresql
     healthcheck:
@@ -23,13 +129,15 @@ services:
   inngest:
     image: inngest/inngest:v1.49.0
     ports:
-      - 8288:8288
+      - target: 8288
+        published: 8288
+        host_ip: 127.0.0.1
     command:
       - inngest
       - dev
       - '--no-discovery'
       - '--sdk-url'
-      - 'http://host.docker.internal:5173/webhook/inngest' # Vite
+      - 'http://web:5173/webhook/inngest' # Vite
     restart: always
     healthcheck:
       test:
@@ -51,7 +159,9 @@ services:
       ZO_ROOT_USER_EMAIL: admin@example.com
       ZO_ROOT_USER_PASSWORD: Password123*
     ports:
-      - 5080:5080
+      - target: 5080
+        published: 5080
+        host_ip: 127.0.0.1
     volumes:
       - open-observe:/data
     restart: always
@@ -59,3 +169,5 @@ services:
 volumes:
   postgres:
   open-observe:
+  svelte:
+  vite:

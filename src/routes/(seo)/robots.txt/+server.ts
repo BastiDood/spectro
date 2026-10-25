@@ -1,8 +1,6 @@
-import { ORIGIN } from '#lib/env.ts';
-
 export const prerender = true;
 
-export function GET() {
-  const lines = ['User-agent: *', 'Allow: /', '', `Sitemap: ${ORIGIN.origin}/sitemap.xml`];
+export function GET({ url }) {
+  const lines = ['User-agent: *', 'Allow: /', '', `Sitemap: ${url.origin}/sitemap.xml`];
   return new Response(lines.join('\n'));
 }

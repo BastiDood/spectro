@@ -23,30 +23,39 @@ pnpm env:prod pnpm discord:register
 
 ## Managing Local Services
 
-Spectro uses Docker Compose to run local development services:
+Spectro uses Docker Compose to run the development stack:
 
+- **Web** (`web`) — The SvelteKit development server in Compose watch mode (port `5173`).
+- **Tunnel** (`tunnel`) — A Cloudflare Tunnel that exposes `web` to Discord.
 - **PostgreSQL** (`db`) — The database layer for data persistence (port `5432`).
 - **Inngest** (`inngest`) — A local Inngest dev server for background job processing (port `8288`).
 - **OpenObserve** (`o2`) — A web UI for visualizing OpenTelemetry traces and logs (port `5080`).
 
-The following environment variables are required for the database to work.
+All ports are published on `127.0.0.1` only. Compose reads the following variables from `.env`:
 
-| **Name**                | **Description**                                                    |
-| ----------------------- | ------------------------------------------------------------------ |
-| `POSTGRES_DATABASE_URL` | The URL connection string for the PostgreSQL development database. |
-| `POSTGRES_PASSWORD`     | The password with which to initialize the default `postgres` user. |
+| **Name**             | **Description**                                      |
+| -------------------- | ---------------------------------------------------- |
+| `DISCORD_PUBLIC_KEY` | The public key of the Discord application.           |
+| `DISCORD_BOT_TOKEN`  | The bot token of the Discord application.            |
+| `ORIGIN`             | The public origin of your Cloudflare Tunnel.         |
+| `TUNNEL_TOKEN`       | The token of the remotely-managed Cloudflare Tunnel. |
+
+In the Cloudflare dashboard, the tunnel's published application route must use `http://web:5173` as its **Service URL**.
+
+Outside of Compose, `ORIGIN` is optional. When it is unset, the [Vite config](./vite.config.ts) falls back to `https://spectro.bastidood.dev` for prerendering.
 
 ```bash
-# Start all local development services.
-# Requires `POSTGRES_PASSWORD`.
-docker compose up --detach
+# Start all services in Compose watch mode.
+just dev
 
-# Run the database migrations.
-# Requires `POSTGRES_DATABASE_URL` already in scope.
-pnpm db:migrate
+# Run the database migrations in the `migrate` service.
+just db-migrate
 
-# Shut down all local development services.
-docker compose down
+# Start Drizzle Studio at `https://local.drizzle.studio` in the `studio` service.
+just db-studio
+
+# Stop all services.
+just stop
 ```
 
 Once running, OpenObserve is accessible at `http://localhost:5080` with the default development credentials:
@@ -109,23 +118,7 @@ The following variables are optional in development, but _highly_ recommended in
 
 ### Local Telemetry with OpenObserve
 
-To enable full observability in local development:
-
-1. Start the local services (including OpenObserve):
-
-   ```bash
-   docker compose up --detach
-   ```
-
-2. Export the OTEL environment variables before running the dev server:
-
-   ```bash
-   export OTEL_EXPORTER_OTLP_ENDPOINT='http://localhost:5080/api/default'
-   export OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic%20YWRtaW5AZXhhbXBsZS5jb206UGFzc3dvcmQxMjMq'
-   pnpm dev
-   ```
-
-3. View traces and logs at `http://localhost:5080`.
+The `web` service exports traces and logs to OpenObserve with the development credentials in [`compose.yaml`]. View them at `http://localhost:5080`.
 
 In production deployments, `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` may be pointed at an external observability provider. Spectro hard-codes the OTLP HTTP/protobuf trace exporter in [`src/instrumentation.server.ts`](./src/instrumentation.server.ts) instead of exposing the exporter protocol as runtime configuration.
 
@@ -139,8 +132,8 @@ pnpm install
 # This is automatically run by `pnpm install`.
 pnpm prepare
 
-# Start the development server with live reloading + hot module replacement.
-pnpm dev
+# Start the development stack with live reloading + hot module replacement.
+just dev
 
 # Compile the production build (i.e., with optimizations).
 pnpm build

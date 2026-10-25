@@ -3,7 +3,8 @@
   import GitHub from '@iconify-icons/simple-icons/github';
   import Icon from '@iconify/svelte';
   import Spectro from '#lib/brand/logomark/48-logomark.png';
-  import { ORIGIN } from '#lib/env.ts';
+
+  import { page } from '$app/state';
 
   import './app.css';
   import Footer from './Footer.svelte';
@@ -13,7 +14,7 @@
 </script>
 
 <svelte:head>
-  <meta property="og:image" content="{ORIGIN.origin}{banner}" />
+  <meta property="og:image" content="{page.url.origin}{banner}" />
 </svelte:head>
 
 <div class="flex flex-col">

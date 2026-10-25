@@ -4,12 +4,6 @@ import { defineEnvVars } from '@sveltejs/kit/env';
 import { hexadecimal, length, picklist, pipe, string, transform, url } from 'valibot';
 
 export const variables = defineEnvVars({
-  PUBLIC_ORIGIN: {
-    public: true,
-    static: true,
-    description: 'Canonical public origin of the site (e.g., `https://spectro.bastidood.dev`).',
-    schema: pipe(string(), url()),
-  },
   SPECTRO_DATABASE_DRIVER: {
     static: true,
     description:

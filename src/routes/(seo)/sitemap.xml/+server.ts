@@ -1,12 +1,10 @@
-import { ORIGIN } from '#lib/env.ts';
-
 export const prerender = true;
 
-export function GET() {
+export function GET({ url }) {
   const urls = ['', 'guide/', 'reference/', 'privacy/']
     .map(
       path =>
-        `<url><loc>${ORIGIN.origin}/${path}</loc><changefreq>daily</changefreq><priority>0.5</priority></url>`,
+        `<url><loc>${url.origin}/${path}</loc><changefreq>daily</changefreq><priority>0.5</priority></url>`,
     )
     .join('');
   return new Response(
