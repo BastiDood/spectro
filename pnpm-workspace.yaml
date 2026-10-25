@@ -9,12 +9,25 @@ engineStrict: true
 minimumReleaseAgeStrict: true
 
 overrides:
-  '@inngest/ai@0.1.7>@types/node': '-'
-  '@inngest/ai@0.1.7>typescript': '-'
-  'inngest@4.20.0>@opentelemetry/auto-instrumentations-node': '-'
-  'inngest@4.20.0>@opentelemetry/context-async-hooks': '-'
-  'inngest@4.20.0>@opentelemetry/instrumentation': '-'
-  'inngest@4.20.0>@traceloop/instrumentation-anthropic': '-'
+  '@eslint-community/eslint-utils@4.10.1>eslint-visitor-keys': ^5.0.1
+  '@html-eslint/eslint-plugin@0.67.0>@eslint/plugin-kit': ^0.7.3
+  '@opentelemetry/instrumentation-pg@0.76.0>@types/pg': ^8.23.1
+  '@tailwindcss/node@4.3.3>lightningcss': 1.33.0
+  '@tailwindcss/typography@0.5.20>postcss-selector-parser': 7.1.7
+  'dotenv-expand@12.0.3>dotenv': '-'
+  'drizzle-kit@0.31.11>@esbuild-kit/esm-loader': '-'
+  'drizzle-kit@0.31.11>esbuild': ^0.28.2
+  'eslint@10.13.0>ignore': ^7.0.9
+  'inngest@4.26.0>@opentelemetry/auto-instrumentations-node': '-'
+  'inngest@4.26.0>@opentelemetry/context-async-hooks': '-'
+  'inngest@4.26.0>@opentelemetry/instrumentation': '-'
+  'inngest@4.26.0>@traceloop/instrumentation-anthropic': '-'
+  'postcss-load-config@3.1.4>yaml': ^2.4.2
+  'qified@0.10.1>hookified': ^1.15.1
+  'svelte-eslint-parser@1.10.0>eslint-scope': ^9.1.2
+  'svelte-eslint-parser@1.10.0>eslint-visitor-keys': ^5.0.1
+  'svelte-eslint-parser@1.10.0>espree': ^11.2.0
+  'vitest@4.1.12>es-module-lexer': ^3.0.2
 
 tasks:
   ci:
