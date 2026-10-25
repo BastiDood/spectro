@@ -5,7 +5,7 @@ import { error } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
-import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
+import { DISCORD_PUBLIC_KEY } from '$app/env/private';
 import { handleApplicationAuthorized } from '$lib/server/events/application-authorized';
 import {
   IntegrationType,

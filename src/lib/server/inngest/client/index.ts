@@ -1,7 +1,7 @@
 import { extendedTracesMiddleware } from 'inngest/experimental';
 import { Inngest } from 'inngest';
 
-import { version } from '$app/environment';
+import { version } from '$app/env';
 
 import { InngestLogger } from './logger';
 

@@ -7,7 +7,7 @@ import {
   trace,
 } from '@opentelemetry/api';
 
-import { version } from '$app/environment';
+import { version } from '$app/env';
 
 export class Tracer {
   #tracer: OTelTracer;

@@ -9,7 +9,7 @@ import {
   type CreatePublicThreadFromMessage,
 } from '$lib/server/models/discord/channel';
 import { type CreateMessage, Message } from '$lib/server/models/discord/message';
-import { DISCORD_BOT_TOKEN } from '$lib/server/env/discord';
+import { DISCORD_BOT_TOKEN } from '$app/env/private';
 import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
 import type { Snowflake } from '$lib/server/models/discord/snowflake';
 import { Tracer } from '$lib/server/telemetry/tracer';

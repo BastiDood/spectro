@@ -1,12 +1,12 @@
 import assert, { strictEqual } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { parse } from 'valibot';
 import { verifyAsync } from '@noble/ed25519';
 
 import { type Channel, ChannelType } from '$lib/server/models/discord/channel';
-import { DISCORD_PUBLIC_KEY } from '$lib/server/env/discord';
+import { DISCORD_PUBLIC_KEY } from '$app/env/private';
 import { handleApproval } from '$lib/server/interactions/approval';
 import { handleConfess } from '$lib/server/interactions/confess';
 import { handleHelp } from '$lib/server/interactions/help';
@@ -276,7 +276,7 @@ export async function POST({ request }) {
       return handled;
     });
 
-    return json(response);
+    return Response.json(response);
   }
 
   logger.error('Invalid signature', 'spectro.discord.interaction.invalid_signature');

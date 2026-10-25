@@ -7,6 +7,7 @@ export default {
   kit: {
     adapter: adapter({ regions: ['iad1'], runtime: 'nodejs24.x', memory: 128 }),
     experimental: {
+      explicitEnvironmentVariables: true,
       tracing: { server: true },
       instrumentation: { server: true },
     },

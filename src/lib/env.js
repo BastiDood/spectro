@@ -1,3 +1,3 @@
-import { PUBLIC_ORIGIN } from '$env/static/public';
+import { PUBLIC_ORIGIN } from '$app/env/public';
 
 export const ORIGIN = new URL(PUBLIC_ORIGIN);

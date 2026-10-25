@@ -6,7 +6,7 @@ import {
   SeverityNumber,
 } from '@opentelemetry/api-logs';
 
-import { version } from '$app/environment';
+import { version } from '$app/env';
 
 import { serializeErrorToException } from './exception';
 

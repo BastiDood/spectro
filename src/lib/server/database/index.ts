@@ -6,8 +6,7 @@ import { AssertionError, assertSingle, UnreachableCodeError } from '$lib/server/
 import type { Attachment } from '$lib/server/models/discord/attachment';
 import { Logger } from '$lib/server/telemetry/logger';
 import { normalizeDiscordAttachmentUrl } from '$lib/url/discord';
-import { POSTGRES_DATABASE_URL } from '$lib/server/env/postgres';
-import { SPECTRO_DATABASE_DRIVER } from '$lib/server/env/spectro';
+import { POSTGRES_DATABASE_URL, SPECTRO_DATABASE_DRIVER } from '$app/env/private';
 import { Tracer } from '$lib/server/telemetry/tracer';
 
 import * as schema from './models';

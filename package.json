@@ -33,6 +33,7 @@
     "@opentelemetry/exporter-trace-otlp-proto": "^0.223.0",
     "@opentelemetry/instrumentation-pg": "^0.76.0",
     "@opentelemetry/sdk-logs": "^0.223.0",
+    "@opentelemetry/sdk-trace": "^2.12.0",
     "@opentelemetry/sdk-trace-base": "^2.12.0",
     "@sveltejs/kit": "^2.70.3",
     "@vercel/otel": "^2.1.3",
