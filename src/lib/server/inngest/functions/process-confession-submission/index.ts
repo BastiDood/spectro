@@ -1,5 +1,3 @@
-import { NonRetriableError } from 'inngest';
-
 import {
   ConfessionChannel,
   createConfessionPayload,
@@ -7,20 +5,21 @@ import {
   getConfessionErrorMessage,
   getThreadCreationErrorMessage,
   LogPayloadType,
-} from '$lib/server/confession';
+} from '#lib/server/confession/index.js';
 import {
   db,
   resetLogChannel,
   resolveApprovedChannelThread,
   upsertDurableAttachmentData,
-} from '$lib/server/database';
-import { DiscordClient } from '$lib/server/api/discord';
-import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
-import { inngest } from '$lib/server/inngest/client';
-import { Logger } from '$lib/server/telemetry/logger';
-import type { Message } from '$lib/server/models/discord/message';
-import { parseDiscordAttachmentCdnUrl } from '$lib/url/discord';
-import { Tracer } from '$lib/server/telemetry/tracer';
+} from '#lib/server/database/index.js';
+import { DiscordClient } from '#lib/server/api/discord.js';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
+import { inngest } from '#lib/server/inngest/client/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
+import type { Message } from '#lib/server/models/discord/message/index.js';
+import { NonRetriableError } from 'inngest';
+import { parseDiscordAttachmentCdnUrl } from '#lib/url/discord.js';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
 
 import {
   assertConfessionSubmissionChannel,

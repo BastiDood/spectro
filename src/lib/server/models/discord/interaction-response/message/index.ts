@@ -1,5 +1,5 @@
-import type { CreateMessage } from '$lib/server/models/discord/message';
-import type { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import type { CreateMessage } from '#lib/server/models/discord/message/index.js';
+import type { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
 
 export interface InteractionResponseMessage {
   type:

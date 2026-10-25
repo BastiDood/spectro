@@ -9,8 +9,6 @@ import ts from 'typescript-eslint';
 
 import { defineConfig } from 'eslint/config';
 
-import svelteConfig from './svelte.config.js';
-
 export default defineConfig(
   { ignores: ['node_modules/**/*', '.svelte-kit/**/*', '.vercel/**/*'] },
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
@@ -179,7 +177,6 @@ export default defineConfig(
         projectService: true,
         extraFileExtensions: ['.svelte'],
         parser: ts.parser,
-        svelteConfig,
       },
     },
     rules: {

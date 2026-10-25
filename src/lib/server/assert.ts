@@ -1,4 +1,4 @@
-import { Logger } from '$lib/server/telemetry/logger';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
 
 const SERVICE_NAME = 'lib.assert';
 const logger = Logger.byName(SERVICE_NAME);

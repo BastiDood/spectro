@@ -1,20 +1,19 @@
-import { NonRetriableError } from 'inngest';
-
-import { ATTACH_FILES } from '$lib/server/models/discord/permission';
+import { ATTACH_FILES } from '#lib/server/models/discord/permission.js';
 import {
   ConfessionChannel,
   createConfessionPayload,
   createLogPayload,
   getConfessionErrorMessage,
   LogPayloadType,
-} from '$lib/server/confession';
-import { db, resetLogChannel } from '$lib/server/database';
-import { DiscordClient } from '$lib/server/api/discord';
-import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
-import { hasAllFlags } from '$lib/bits';
-import { inngest } from '$lib/server/inngest/client';
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
+} from '#lib/server/confession/index.js';
+import { db, resetLogChannel } from '#lib/server/database/index.js';
+import { DiscordClient } from '#lib/server/api/discord.js';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
+import { hasAllFlags } from '#lib/bits.js';
+import { inngest } from '#lib/server/inngest/client/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { NonRetriableError } from 'inngest';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
 
 import { ConfessionResendEvent } from './schema';
 import { createResendConfessionState } from './state';

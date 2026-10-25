@@ -1,8 +1,10 @@
+import type {
+  InsertableAttachment,
+  PersistableDurableAttachment,
+} from '#lib/server/database/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
 import { NonRetriableError } from 'inngest';
-
-import type { InsertableAttachment, PersistableDurableAttachment } from '$lib/server/database';
-import { Logger } from '$lib/server/telemetry/logger';
-import type { SerializedAttachment } from '$lib/server/confession';
+import type { SerializedAttachment } from '#lib/server/confession/index.js';
 
 import type { loadConfessionSubmissionChannel } from './query';
 

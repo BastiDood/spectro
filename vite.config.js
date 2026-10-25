@@ -1,5 +1,6 @@
 import { cwd, env } from 'node:process';
 
+import adapter from '@sveltejs/adapter-vercel';
 import tailwind from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 import { loadEnv } from 'vite';
@@ -17,7 +18,10 @@ export default defineConfig({
       },
     },
     tailwind(),
-    sveltekit(),
+    sveltekit({
+      adapter: adapter({ regions: ['iad1'], runtime: 'nodejs24.x', memory: 128 }),
+      tracing: { server: true },
+    }),
   ],
   server: { host: true, allowedHosts: ['host.docker.internal'] },
   preview: { host: true, allowedHosts: ['host.docker.internal'] },

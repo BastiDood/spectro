@@ -3,8 +3,8 @@ import { type InferOutput, literal, object } from 'valibot';
 import {
   InteractionApplicationCommandChatInputOptionBase,
   InteractionApplicationCommandChatInputOptionType,
-} from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
-import { Snowflake } from '$lib/server/models/discord/snowflake';
+} from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.js';
 
 export const InteractionApplicationCommandChatInputOptionAttachment = object({
   ...InteractionApplicationCommandChatInputOptionBase.entries,

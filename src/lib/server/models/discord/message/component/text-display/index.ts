@@ -1,6 +1,6 @@
 import { type InferOutput, literal, object, optional, string } from 'valibot';
 
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
 
 /**
  * Inbound schema for TextDisplay in modal submissions.

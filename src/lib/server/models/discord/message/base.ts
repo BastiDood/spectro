@@ -1,7 +1,7 @@
 import { type InferOutput, object } from 'valibot';
 
-import { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Timestamp } from '$lib/server/models/discord/timestamp';
+import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Timestamp } from '#lib/server/models/discord/timestamp.js';
 
 export const enum MessageFlags {
   /** Do not include embeds when serializing this message. */

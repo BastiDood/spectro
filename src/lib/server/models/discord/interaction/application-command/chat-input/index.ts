@@ -3,8 +3,8 @@ import { array, type InferOutput, literal, object, optional } from 'valibot';
 import {
   InteractionApplicationCommandBase,
   InteractionApplicationCommandType,
-} from '$lib/server/models/discord/interaction/application-command/base';
-import { Snowflake } from '$lib/server/models/discord/snowflake';
+} from '#lib/server/models/discord/interaction/application-command/base.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.js';
 
 import { InteractionApplicationCommandChatInputOption } from './option';
 

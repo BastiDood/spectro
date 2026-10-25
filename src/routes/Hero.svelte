@@ -1,6 +1,6 @@
 <script>
-  import Spectro from '$lib/brand/logomark/logomark-transparent.svg';
-  import TextLogo from '$lib/brand/logotype/logotype-dark-textonly.svg';
+  import Spectro from '#lib/brand/logomark/logomark-transparent.svg';
+  import TextLogo from '#lib/brand/logotype/logotype-dark-textonly.svg';
 </script>
 
 <div class="flex flex-col items-center gap-6 self-center p-12 md:gap-8">

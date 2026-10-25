@@ -1,8 +1,8 @@
 import { array, type InferOutput, literal, object, optional } from 'valibot';
 
-import { MessageComponentSelectBase } from '$lib/server/models/discord/message/component/select/base';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import { Snowflake } from '$lib/server/models/discord/snowflake';
+import { MessageComponentSelectBase } from '#lib/server/models/discord/message/component/select/base.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.js';
 
 /**
  * Default value for a role select menu.

@@ -1,20 +1,20 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { type Channel, ChannelType } from '$lib/server/models/discord/channel';
-import { ChannelSetupEvent } from '$lib/server/inngest/functions/process-channel-setup/schema';
-import { inngest } from '$lib/server/inngest/client';
-import type { InteractionApplicationCommandChatInputOption } from '$lib/server/models/discord/interaction/application-command/chat-input/option';
-import { InteractionApplicationCommandChatInputOptionType } from '$lib/server/models/discord/interaction/application-command/chat-input/option/base';
-import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
-import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Tracer } from '$lib/server/telemetry/tracer';
+import { type Channel, ChannelType } from '#lib/server/models/discord/channel.js';
+import { ChannelSetupEvent } from '#lib/server/inngest/functions/process-channel-setup/schema.js';
+import { inngest } from '#lib/server/inngest/client/index.js';
+import type { InteractionApplicationCommandChatInputOption } from '#lib/server/models/discord/interaction/application-command/chat-input/option/index.js';
+import { InteractionApplicationCommandChatInputOptionType } from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.js';
+import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.js';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
+import { MessageFlags } from '#lib/server/models/discord/message/base.js';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
 
 import {
   UnexpectedSetupArgumentError,
   UnexpectedSetupOptionTypeError,
-} from '$lib/server/interactions/errors';
+} from '#lib/server/interactions/errors.js';
 
 const SERVICE_NAME = 'webhook.interaction.setup';
 const tracer = Tracer.byName(SERVICE_NAME);

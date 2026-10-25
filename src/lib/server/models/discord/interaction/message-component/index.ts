@@ -1,6 +1,6 @@
 import { type InferOutput, literal, object, variant } from 'valibot';
 
-import { InteractionBase, InteractionType } from '$lib/server/models/discord/interaction/base';
+import { InteractionBase, InteractionType } from '#lib/server/models/discord/interaction/base.js';
 
 import { InteractionDataButton } from './button';
 import { InteractionDataSnowflakeSelect } from './snowflake-select';

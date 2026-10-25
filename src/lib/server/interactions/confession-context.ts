@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 
-import { type Channel, ChannelType } from '$lib/server/models/discord/channel';
-import { Logger } from '$lib/server/telemetry/logger';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
+import { type Channel, ChannelType } from '#lib/server/models/discord/channel.js';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
 
 const SERVICE_NAME = 'webhook.interaction.channel-context';
 const logger = Logger.byName(SERVICE_NAME);

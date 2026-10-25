@@ -1,7 +1,7 @@
-import { db } from '$lib/server/database';
-import { guild } from '$lib/server/database/models';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Tracer } from '$lib/server/telemetry/tracer';
+import { db } from '#lib/server/database/index.js';
+import { guild } from '#lib/server/database/models/index.js';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
 
 const SERVICE_NAME = 'webhook.event.application-authorized';
 const tracer = Tracer.byName(SERVICE_NAME);

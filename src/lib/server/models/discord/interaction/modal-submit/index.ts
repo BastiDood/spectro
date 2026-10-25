@@ -1,8 +1,8 @@
 import { type InferOutput, literal, object, optional, string } from 'valibot';
 
-import { InteractionBase, InteractionType } from '$lib/server/models/discord/interaction/base';
-import { ModalComponents } from '$lib/server/models/discord/message/component/modal';
-import { Resolved } from '$lib/server/models/discord/interaction/resolved';
+import { InteractionBase, InteractionType } from '#lib/server/models/discord/interaction/base.js';
+import { ModalComponents } from '#lib/server/models/discord/message/component/modal/index.js';
+import { Resolved } from '#lib/server/models/discord/interaction/resolved.js';
 
 export const InteractionModalSubmit = object({
   ...InteractionBase.entries,

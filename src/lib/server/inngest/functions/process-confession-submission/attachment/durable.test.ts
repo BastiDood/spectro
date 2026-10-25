@@ -1,6 +1,5 @@
+import { AssertionError } from '#lib/server/assert.js';
 import { describe, expect, it } from 'vitest';
-
-import { AssertionError } from '$lib/server/assert';
 
 import { type DurableAttachmentMessage, extractDurableAttachmentMetadata } from './durable';
 

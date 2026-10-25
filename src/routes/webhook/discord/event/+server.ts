@@ -2,20 +2,20 @@ import { strictEqual } from 'node:assert/strict';
 
 import { ATTR_ENDUSER_ID } from '@opentelemetry/semantic-conventions/incubating';
 import { error } from '@sveltejs/kit';
-import { parse } from 'valibot';
-import { verifyAsync } from '@noble/ed25519';
-
-import { DISCORD_PUBLIC_KEY } from '$app/env/private';
-import { handleApplicationAuthorized } from '$lib/server/events/application-authorized';
+import { handleApplicationAuthorized } from '#lib/server/events/application-authorized.js';
 import {
   IntegrationType,
   Webhook,
   WebhookEventType,
   WebhookType,
-} from '$lib/server/models/discord/event';
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
-import { UnreachableCodeError } from '$lib/server/assert';
+} from '#lib/server/models/discord/event/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { parse } from 'valibot';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { UnreachableCodeError } from '#lib/server/assert.js';
+import { verifyAsync } from '@noble/ed25519';
+
+import { DISCORD_PUBLIC_KEY } from '$app/env/private';
 
 const SERVICE_NAME = 'webhook.event';
 const logger = Logger.byName(SERVICE_NAME);

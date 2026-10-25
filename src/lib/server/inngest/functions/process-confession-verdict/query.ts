@@ -1,9 +1,8 @@
+import * as schema from '#lib/server/database/models/index.js';
 import { aliasedTable, eq } from 'drizzle-orm';
-
-import * as schema from '$lib/server/database/models';
-import { AssertionError, assertOptional, assertSingle } from '$lib/server/assert';
-import type { Interface, Transaction } from '$lib/server/database';
-import { Tracer } from '$lib/server/telemetry/tracer';
+import { AssertionError, assertOptional, assertSingle } from '#lib/server/assert.js';
+import type { Interface, Transaction } from '#lib/server/database/index.js';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
 
 import type { ApprovedConfessionState, ConfessionVerdictConfessionState } from './state';
 

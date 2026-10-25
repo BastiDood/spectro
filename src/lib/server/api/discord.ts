@@ -1,18 +1,18 @@
 import { Buffer } from 'node:buffer';
 
-import { parse } from 'valibot';
-
 import {
   Channel,
   ChannelType,
   type CreatePublicThread,
   type CreatePublicThreadFromMessage,
-} from '$lib/server/models/discord/channel';
-import { type CreateMessage, Message } from '$lib/server/models/discord/message';
+} from '#lib/server/models/discord/channel.js';
+import { type CreateMessage, Message } from '#lib/server/models/discord/message/index.js';
+import { DiscordError, DiscordErrorResponse } from '#lib/server/models/discord/errors.js';
+import { parse } from 'valibot';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
+
 import { DISCORD_BOT_TOKEN } from '$app/env/private';
-import { DiscordError, DiscordErrorResponse } from '$lib/server/models/discord/errors';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Tracer } from '$lib/server/telemetry/tracer';
 
 const SERVICE_NAME = 'api.discord';
 const tracer = Tracer.byName(SERVICE_NAME);

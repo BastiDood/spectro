@@ -1,6 +1,5 @@
+import { ChannelType } from '#lib/server/models/discord/channel.js';
 import { describe, expect, it } from 'vitest';
-
-import { ChannelType } from '$lib/server/models/discord/channel';
 
 import {
   ConfessionDestinationType,

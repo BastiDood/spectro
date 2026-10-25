@@ -11,9 +11,9 @@ import {
   string,
 } from 'valibot';
 
-import { Emoji } from '$lib/server/models/discord/message/component/emoji';
-import { MessageComponentSelectBase } from '$lib/server/models/discord/message/component/select/base';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+import { Emoji } from '#lib/server/models/discord/message/component/emoji.js';
+import { MessageComponentSelectBase } from '#lib/server/models/discord/message/component/select/base.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
 
 /**
  * An option in a string select menu.

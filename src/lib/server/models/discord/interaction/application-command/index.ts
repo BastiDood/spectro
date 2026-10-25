@@ -1,6 +1,6 @@
 import { type InferOutput, literal, object, variant } from 'valibot';
 
-import { InteractionBase, InteractionType } from '$lib/server/models/discord/interaction/base';
+import { InteractionBase, InteractionType } from '#lib/server/models/discord/interaction/base.js';
 
 import { InteractionApplicationCommandChatInput } from './chat-input';
 import { InteractionApplicationCommandMessage } from './message';

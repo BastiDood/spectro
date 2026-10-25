@@ -1,10 +1,9 @@
 <script>
+  import banner from '#lib/brand/link-preview.png?url';
   import GitHub from '@iconify-icons/simple-icons/github';
   import Icon from '@iconify/svelte';
-
-  import banner from '$lib/brand/link-preview.png?url';
-  import Spectro from '$lib/brand/logomark/48-logomark.png';
-  import { ORIGIN } from '$lib/env';
+  import Spectro from '#lib/brand/logomark/48-logomark.png';
+  import { ORIGIN } from '#lib/env.js';
 
   import './app.css';
   import Footer from './Footer.svelte';

@@ -1,9 +1,8 @@
+import type { AllowedMentions } from '#lib/server/models/discord/allowed-mentions.js';
 import { array, type InferOutput, object, optional } from 'valibot';
-
-import type { AllowedMentions } from '$lib/server/models/discord/allowed-mentions';
-import { Attachment } from '$lib/server/models/discord/attachment';
-import { Channel } from '$lib/server/models/discord/channel';
-import { Embed } from '$lib/server/models/discord/embed';
+import { Attachment } from '#lib/server/models/discord/attachment/index.js';
+import { Channel } from '#lib/server/models/discord/channel.js';
+import { Embed } from '#lib/server/models/discord/embed.js';
 
 import { MessageBase, MessageFlags } from './base';
 import type { MessageComponent } from './component';

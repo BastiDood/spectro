@@ -1,6 +1,6 @@
 import { check, type InferOutput, number, object, pipe, safeInteger, string } from 'valibot';
 
-import { Logger } from '$lib/server/telemetry/logger';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
 
 const SERVICE_NAME = 'models.discord.errors';
 const logger = Logger.byName(SERVICE_NAME);

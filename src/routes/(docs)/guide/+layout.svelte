@@ -1,5 +1,5 @@
 <script>
-  import DocsLayout from '$lib/layouts/DocsLayout.svelte';
+  import DocsLayout from '#lib/layouts/DocsLayout.svelte';
   const { children } = $props();
 </script>
 

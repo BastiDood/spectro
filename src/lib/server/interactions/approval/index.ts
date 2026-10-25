@@ -3,16 +3,16 @@ import { strictEqual } from 'node:assert/strict';
 import {
   ConfessionVerdict,
   ConfessionVerdictEvent,
-} from '$lib/server/inngest/functions/process-confession-verdict/schema';
-import { hasAllFlags } from '$lib/bits';
-import { inngest } from '$lib/server/inngest/client';
-import type { InteractionResponse } from '$lib/server/models/discord/interaction-response';
-import { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
-import { MalformedCustomIdFormat } from '$lib/server/interactions/errors';
-import { MANAGE_MESSAGES } from '$lib/server/models/discord/permission';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
-import type { Snowflake } from '$lib/server/models/discord/snowflake';
-import { Tracer } from '$lib/server/telemetry/tracer';
+} from '#lib/server/inngest/functions/process-confession-verdict/schema.js';
+import { hasAllFlags } from '#lib/bits.js';
+import { inngest } from '#lib/server/inngest/client/index.js';
+import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.js';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
+import { MalformedCustomIdFormat } from '#lib/server/interactions/errors.js';
+import { MANAGE_MESSAGES } from '#lib/server/models/discord/permission.js';
+import { MessageFlags } from '#lib/server/models/discord/message/base.js';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
 
 const SERVICE_NAME = 'webhook.interaction.approval';
 const tracer = Tracer.byName(SERVICE_NAME);

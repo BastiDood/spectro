@@ -1,15 +1,14 @@
+import { assertSingle } from '#lib/server/assert.js';
+import { channel, type NewChannel } from '#lib/server/database/models/index.js';
+import { db } from '#lib/server/database/index.js';
+import { DiscordClient } from '#lib/server/api/discord.js';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
+import { inngest } from '#lib/server/inngest/client/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
 import { NonRetriableError } from 'inngest';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-
-import { assertSingle } from '$lib/server/assert';
-import { channel, type NewChannel } from '$lib/server/database/models';
-import { db } from '$lib/server/database';
-import { DiscordClient } from '$lib/server/api/discord';
-import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
-import { inngest } from '$lib/server/inngest/client';
-import { Logger } from '$lib/server/telemetry/logger';
-import { Tracer } from '$lib/server/telemetry/tracer';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
 
 import { ChannelSetupEvent } from './schema';
 

@@ -1,5 +1,5 @@
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
-import type { UnfurledMediaItem } from '$lib/server/models/discord/message/component/unfurled-media';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import type { UnfurledMediaItem } from '#lib/server/models/discord/message/component/unfurled-media/index.js';
 
 /**
  * Outbound interface for a media gallery item.

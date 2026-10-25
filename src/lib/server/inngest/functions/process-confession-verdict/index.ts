@@ -1,9 +1,6 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { eq } from 'drizzle-orm';
-import { NonRetriableError } from 'inngest';
-
-import * as schema from '$lib/server/database/models';
+import * as schema from '#lib/server/database/models/index.js';
 import {
   ConfessionChannel,
   createConfessionPayload,
@@ -11,15 +8,17 @@ import {
   getConfessionErrorMessage,
   getThreadCreationErrorMessage,
   LogPayloadType,
-} from '$lib/server/confession';
-import { db, resolveApprovedChannelThread } from '$lib/server/database';
-import { DiscordClient } from '$lib/server/api/discord';
-import { DiscordError, DiscordErrorCode } from '$lib/server/models/discord/errors';
-import { inngest } from '$lib/server/inngest/client';
-import { Logger } from '$lib/server/telemetry/logger';
-import { MessageFlags } from '$lib/server/models/discord/message/base';
-import { Tracer } from '$lib/server/telemetry/tracer';
-import { UnreachableCodeError } from '$lib/server/assert';
+} from '#lib/server/confession/index.js';
+import { db, resolveApprovedChannelThread } from '#lib/server/database/index.js';
+import { DiscordClient } from '#lib/server/api/discord.js';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
+import { eq } from 'drizzle-orm';
+import { inngest } from '#lib/server/inngest/client/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { MessageFlags } from '#lib/server/models/discord/message/base.js';
+import { NonRetriableError } from 'inngest';
+import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { UnreachableCodeError } from '#lib/server/assert.js';
 
 import {
   AlreadyApprovedApprovalError,

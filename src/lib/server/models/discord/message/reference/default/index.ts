@@ -3,8 +3,8 @@ import { type InferOutput, literal, object, optional } from 'valibot';
 import {
   MessageReferenceBase,
   MessageReferenceType,
-} from '$lib/server/models/discord/message/reference/base';
-import { Snowflake } from '$lib/server/models/discord/snowflake';
+} from '#lib/server/models/discord/message/reference/base.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.js';
 
 export const MessageReferenceDefault = object({
   ...MessageReferenceBase.entries,

@@ -1,7 +1,6 @@
+import { Logger } from '#lib/server/telemetry/logger/index.js';
 import { NonRetriableError } from 'inngest';
-
-import { Logger } from '$lib/server/telemetry/logger';
-import type { SerializedAttachment } from '$lib/server/confession';
+import type { SerializedAttachment } from '#lib/server/confession/index.js';
 
 const SERVICE_NAME = 'inngest.process-confession-verdict.state';
 const logger = Logger.byName(SERVICE_NAME);

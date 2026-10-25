@@ -1,5 +1,5 @@
-import type { CreateModalComponents } from '$lib/server/models/discord/message/component/modal';
-import type { InteractionResponseType } from '$lib/server/models/discord/interaction-response/base';
+import type { CreateModalComponents } from '#lib/server/models/discord/message/component/modal/index.js';
+import type { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
 
 export interface InteractionResponseModal {
   type: InteractionResponseType.Modal;

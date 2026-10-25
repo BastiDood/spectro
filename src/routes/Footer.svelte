@@ -1,5 +1,5 @@
 <script>
-  import profile from '$lib/brand/logotype/logotype-dark-transparent.svg';
+  import profile from '#lib/brand/logotype/logotype-dark-transparent.svg';
 </script>
 
 <footer class="bg-base-300 p-4 text-gray-400 sm:p-6">

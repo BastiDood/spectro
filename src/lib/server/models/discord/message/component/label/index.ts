@@ -1,21 +1,20 @@
-import { type InferOutput, literal, object, variant } from 'valibot';
-
 import {
   type CreateMessageComponentFileUpload,
   MessageComponentFileUpload,
-} from '$lib/server/models/discord/message/component/file-upload';
+} from '#lib/server/models/discord/message/component/file-upload/index.js';
 import {
   type CreateMessageComponentTextInput,
   MessageComponentTextInput,
-} from '$lib/server/models/discord/message/component/text-input';
+} from '#lib/server/models/discord/message/component/text-input/index.js';
+import { type InferOutput, literal, object, variant } from 'valibot';
 import {
   MessageComponentChannelSelect,
   MessageComponentMentionableSelect,
   MessageComponentRoleSelect,
   MessageComponentStringSelect,
   MessageComponentUserSelect,
-} from '$lib/server/models/discord/message/component/select';
-import { MessageComponentType } from '$lib/server/models/discord/message/component/base';
+} from '#lib/server/models/discord/message/component/select/index.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
 
 /**
  * Inbound Valibot variant for child components that can be wrapped by a Label.
