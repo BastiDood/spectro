@@ -12,7 +12,6 @@ import {
 import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { parse } from 'valibot';
 import { Tracer } from '#lib/server/telemetry/tracer.ts';
-import { UnreachableCodeError } from '#lib/server/assert.ts';
 import { verifyAsync } from '@noble/ed25519';
 
 import { DISCORD_PUBLIC_KEY } from '$app/env/private';
@@ -38,12 +37,8 @@ async function handleWebhook(timestamp: Date, webhook: Webhook) {
             { [ATTR_ENDUSER_ID]: webhook.event.data.user.id },
           );
           break;
-        default:
-          UnreachableCodeError.throwNew();
       }
       break;
-    default:
-      UnreachableCodeError.throwNew();
   }
 }
 
@@ -78,6 +73,7 @@ export async function POST({ request }) {
   }
 
   const text = await request.text();
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands -- Type-aware lints cannot see the `.svelte-kit/` request types.
   const message = Buffer.from(timestamp + text);
   const signature = Buffer.from(ed25519, 'hex');
 
@@ -87,7 +83,7 @@ export async function POST({ request }) {
     await tracer.asyncSpan('handle-webhook', async span => {
       span.setAttributes({
         'spectro.discord.webhook.event.type': event.type,
-        'spectro.discord.application.id': event.application_id.toString(),
+        'spectro.discord.application.id': event.application_id,
       });
       await handleWebhook(datetime, event);
       span.setAttribute('spectro.discord.webhook.handled', true);

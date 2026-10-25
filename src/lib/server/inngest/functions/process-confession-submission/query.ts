@@ -132,7 +132,7 @@ async function insertPendingChannelThreadTitle(
   pendingChannelThreadId: bigint,
   title: string,
 ) {
-  return await tracer.asyncSpan('insert-pending-channel-thread-title', async span => {
+  await tracer.asyncSpan('insert-pending-channel-thread-title', async span => {
     span.setAttributes({
       'spectro.confession.internal.id': confessionInternalId.toString(),
       'spectro.pending.channel.thread.id': pendingChannelThreadId.toString(),

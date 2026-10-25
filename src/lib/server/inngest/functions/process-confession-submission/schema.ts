@@ -15,6 +15,20 @@ export const enum ConfessionSubmitMode {
   NewThreadReply = 'new-thread-reply',
 }
 
+/** Narrows a raw mode string to a known {@linkcode ConfessionSubmitMode}, or `null` if it is not one. */
+export function parseConfessionSubmitMode(mode: string) {
+  /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- Narrows raw modes into the enum. */
+  switch (mode) {
+    case ConfessionSubmitMode.Message:
+    case ConfessionSubmitMode.NewThread:
+    case ConfessionSubmitMode.NewThreadReply:
+      return mode;
+    default:
+      return null;
+  }
+  /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
+}
+
 const ConfessionSubmitEventBaseData = object({
   applicationId: string(),
   interactionToken: string(),

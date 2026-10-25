@@ -30,7 +30,7 @@ export class AssertionError extends Error {
 }
 
 /** @throws {AssertionError} */
-export function assertDefined<T>(value?: T | undefined) {
+export function assertDefined<T>(value?: T) {
   if (typeof value === 'undefined') AssertionError.throwNew('value must be defined');
   return value;
 }

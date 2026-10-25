@@ -14,6 +14,7 @@ export interface DiscordAttachmentCdnUrl {
 }
 
 function validateAttachmentNamespace(namespace: string) {
+  /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- Narrows raw namespaces into the enum. */
   switch (namespace) {
     case DiscordAttachmentCdnNamespace.Durable:
     case DiscordAttachmentCdnNamespace.Ephemeral:
@@ -21,6 +22,7 @@ function validateAttachmentNamespace(namespace: string) {
     default:
       break;
   }
+  /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
 }
 
 export function parseDiscordAttachmentCdnUrl(url: string) {
@@ -40,7 +42,6 @@ export function parseDiscordAttachmentCdnUrl(url: string) {
   if (root !== '') return null;
 
   if (
-    root !== '' ||
     typeof namespace === 'undefined' ||
     typeof channelId === 'undefined' ||
     channelId === '' ||

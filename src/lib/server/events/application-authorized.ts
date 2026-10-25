@@ -7,7 +7,7 @@ const SERVICE_NAME = 'webhook.event.application-authorized';
 const tracer = Tracer.byName(SERVICE_NAME);
 
 export async function handleApplicationAuthorized(createdAt: Date, guildId: Snowflake) {
-  return await tracer.asyncSpan('handle-application-authorized', async span => {
+  await tracer.asyncSpan('handle-application-authorized', async span => {
     span.setAttribute('spectro.discord.guild.id', guildId);
     await tracer.asyncSpan('insert-guild', async span => {
       span.setAttribute('spectro.discord.guild.id', guildId);

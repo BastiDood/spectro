@@ -1,6 +1,6 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { assertDefined, assertOptional, UnreachableCodeError } from '#lib/server/assert.ts';
+import { assertDefined, assertOptional } from '#lib/server/assert.ts';
 import {
   ATTACH_FILES,
   MANAGE_THREADS,
@@ -11,6 +11,7 @@ import type { Attachment } from '#lib/server/models/discord/attachment/index.ts'
 import {
   ConfessionSubmitEvent,
   ConfessionSubmitMode,
+  parseConfessionSubmitMode,
 } from '#lib/server/inngest/functions/process-confession-submission/schema.ts';
 import { hasAllFlags } from '#lib/bits.ts';
 import { inngest } from '#lib/server/inngest/client/index.ts';
@@ -51,24 +52,28 @@ function parseModalState(customId: string): ModalState {
   const [namespace, mode, channelId, threadId, parentMessageId, ...rest] = customId.split(':');
   strictEqual(namespace, 'confess');
   strictEqual(rest.length, 0);
+  assert(typeof mode !== 'undefined');
   assert(typeof channelId !== 'undefined');
-  switch (mode) {
+  const submitMode = parseConfessionSubmitMode(mode);
+  switch (submitMode) {
     case ConfessionSubmitMode.Message:
       return {
-        mode,
+        mode: submitMode,
         channelId,
-        threadId: threadId || null,
-        parentMessageId: parentMessageId || null,
+        threadId: typeof threadId === 'undefined' || threadId === '' ? null : threadId,
+        parentMessageId:
+          typeof parentMessageId === 'undefined' || parentMessageId === '' ? null : parentMessageId,
       };
     case ConfessionSubmitMode.NewThread:
     case ConfessionSubmitMode.NewThreadReply:
       return {
-        mode,
+        mode: submitMode,
         channelId,
         threadId: null,
-        parentMessageId: parentMessageId || null,
+        parentMessageId:
+          typeof parentMessageId === 'undefined' || parentMessageId === '' ? null : parentMessageId,
       };
-    default:
+    case null:
       throw new Error('unknown confession modal state');
   }
 }
@@ -83,7 +88,7 @@ export async function handleModalSubmit(
   authorId: Snowflake,
   permissions: bigint,
   components: ModalComponents,
-  resolvedAttachments?: Record<string, Attachment> | undefined,
+  resolvedAttachments?: Record<string, Attachment>,
 ): Promise<InteractionResponse> {
   return await tracer.asyncSpan('handle-confess-submit', async span => {
     const state = parseModalState(customId);
@@ -124,8 +129,6 @@ export async function handleModalSubmit(
         disclaimerDisplay = assertDefined(disclaimer);
         break;
       }
-      default:
-        throw new Error('unknown confession modal mode');
     }
 
     strictEqual(disclaimerDisplay.type, MessageComponentType.TextDisplay);
@@ -206,8 +209,6 @@ export async function handleModalSubmit(
       case ConfessionSubmitMode.NewThread:
       case ConfessionSubmitMode.NewThreadReply:
         break;
-      default:
-        UnreachableCodeError.throwNew();
     }
 
     let ids: string[];
@@ -272,8 +273,6 @@ export async function handleModalSubmit(
           ),
         ));
         break;
-      default:
-        UnreachableCodeError.throwNew();
     }
 
     span.setAttribute('spectro.inngest.event.ids', ids);

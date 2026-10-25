@@ -1,6 +1,10 @@
 import { db, disableConfessionChannel } from '#lib/server/database/index.ts';
 import { DiscordClient } from '#lib/server/api/discord.ts';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
+import {
+  DiscordError,
+  DiscordErrorCode,
+  parseDiscordErrorCode,
+} from '#lib/server/models/discord/errors.ts';
 import { inngest } from '#lib/server/inngest/client/index.ts';
 import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { NonRetriableError } from 'inngest';
@@ -18,7 +22,7 @@ export const processChannelLockdown = inngest.createFunction(
     name: 'Process Channel Lockdown',
     triggers: ChannelLockdownEvent,
   },
-  async ({ event, step }) =>
+  async ({ event, step }) => {
     await tracer.asyncSpan('process-channel-lockdown-function', async span => {
       const { data } = event;
       const { applicationId, interactionToken } = data;
@@ -58,7 +62,7 @@ export const processChannelLockdown = inngest.createFunction(
             });
           } catch (cause) {
             if (cause instanceof DiscordError)
-              switch (cause.code) {
+              switch (parseDiscordErrorCode(cause.code)) {
                 case DiscordErrorCode.UnknownWebhook:
                 case DiscordErrorCode.InvalidWebhookToken: {
                   const wrapped = new NonRetriableError(
@@ -73,7 +77,14 @@ export const processChannelLockdown = inngest.createFunction(
                   );
                   throw wrapped;
                 }
-                default:
+                case DiscordErrorCode.InvalidFormBody:
+                case DiscordErrorCode.MaxActiveThreadsReached:
+                case DiscordErrorCode.MissingAccess:
+                case DiscordErrorCode.MissingPermissions:
+                case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                case DiscordErrorCode.ThreadLocked:
+                case DiscordErrorCode.UnknownChannel:
+                case null:
                   break;
               }
             throw cause;
@@ -81,5 +92,6 @@ export const processChannelLockdown = inngest.createFunction(
         },
       );
       span.setAttribute('spectro.discord.interaction_response.edited', true);
-    }),
+    });
+  },
 );

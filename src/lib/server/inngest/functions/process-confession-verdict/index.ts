@@ -11,14 +11,17 @@ import {
 } from '#lib/server/confession/index.ts';
 import { db, resolveApprovedChannelThread } from '#lib/server/database/index.ts';
 import { DiscordClient } from '#lib/server/api/discord.ts';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
+import {
+  DiscordError,
+  DiscordErrorCode,
+  parseDiscordErrorCode,
+} from '#lib/server/models/discord/errors.ts';
 import { eq } from 'drizzle-orm';
 import { inngest } from '#lib/server/inngest/client/index.ts';
 import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
 import { NonRetriableError } from 'inngest';
 import { Tracer } from '#lib/server/telemetry/tracer.ts';
-import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 import {
   AlreadyApprovedApprovalError,
@@ -120,8 +123,6 @@ async function submitConfessionVerdict(
               });
               return deleted;
             }
-            default:
-              UnreachableCodeError.throwNew();
           }
         },
         { isolationLevel: 'read committed' },
@@ -151,7 +152,7 @@ export const processConfessionVerdict = inngest.createFunction(
       mode: 'skip',
     },
   },
-  async ({ event, step }) =>
+  async ({ event, step }) => {
     await tracer.asyncSpan('process-confession-verdict-function', async span => {
       span.setAttributes({
         'spectro.inngest.event.id': event.id,
@@ -189,7 +190,7 @@ export const processConfessionVerdict = inngest.createFunction(
               );
             } catch (cause) {
               if (cause instanceof DiscordError)
-                switch (cause.code) {
+                switch (parseDiscordErrorCode(cause.code)) {
                   case DiscordErrorCode.UnknownWebhook:
                   case DiscordErrorCode.InvalidWebhookToken: {
                     const wrapped = new NonRetriableError(
@@ -206,7 +207,14 @@ export const processConfessionVerdict = inngest.createFunction(
                     );
                     throw wrapped;
                   }
-                  default:
+                  case DiscordErrorCode.InvalidFormBody:
+                  case DiscordErrorCode.MaxActiveThreadsReached:
+                  case DiscordErrorCode.MissingAccess:
+                  case DiscordErrorCode.MissingPermissions:
+                  case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                  case DiscordErrorCode.ThreadLocked:
+                  case DiscordErrorCode.UnknownChannel:
+                  case null:
                     break;
                 }
               throw cause;
@@ -236,7 +244,7 @@ export const processConfessionVerdict = inngest.createFunction(
               );
             } catch (cause) {
               if (cause instanceof DiscordError)
-                switch (cause.code) {
+                switch (parseDiscordErrorCode(cause.code)) {
                   case DiscordErrorCode.UnknownWebhook:
                   case DiscordErrorCode.InvalidWebhookToken: {
                     const wrapped = new NonRetriableError(
@@ -253,7 +261,14 @@ export const processConfessionVerdict = inngest.createFunction(
                     );
                     throw wrapped;
                   }
-                  default:
+                  case DiscordErrorCode.InvalidFormBody:
+                  case DiscordErrorCode.MaxActiveThreadsReached:
+                  case DiscordErrorCode.MissingAccess:
+                  case DiscordErrorCode.MissingPermissions:
+                  case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                  case DiscordErrorCode.ThreadLocked:
+                  case DiscordErrorCode.UnknownChannel:
+                  case null:
                     break;
                 }
               throw cause;
@@ -302,8 +317,9 @@ export const processConfessionVerdict = inngest.createFunction(
                 );
                 return { ok: true, threadId: thread.id };
               } catch (error) {
-                if (error instanceof DiscordError)
-                  switch (error.code) {
+                if (error instanceof DiscordError) {
+                  const code = parseDiscordErrorCode(error.code);
+                  switch (code) {
                     case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
                       logger.warn(
                         `Recovered Discord thread creation failure code ${error.code}.`,
@@ -318,7 +334,7 @@ export const processConfessionVerdict = inngest.createFunction(
                         };
                       return {
                         ok: false,
-                        content: getThreadCreationErrorMessage(error.code, {
+                        content: getThreadCreationErrorMessage(code, {
                           label: loaded.channel.label,
                           confessionId: loaded.confessionId,
                         }),
@@ -336,21 +352,25 @@ export const processConfessionVerdict = inngest.createFunction(
                       );
                       return {
                         ok: false,
-                        content: getThreadCreationErrorMessage(error.code, {
+                        content: getThreadCreationErrorMessage(code, {
                           label: loaded.channel.label,
                           confessionId: loaded.confessionId,
                         }),
                       };
-                    default:
+                    case DiscordErrorCode.InvalidFormBody:
+                    case DiscordErrorCode.InvalidWebhookToken:
+                    case DiscordErrorCode.UnknownWebhook:
+                    case null:
                       break;
                   }
+                }
                 throw error;
               }
             },
           );
 
           if (!threadResult.ok)
-            UnavailableApprovedThreadDestinationError.throwNew(loaded.confessionId.toString());
+            UnavailableApprovedThreadDestinationError.throwNew(loaded.confessionId);
 
           resolvedThreadId = await step.run(
             { id: 'resolve-approved-thread', name: 'Resolve Approved Thread' },
@@ -412,8 +432,9 @@ export const processConfessionVerdict = inngest.createFunction(
 
               return null;
             } catch (error) {
-              if (error instanceof DiscordError)
-                switch (error.code) {
+              if (error instanceof DiscordError) {
+                const code = parseDiscordErrorCode(error.code);
+                switch (code) {
                   case DiscordErrorCode.InvalidFormBody: {
                     const wrapped = new NonRetriableError(
                       'discord rejected createMessage nonce payload',
@@ -438,15 +459,21 @@ export const processConfessionVerdict = inngest.createFunction(
                       { 'spectro.discord.error.code': error.code },
                       error,
                     );
-                    return getConfessionErrorMessage(error.code, {
+                    return getConfessionErrorMessage(code, {
                       label: confession.channel.label,
                       confessionId: confession.confessionId,
                       channel: ConfessionChannel.Confession,
                       status: 'approved internally',
                     });
-                  default:
+                  case DiscordErrorCode.InvalidWebhookToken:
+                  case DiscordErrorCode.MaxActiveThreadsReached:
+                  case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                  case DiscordErrorCode.ThreadLocked:
+                  case DiscordErrorCode.UnknownWebhook:
+                  case null:
                     break;
                 }
+              }
               throw error;
             }
           }),
@@ -472,7 +499,7 @@ export const processConfessionVerdict = inngest.createFunction(
               );
             } catch (cause) {
               if (cause instanceof DiscordError)
-                switch (cause.code) {
+                switch (parseDiscordErrorCode(cause.code)) {
                   case DiscordErrorCode.UnknownWebhook:
                   case DiscordErrorCode.InvalidWebhookToken: {
                     const wrapped = new NonRetriableError(
@@ -489,7 +516,14 @@ export const processConfessionVerdict = inngest.createFunction(
                     );
                     throw wrapped;
                   }
-                  default:
+                  case DiscordErrorCode.InvalidFormBody:
+                  case DiscordErrorCode.MaxActiveThreadsReached:
+                  case DiscordErrorCode.MissingAccess:
+                  case DiscordErrorCode.MissingPermissions:
+                  case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                  case DiscordErrorCode.ThreadLocked:
+                  case DiscordErrorCode.UnknownChannel:
+                  case null:
                     break;
                 }
               throw cause;
@@ -521,7 +555,7 @@ export const processConfessionVerdict = inngest.createFunction(
             );
           } catch (cause) {
             if (cause instanceof DiscordError)
-              switch (cause.code) {
+              switch (parseDiscordErrorCode(cause.code)) {
                 case DiscordErrorCode.UnknownWebhook:
                 case DiscordErrorCode.InvalidWebhookToken: {
                   const wrapped = new NonRetriableError(
@@ -538,7 +572,14 @@ export const processConfessionVerdict = inngest.createFunction(
                   );
                   throw wrapped;
                 }
-                default:
+                case DiscordErrorCode.InvalidFormBody:
+                case DiscordErrorCode.MaxActiveThreadsReached:
+                case DiscordErrorCode.MissingAccess:
+                case DiscordErrorCode.MissingPermissions:
+                case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                case DiscordErrorCode.ThreadLocked:
+                case DiscordErrorCode.UnknownChannel:
+                case null:
                   break;
               }
             throw cause;
@@ -558,7 +599,7 @@ export const processConfessionVerdict = inngest.createFunction(
           );
         } catch (cause) {
           if (cause instanceof DiscordError)
-            switch (cause.code) {
+            switch (parseDiscordErrorCode(cause.code)) {
               case DiscordErrorCode.UnknownWebhook:
               case DiscordErrorCode.InvalidWebhookToken: {
                 const wrapped = new NonRetriableError(
@@ -575,11 +616,19 @@ export const processConfessionVerdict = inngest.createFunction(
                 );
                 throw wrapped;
               }
-              default:
+              case DiscordErrorCode.InvalidFormBody:
+              case DiscordErrorCode.MaxActiveThreadsReached:
+              case DiscordErrorCode.MissingAccess:
+              case DiscordErrorCode.MissingPermissions:
+              case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+              case DiscordErrorCode.ThreadLocked:
+              case DiscordErrorCode.UnknownChannel:
+              case null:
                 break;
             }
           throw cause;
         }
       });
-    }),
+    });
+  },
 );

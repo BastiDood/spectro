@@ -25,8 +25,8 @@ export class Logger {
     severityNumber: SeverityNumber,
     body: string,
     eventName: string,
-    attributes?: AnyValueMap | undefined,
-    error?: Error | undefined,
+    attributes?: AnyValueMap,
+    error?: Error,
   ) {
     const logRecord: LogRecord = {
       severityNumber,
@@ -38,67 +38,37 @@ export class Logger {
     return logRecord;
   }
 
-  trace(
-    body: string,
-    eventName: string,
-    attributes?: AnyValueMap | undefined,
-    error?: Error | undefined,
-  ) {
+  trace(body: string, eventName: string, attributes?: AnyValueMap, error?: Error) {
     this.#logger.emit(
       Logger.#createLogRecord(SeverityNumber.TRACE, body, eventName, attributes, error),
     );
   }
 
-  debug(
-    body: string,
-    eventName: string,
-    attributes?: AnyValueMap | undefined,
-    error?: Error | undefined,
-  ) {
+  debug(body: string, eventName: string, attributes?: AnyValueMap, error?: Error) {
     this.#logger.emit(
       Logger.#createLogRecord(SeverityNumber.DEBUG, body, eventName, attributes, error),
     );
   }
 
-  info(
-    body: string,
-    eventName: string,
-    attributes?: AnyValueMap | undefined,
-    error?: Error | undefined,
-  ) {
+  info(body: string, eventName: string, attributes?: AnyValueMap, error?: Error) {
     this.#logger.emit(
       Logger.#createLogRecord(SeverityNumber.INFO, body, eventName, attributes, error),
     );
   }
 
-  warn(
-    body: string,
-    eventName: string,
-    attributes?: AnyValueMap | undefined,
-    error?: Error | undefined,
-  ) {
+  warn(body: string, eventName: string, attributes?: AnyValueMap, error?: Error) {
     this.#logger.emit(
       Logger.#createLogRecord(SeverityNumber.WARN, body, eventName, attributes, error),
     );
   }
 
-  error(
-    body: string,
-    eventName: string,
-    attributes?: AnyValueMap | undefined,
-    error?: Error | undefined,
-  ) {
+  error(body: string, eventName: string, attributes?: AnyValueMap, error?: Error) {
     this.#logger.emit(
       Logger.#createLogRecord(SeverityNumber.ERROR, body, eventName, attributes, error),
     );
   }
 
-  fatal(
-    body: string,
-    eventName: string,
-    attributes?: AnyValueMap | undefined,
-    error?: Error | undefined,
-  ) {
+  fatal(body: string, eventName: string, attributes?: AnyValueMap, error?: Error) {
     this.#logger.emit(
       Logger.#createLogRecord(SeverityNumber.FATAL, body, eventName, attributes, error),
     );

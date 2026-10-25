@@ -16,7 +16,6 @@ import { MessageComponentType } from '#lib/server/models/discord/message/compone
 import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
 import { MessageReferenceType } from '#lib/server/models/discord/message/reference/base.ts';
 import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
-import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 interface CreateConfessionModalOptions {
   channelId: Snowflake;
@@ -368,7 +367,8 @@ export function createLogPayload(
     case LogPayloadType.VerdictDeleted:
       fields.push({ name: 'Deleted by', value: `<@${mode.moderatorId}>`, inline: true });
       break;
-    default:
+    case LogPayloadType.Pending:
+    case LogPayloadType.Published:
       break;
   }
 
@@ -391,7 +391,7 @@ export function createLogPayload(
   if (
     ephemeralAttachment !== null &&
     typeof durableAttachmentUrl !== 'undefined' &&
-    ephemeralAttachment.content_type?.startsWith('image/')
+    ephemeralAttachment.content_type?.startsWith('image/') === true
   ) {
     image = { url: durableAttachmentUrl };
     if (typeof ephemeralAttachment.height === 'number') image.height = ephemeralAttachment.height;
@@ -416,8 +416,6 @@ export function createLogPayload(
     case LogPayloadType.VerdictDeleted:
       color = Color.Failure;
       break;
-    default:
-      UnreachableCodeError.throwNew();
   }
 
   let timestamp: string;
@@ -433,8 +431,6 @@ export function createLogPayload(
     case LogPayloadType.Pending:
       timestamp = confession.createdAt;
       break;
-    default:
-      UnreachableCodeError.throwNew();
   }
 
   const params: CreateMessage = {
@@ -484,7 +480,8 @@ export function createLogPayload(
     case LogPayloadType.VerdictDeleted:
       params.components = [];
       break;
-    default:
+    case LogPayloadType.Published:
+    case LogPayloadType.Resent:
       break;
   }
 
@@ -502,7 +499,12 @@ export function getConfessionErrorMessage(
       return `${label} #${confessionId} has been ${status}, but Spectro cannot access the ${channel}.`;
     case DiscordErrorCode.MissingPermissions:
       return `${label} #${confessionId} has been ${status}, but Spectro doesn't have permission to send messages in the ${channel}.`;
-    default:
+    case DiscordErrorCode.InvalidFormBody:
+    case DiscordErrorCode.InvalidWebhookToken:
+    case DiscordErrorCode.MaxActiveThreadsReached:
+    case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+    case DiscordErrorCode.ThreadLocked:
+    case DiscordErrorCode.UnknownWebhook:
       return `${label} #${confessionId} has been ${status}, but an unexpected error occurred. Please report this bug to the Spectro developers.`;
   }
 }
@@ -524,7 +526,9 @@ export function getThreadCreationErrorMessage(
       return `${label} #${confessionId} has been submitted, but Discord rejected the thread because it is locked.`;
     case DiscordErrorCode.MaxActiveThreadsReached:
       return `${label} #${confessionId} has been submitted, but Discord has reached the maximum number of active threads for this server.`;
-    default:
+    case DiscordErrorCode.InvalidFormBody:
+    case DiscordErrorCode.InvalidWebhookToken:
+    case DiscordErrorCode.UnknownWebhook:
       return `${label} #${confessionId} has been submitted, but Spectro could not create the Discord thread. Please report this bug to the Spectro developers.`;
   }
 }

@@ -24,29 +24,28 @@ async function init() {
       import('pg'),
     ]);
     const pool = new Pool({ connectionString: POSTGRES_DATABASE_URL });
-    process.once(
-      'sveltekit:shutdown',
-      async () =>
-        await tracer.asyncSpan('shutdown-pg-database', async () => {
-          await pool.end();
-        }),
-    );
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- The emitter ignores the returned promise.
+    process.once('sveltekit:shutdown', async () => {
+      await tracer.asyncSpan('shutdown-pg-database', async () => {
+        await pool.end();
+      });
+    });
     return drizzle(pool, { schema });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Kept so the static driver tree-shakes the unused branch.
   if (SPECTRO_DATABASE_DRIVER === 'neon') {
     const [{ drizzle }, { Pool }] = await Promise.all([
       import('drizzle-orm/neon-serverless'),
       import('@neondatabase/serverless'),
     ]);
     const pool = new Pool({ connectionString: POSTGRES_DATABASE_URL });
-    process.once(
-      'sveltekit:shutdown',
-      async () =>
-        await tracer.asyncSpan('shutdown-neon-database', async () => {
-          await pool.end();
-        }),
-    );
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- The emitter ignores the returned promise.
+    process.once('sveltekit:shutdown', async () => {
+      await tracer.asyncSpan('shutdown-neon-database', async () => {
+        await pool.end();
+      });
+    });
     return drizzle(pool, { schema });
   }
 
@@ -161,7 +160,7 @@ async function insertAttachmentData(
   confessionInternalId: bigint,
   ephemeralAttachment: InsertableAttachment,
 ) {
-  return await tracer.asyncSpan('insert-attachment', async span => {
+  await tracer.asyncSpan('insert-attachment', async span => {
     span.setAttributes({
       'spectro.attachment.id': ephemeralAttachment.id,
       'spectro.confession.internal.id': confessionInternalId.toString(),
@@ -193,7 +192,7 @@ export async function upsertDurableAttachmentData(
   ephemeralAttachmentId: bigint,
   durableAttachment: PersistableDurableAttachment,
 ) {
-  return await tracer.asyncSpan('upsert-durable-attachment', async span => {
+  await tracer.asyncSpan('upsert-durable-attachment', async span => {
     span.setAttributes({
       'spectro.attachment.id': ephemeralAttachmentId.toString(),
       'spectro.durable.attachment.id': durableAttachment.id,

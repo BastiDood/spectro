@@ -17,6 +17,26 @@ export const enum DiscordErrorCode {
   MaxActiveThreadsReached = 160006,
 }
 
+/** Narrows a raw Discord error code to a known {@linkcode DiscordErrorCode}, or `null` if Spectro does not handle it. */
+export function parseDiscordErrorCode(code: number) {
+  /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- Narrows raw codes into the enum. */
+  switch (code) {
+    case DiscordErrorCode.UnknownChannel:
+    case DiscordErrorCode.UnknownWebhook:
+    case DiscordErrorCode.MissingAccess:
+    case DiscordErrorCode.MissingPermissions:
+    case DiscordErrorCode.InvalidWebhookToken:
+    case DiscordErrorCode.InvalidFormBody:
+    case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+    case DiscordErrorCode.ThreadLocked:
+    case DiscordErrorCode.MaxActiveThreadsReached:
+      return code;
+    default:
+      return null;
+  }
+  /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
+}
+
 export const DiscordErrorResponse = object({
   code: pipe(
     number(),

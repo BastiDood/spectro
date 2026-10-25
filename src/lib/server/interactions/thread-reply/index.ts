@@ -17,7 +17,6 @@ import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
 import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 import { Tracer } from '#lib/server/telemetry/tracer.ts';
-import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 const SERVICE_NAME = 'webhook.interaction.thread-reply-modal';
 const logger = Logger.byName(SERVICE_NAME);
@@ -86,8 +85,6 @@ class MissingThreadReplyPermissionError extends ThreadReplyModalError {
       case MissingThreadReplyPermissionErrorType.SendMessagesInThreads:
         message = 'You do not have permission to send messages in threads.';
         break;
-      default:
-        UnreachableCodeError.throwNew();
     }
     const error = new MissingThreadReplyPermissionError(type, message);
     logger.error(
@@ -145,8 +142,6 @@ function renderThreadReplyModal(
             content: 'Anonymous threads are not supported in voice channels.',
           },
         } satisfies InteractionResponseMessage;
-      default:
-        UnreachableCodeError.throwNew();
     }
 
     if (messageChannelId !== currentChannelId)

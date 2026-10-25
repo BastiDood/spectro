@@ -21,7 +21,7 @@ const InngestAttributeValue: v.GenericSchema<unknown, AnyValue> = v.lazy(() =>
 );
 
 const InngestFields = v.objectWithRest(
-  { err: v.optional(v.custom<Error>(Error.isError)) },
+  { err: v.optional(v.custom<Error>(input => Error.isError(input))) },
   InngestAttributeValue,
 );
 type InngestFields = v.InferOutput<typeof InngestFields>;

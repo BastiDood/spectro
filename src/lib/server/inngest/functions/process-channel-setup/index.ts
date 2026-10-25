@@ -2,7 +2,11 @@ import { assertSingle } from '#lib/server/assert.ts';
 import { channel, type NewChannel } from '#lib/server/database/models/index.ts';
 import { db } from '#lib/server/database/index.ts';
 import { DiscordClient } from '#lib/server/api/discord.ts';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
+import {
+  DiscordError,
+  DiscordErrorCode,
+  parseDiscordErrorCode,
+} from '#lib/server/models/discord/errors.ts';
 import { inngest } from '#lib/server/inngest/client/index.ts';
 import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { NonRetriableError } from 'inngest';
@@ -23,7 +27,7 @@ export const processChannelSetup = inngest.createFunction(
     name: 'Process Channel Setup',
     triggers: ChannelSetupEvent,
   },
-  async ({ event, step }) =>
+  async ({ event, step }) => {
     await tracer.asyncSpan('process-channel-setup-function', async span => {
       const { data } = event;
       const { applicationId, interactionToken } = data;
@@ -90,7 +94,7 @@ export const processChannelSetup = inngest.createFunction(
             });
           } catch (cause) {
             if (cause instanceof DiscordError)
-              switch (cause.code) {
+              switch (parseDiscordErrorCode(cause.code)) {
                 case DiscordErrorCode.UnknownWebhook:
                 case DiscordErrorCode.InvalidWebhookToken: {
                   const wrapped = new NonRetriableError(
@@ -105,7 +109,14 @@ export const processChannelSetup = inngest.createFunction(
                   );
                   throw wrapped;
                 }
-                default:
+                case DiscordErrorCode.InvalidFormBody:
+                case DiscordErrorCode.MaxActiveThreadsReached:
+                case DiscordErrorCode.MissingAccess:
+                case DiscordErrorCode.MissingPermissions:
+                case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
+                case DiscordErrorCode.ThreadLocked:
+                case DiscordErrorCode.UnknownChannel:
+                case null:
                   break;
               }
             throw cause;
@@ -113,5 +124,6 @@ export const processChannelSetup = inngest.createFunction(
         },
       );
       span.setAttribute('spectro.discord.interaction_response.edited', true);
-    }),
+    });
+  },
 );

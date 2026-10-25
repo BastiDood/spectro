@@ -36,7 +36,8 @@ export interface CreateMessage {
   content?: string;
   nonce?: string;
   enforce_nonce?: boolean;
-  flags?: MessageFlags;
+  /** Bitwise OR of {@linkcode MessageFlags} members. */
+  flags?: MessageFlags | (number & {});
   allowed_mentions?: Partial<AllowedMentions>;
   embeds?: Embed[];
   components?: MessageComponent[];

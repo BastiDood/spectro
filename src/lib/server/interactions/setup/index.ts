@@ -74,7 +74,14 @@ export async function handleSetup(
           strictEqual(option.name, 'approval');
           isApprovalRequired = option.value;
           break;
-        default:
+        case InteractionApplicationCommandChatInputOptionType.Attachment:
+        case InteractionApplicationCommandChatInputOptionType.Integer:
+        case InteractionApplicationCommandChatInputOptionType.Mentionable:
+        case InteractionApplicationCommandChatInputOptionType.Number:
+        case InteractionApplicationCommandChatInputOptionType.Role:
+        case InteractionApplicationCommandChatInputOptionType.SubCommand:
+        case InteractionApplicationCommandChatInputOptionType.SubCommandGroup:
+        case InteractionApplicationCommandChatInputOptionType.User:
           UnexpectedSetupOptionTypeError.throwNew(option.type);
       }
 
@@ -87,7 +94,17 @@ export async function handleSetup(
       case ChannelType.GuildText:
       case ChannelType.GuildVoice:
         break;
-      default:
+      case ChannelType.AnnouncementThread:
+      case ChannelType.DirectMessage:
+      case ChannelType.GroupDirectMessage:
+      case ChannelType.GuildAnnouncement:
+      case ChannelType.GuildCategory:
+      case ChannelType.GuildDirectory:
+      case ChannelType.GuildForum:
+      case ChannelType.GuildMedia:
+      case ChannelType.GuildStageVoice:
+      case ChannelType.PrivateThread:
+      case ChannelType.PublicThread:
         strictEqual(logChannel.type, ChannelType.GuildText);
     }
 

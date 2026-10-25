@@ -13,7 +13,6 @@ import { InteractionResponseType } from '#lib/server/models/discord/interaction-
 import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
 import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 import { Tracer } from '#lib/server/telemetry/tracer.ts';
-import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 const SERVICE_NAME = 'webhook.interaction.thread';
 const tracer = Tracer.byName(SERVICE_NAME);
@@ -48,8 +47,6 @@ export function handleThread(
             content: 'Anonymous threads are not supported in voice channels.',
           },
         };
-      default:
-        UnreachableCodeError.throwNew();
     }
 
     if (!hasAllFlags(permissions, CREATE_PUBLIC_THREADS))

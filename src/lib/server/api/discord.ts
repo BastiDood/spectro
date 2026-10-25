@@ -96,7 +96,7 @@ export class DiscordClient {
         });
       }
 
-      const json = await response.json();
+      const json: unknown = await response.json();
 
       if (response.status === 200) {
         const parsed = parse(Message, json);
@@ -125,7 +125,7 @@ export class DiscordClient {
         },
       });
 
-      const json = await response.json();
+      const json: unknown = await response.json();
 
       if (response.status === 201) {
         const parsed = parse(Channel, json);
@@ -157,7 +157,7 @@ export class DiscordClient {
         },
       );
 
-      const json = await response.json();
+      const json: unknown = await response.json();
 
       if (response.status === 201) {
         const parsed = parse(Channel, json);
@@ -189,13 +189,13 @@ export class DiscordClient {
       );
 
       if (response.status === 200) {
-        const json = await response.json();
+        const json: unknown = await response.json();
         const parsed = parse(Message, json);
         span.setAttribute('spectro.discord.message.id', parsed.id);
         return parsed;
       }
 
-      const json = await response.json();
+      const json: unknown = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
       return DiscordError.throwNew(code, message);
     });
@@ -220,13 +220,13 @@ export class DiscordClient {
       );
 
       if (response.status === 200) {
-        const json = await response.json();
+        const json: unknown = await response.json();
         const parsed = parse(Message, json);
         span.setAttribute('spectro.discord.message.id', parsed.id);
         return parsed;
       }
 
-      const json = await response.json();
+      const json: unknown = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
       return DiscordError.throwNew(code, message);
     });
@@ -236,7 +236,7 @@ export class DiscordClient {
     applicationId: Snowflake,
     interactionToken: string,
   ) {
-    return await tracer.asyncSpan('delete-original-interaction-response', async span => {
+    await tracer.asyncSpan('delete-original-interaction-response', async span => {
       // Interaction token is too sensitive to log.
       span.setAttribute('spectro.discord.application.id', applicationId);
 
@@ -250,7 +250,7 @@ export class DiscordClient {
         return;
       }
 
-      const json = await response.json();
+      const json: unknown = await response.json();
       const { code, message } = parse(DiscordErrorResponse, json);
       return DiscordError.throwNew(code, message);
     });

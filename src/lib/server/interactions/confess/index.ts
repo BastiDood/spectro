@@ -17,7 +17,6 @@ import {
 import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
 import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 import { Tracer } from '#lib/server/telemetry/tracer.ts';
-import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 const SERVICE_NAME = 'webhook.interaction.confess';
 const tracer = Tracer.byName(SERVICE_NAME);
@@ -72,8 +71,6 @@ export function handleConfess(
               },
             };
           break;
-        default:
-          UnreachableCodeError.throwNew();
       }
 
       return createConfessionModal({

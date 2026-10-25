@@ -19,6 +19,7 @@ export const guild = app.table('guild', {
   // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
   lastConfessionId: bigint('last_confession_id', { mode: 'bigint' })
     .notNull()
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- See the HACK above.
     .default(0 as unknown as bigint),
 });
 
@@ -87,6 +88,7 @@ export const confession = app.table(
     // HACK: JSON.stringify cannot serialize a `bigint`, so we just type-cast it anyway.
     confessionId: bigint('confession_id', { mode: 'bigint' })
       .notNull()
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- See the HACK above.
       .default(0 as unknown as bigint),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     approvedAt: timestamp('approved_at', { withTimezone: true }).defaultNow(),

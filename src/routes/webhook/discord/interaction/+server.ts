@@ -57,7 +57,16 @@ function getModalChannelContext(
         isLockedThread: channel.thread_metadata.locked,
         threadTitle: channel.name,
       };
-    default:
+    case ChannelType.DirectMessage:
+    case ChannelType.GroupDirectMessage:
+    case ChannelType.GuildAnnouncement:
+    case ChannelType.GuildCategory:
+    case ChannelType.GuildDirectory:
+    case ChannelType.GuildForum:
+    case ChannelType.GuildMedia:
+    case ChannelType.GuildStageVoice:
+    case ChannelType.GuildText:
+    case ChannelType.GuildVoice:
       return {
         channelId: channel.id,
         isLockedThread: null,
@@ -105,7 +114,7 @@ async function handleInteraction(
               assert(typeof interaction.guild_id !== 'undefined');
               assert(typeof interaction.channel !== 'undefined');
               assert(typeof interaction.member?.user?.id !== 'undefined');
-              assert(typeof interaction.member?.permissions !== 'undefined');
+              assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllFlags(interaction.member.permissions, MANAGE_CHANNELS));
               return await handleSetup(
                 timestamp,
@@ -122,7 +131,7 @@ async function handleInteraction(
             case 'lockdown':
               assert(typeof interaction.channel !== 'undefined');
               assert(typeof interaction.member?.user?.id !== 'undefined');
-              assert(typeof interaction.member?.permissions !== 'undefined');
+              assert(typeof interaction.member.permissions !== 'undefined');
               assert(hasAllFlags(interaction.member.permissions, MANAGE_CHANNELS));
               return await handleLockdown(
                 timestamp,
@@ -192,7 +201,7 @@ async function handleInteraction(
               break;
           }
           return UnexpectedApplicationCommandMessageNameError.throwNew(interaction.data.name);
-        default:
+        case InteractionApplicationCommandType.User:
           break;
       }
       return UnexpectedApplicationCommandTypeError.throwNew(interaction.data.type);
@@ -226,8 +235,6 @@ async function handleInteraction(
         interaction.data.components,
         interaction.data.resolved?.attachments,
       );
-    default:
-      break;
   }
   return UnreachableCodeError.throwNew();
 }
@@ -260,6 +267,7 @@ export async function POST({ request }) {
   }
 
   const text = await request.text();
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands -- Type-aware lints cannot see the `.svelte-kit/` request types.
   const message = Buffer.from(timestamp + text);
   const signature = Buffer.from(ed25519, 'hex');
 
@@ -268,8 +276,8 @@ export async function POST({ request }) {
     const response = await tracer.asyncSpan('handle-interaction', async span => {
       span.setAttributes({
         'spectro.discord.interaction.type': interaction.type,
-        'spectro.discord.interaction.id': interaction.id.toString(),
-        'spectro.discord.application.id': interaction.application_id.toString(),
+        'spectro.discord.interaction.id': interaction.id,
+        'spectro.discord.application.id': interaction.application_id,
       });
       const handled = await handleInteraction(datetime, interaction);
       span.setAttribute('spectro.discord.interaction.response.type', handled.type);

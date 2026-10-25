@@ -65,7 +65,14 @@ export function resolveConfessionChannelId(channel: ChannelRefInput): Snowflake 
       assert(typeof channel.parent_id !== 'undefined');
       assert(channel.parent_id !== null);
       return channel.parent_id;
-    default:
+    case ChannelType.DirectMessage:
+    case ChannelType.GroupDirectMessage:
+    case ChannelType.GuildAnnouncement:
+    case ChannelType.GuildCategory:
+    case ChannelType.GuildDirectory:
+    case ChannelType.GuildForum:
+    case ChannelType.GuildMedia:
+    case ChannelType.GuildStageVoice:
       UnsupportedConfessionChannelError.throwNew(channel.type);
   }
 }
@@ -96,7 +103,14 @@ export function resolveConfessionDestination(
         isLocked: channel.thread_metadata.locked,
         title: channel.name,
       };
-    default:
+    case ChannelType.DirectMessage:
+    case ChannelType.GroupDirectMessage:
+    case ChannelType.GuildAnnouncement:
+    case ChannelType.GuildCategory:
+    case ChannelType.GuildDirectory:
+    case ChannelType.GuildForum:
+    case ChannelType.GuildMedia:
+    case ChannelType.GuildStageVoice:
       UnsupportedConfessionChannelError.throwNew(channel.type);
   }
 }

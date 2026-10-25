@@ -8,7 +8,7 @@
 {/snippet}
 
 <section>
-  <h1 id="getting started" class="font-medium">Getting Started</h1>
+  <h1 id="getting-started" class="font-medium">Getting Started</h1>
   <p>To get started with Spectro, we must first invite the Discord bot into the server.</p>
   <div class="alert alert-warning">
     <Icon icon={BaselineAnnouncement} width={24} />
