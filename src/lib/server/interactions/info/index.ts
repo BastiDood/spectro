@@ -1,6 +1,5 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { APP_WEBSITE } from '#lib/server/constants.ts';
 import type { CreateMessage } from '#lib/server/models/discord/message/index.ts';
 import type { InteractionApplicationCommandChatInputOption } from '#lib/server/models/discord/interaction/application-command/chat-input/option/index.ts';
 import type { MessageComponent } from '#lib/server/models/discord/message/component/index.ts';
@@ -13,10 +12,10 @@ import { Tracer } from '#lib/server/telemetry/tracer.ts';
 const SERVICE_NAME = 'webhook.interaction.info';
 const tracer = Tracer.byName(SERVICE_NAME);
 
-export function handleInfo([
-  arg,
-  ...otherArgs
-]: InteractionApplicationCommandChatInputOption[]): Partial<CreateMessage> {
+export function handleInfo(
+  origin: string,
+  [arg, ...otherArgs]: InteractionApplicationCommandChatInputOption[],
+): Partial<CreateMessage> {
   return tracer.span('handle-info', span => {
     strictEqual(otherArgs.length, 0);
 
@@ -29,7 +28,7 @@ export function handleInfo([
         components: [
           {
             type: MessageComponentType.TextDisplay,
-            content: `[Spectro](${APP_WEBSITE}) enables your community members to post anonymous confessions and replies to moderator-configured channels. However, for the sake of moderation, confessions are still logged for later viewing.`,
+            content: `[Spectro](${origin}/) enables your community members to post anonymous confessions and replies to moderator-configured channels. However, for the sake of moderation, confessions are still logged for later viewing.`,
           },
           {
             type: MessageComponentType.Separator,
@@ -48,7 +47,7 @@ export function handleInfo([
                 style: MessageComponentButtonStyle.Link,
                 emoji: { id: null, name: '📚' },
                 label: 'Read the Docs',
-                url: 'https://spectro.bastidood.dev/docs/',
+                url: `${origin}/guide/`,
               },
               {
                 type: MessageComponentType.Button,

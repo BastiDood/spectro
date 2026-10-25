@@ -76,6 +76,7 @@ function getModalChannelContext(
 }
 
 async function handleInteraction(
+  origin: string,
   timestamp: Date,
   interaction: Interaction,
 ): Promise<InteractionResponse> {
@@ -107,7 +108,7 @@ async function handleInteraction(
             case 'help':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
-                data: handleHelp(interaction.data.options ?? []),
+                data: handleHelp(origin, interaction.data.options ?? []),
               };
             case 'setup':
               assert(typeof interaction.data.resolved?.channels !== 'undefined');
@@ -159,7 +160,7 @@ async function handleInteraction(
             case 'info':
               return {
                 type: InteractionResponseType.ChannelMessageWithSource,
-                data: handleInfo(interaction.data.options ?? []),
+                data: handleInfo(origin, interaction.data.options ?? []),
               };
             default:
               break;
@@ -239,7 +240,7 @@ async function handleInteraction(
   return UnreachableCodeError.throwNew();
 }
 
-export async function POST({ request }) {
+export async function POST({ request, url }) {
   const ed25519 = request.headers.get('X-Signature-Ed25519');
   if (ed25519 === null) {
     logger.error(
@@ -279,7 +280,7 @@ export async function POST({ request }) {
         'spectro.discord.interaction.id': interaction.id,
         'spectro.discord.application.id': interaction.application_id,
       });
-      const handled = await handleInteraction(datetime, interaction);
+      const handled = await handleInteraction(url.origin, datetime, interaction);
       span.setAttribute('spectro.discord.interaction.response.type', handled.type);
       return handled;
     });
