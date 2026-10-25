@@ -43,12 +43,8 @@
     "svelte": "^5.57.2",
     "valibot": "^1.5.0"
   },
+  "packageManager": "pnpm@12.15.0",
   "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^12.15.0",
-      "onFail": "download"
-    },
     "runtime": {
       "name": "node",
       "version": "24.x",
