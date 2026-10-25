@@ -26,5 +26,12 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
-      - name: Run Code Quality Tasks
-        run: pnpm --recursive --workspace-root --if-present run ci
+      - parallel:
+          - name: Check Formatters
+            run: pnpm fmt
+          - name: Lint with ESLint
+            run: pnpm lint:eslint
+          - name: Lint with Svelte Check
+            run: pnpm lint:svelte
+          - name: Run Unit Tests
+            run: pnpm test:run

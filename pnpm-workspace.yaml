@@ -30,17 +30,6 @@ overrides:
   'svelte-eslint-parser@1.10.0>espree': ^11.2.0
   'vitest@4.1.12>es-module-lexer': ^3.0.2
 
-tasks:
-  ci:
-    dependsOn:
-      - fmt
-      - lint
-      - test:run
-  lint:
-    dependsOn:
-      - lint:eslint
-      - lint:svelte
-
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - chokidar@4.0.3

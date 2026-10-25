@@ -161,9 +161,6 @@ pnpm fmt:fix # prettier --write
 # Check Linting Rules
 pnpm lint:eslint # eslint
 pnpm lint:svelte # svelte-check
-
-# Check All Lints in Parallel
-pnpm --recursive run --if-present lint
 ```
 
 ## OpenTelemetry Instrumentation
