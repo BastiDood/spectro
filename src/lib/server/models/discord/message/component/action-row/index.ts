@@ -1,5 +1,5 @@
-import type { MessageComponentButton } from '#lib/server/models/discord/message/component/button/index.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import type { MessageComponentButton } from '#lib/server/models/discord/message/component/button/index.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 
 /**
  * Outbound interface for an action row containing buttons.

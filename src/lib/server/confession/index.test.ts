@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DiscordErrorCode } from '#lib/server/models/discord/errors.js';
+import { DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
 
 import {
   createConfessionPayload,

@@ -1,8 +1,8 @@
-import { Channel } from '#lib/server/models/discord/channel.js';
-import { GuildMember } from '#lib/server/models/discord/interaction/guild-member.js';
+import { Channel } from '#lib/server/models/discord/channel.ts';
+import { GuildMember } from '#lib/server/models/discord/interaction/guild-member.ts';
 import { type InferOutput, literal, object, optional, string } from 'valibot';
-import { Message } from '#lib/server/models/discord/message/index.js';
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Message } from '#lib/server/models/discord/message/index.ts';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 export const enum InteractionType {
   Ping = 1,

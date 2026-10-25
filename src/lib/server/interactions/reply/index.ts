@@ -3,21 +3,21 @@ import {
   ConfessionDestinationType,
   type ConfessionThreadDestination,
   type ConfessionVoiceDestination,
-} from '#lib/server/interactions/confession-context.js';
-import { createConfessionModal } from '#lib/server/confession/index.js';
-import { hasAllFlags } from '#lib/bits.js';
-import type { InteractionResponseMessage } from '#lib/server/models/discord/interaction-response/message/index.js';
-import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+} from '#lib/server/interactions/confession-context.ts';
+import { createConfessionModal } from '#lib/server/confession/index.ts';
+import { hasAllFlags } from '#lib/bits.ts';
+import type { InteractionResponseMessage } from '#lib/server/models/discord/interaction-response/message/index.ts';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import {
   MANAGE_THREADS,
   SEND_MESSAGES,
   SEND_MESSAGES_IN_THREADS,
-} from '#lib/server/models/discord/permission.js';
-import { MessageFlags } from '#lib/server/models/discord/message/base.js';
-import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
-import { UnreachableCodeError } from '#lib/server/assert.js';
+} from '#lib/server/models/discord/permission.ts';
+import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
+import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 const SERVICE_NAME = 'webhook.interaction.reply-modal';
 const logger = Logger.byName(SERVICE_NAME);

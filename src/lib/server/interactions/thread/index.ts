@@ -1,19 +1,19 @@
 import {
   type ConfessionDestination,
   ConfessionDestinationType,
-} from '#lib/server/interactions/confession-context.js';
+} from '#lib/server/interactions/confession-context.ts';
 import {
   CREATE_PUBLIC_THREADS,
   SEND_MESSAGES_IN_THREADS,
-} from '#lib/server/models/discord/permission.js';
-import { createThreadConfessionModal } from '#lib/server/confession/index.js';
-import { hasAllFlags } from '#lib/bits.js';
-import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.js';
-import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
-import { MessageFlags } from '#lib/server/models/discord/message/base.js';
-import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
-import { UnreachableCodeError } from '#lib/server/assert.js';
+} from '#lib/server/models/discord/permission.ts';
+import { createThreadConfessionModal } from '#lib/server/confession/index.ts';
+import { hasAllFlags } from '#lib/bits.ts';
+import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.ts';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.ts';
+import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
+import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 const SERVICE_NAME = 'webhook.interaction.thread';
 const tracer = Tracer.byName(SERVICE_NAME);

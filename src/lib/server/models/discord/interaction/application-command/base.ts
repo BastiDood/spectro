@@ -1,6 +1,6 @@
 import { type InferOutput, object, optional, string } from 'valibot';
 
-import { Resolved } from '#lib/server/models/discord/interaction/resolved.js';
+import { Resolved } from '#lib/server/models/discord/interaction/resolved.ts';
 
 export const enum InteractionApplicationCommandType {
   ChatInput = 1,

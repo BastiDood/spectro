@@ -1,16 +1,16 @@
-import { assertSingle } from '#lib/server/assert.js';
-import { channel, type NewChannel } from '#lib/server/database/models/index.js';
-import { db } from '#lib/server/database/index.js';
-import { DiscordClient } from '#lib/server/api/discord.js';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
-import { inngest } from '#lib/server/inngest/client/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { assertSingle } from '#lib/server/assert.ts';
+import { channel, type NewChannel } from '#lib/server/database/models/index.ts';
+import { db } from '#lib/server/database/index.ts';
+import { DiscordClient } from '#lib/server/api/discord.ts';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
+import { inngest } from '#lib/server/inngest/client/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { NonRetriableError } from 'inngest';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
-import { ChannelSetupEvent } from './schema';
+import { ChannelSetupEvent } from './schema.ts';
 
 const SERVICE_NAME = 'inngest.process-channel-setup';
 const logger = Logger.byName(SERVICE_NAME);

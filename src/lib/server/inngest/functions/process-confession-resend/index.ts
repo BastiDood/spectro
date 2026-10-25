@@ -1,23 +1,23 @@
-import { ATTACH_FILES } from '#lib/server/models/discord/permission.js';
+import { ATTACH_FILES } from '#lib/server/models/discord/permission.ts';
 import {
   ConfessionChannel,
   createConfessionPayload,
   createLogPayload,
   getConfessionErrorMessage,
   LogPayloadType,
-} from '#lib/server/confession/index.js';
-import { db, resetLogChannel } from '#lib/server/database/index.js';
-import { DiscordClient } from '#lib/server/api/discord.js';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
-import { hasAllFlags } from '#lib/bits.js';
-import { inngest } from '#lib/server/inngest/client/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+} from '#lib/server/confession/index.ts';
+import { db, resetLogChannel } from '#lib/server/database/index.ts';
+import { DiscordClient } from '#lib/server/api/discord.ts';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
+import { hasAllFlags } from '#lib/bits.ts';
+import { inngest } from '#lib/server/inngest/client/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { NonRetriableError } from 'inngest';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
-import { ConfessionResendEvent } from './schema';
-import { createResendConfessionState } from './state';
-import { loadResendConfession } from './query';
+import { ConfessionResendEvent } from './schema.ts';
+import { createResendConfessionState } from './state.ts';
+import { loadResendConfession } from './query.ts';
 
 const SERVICE_NAME = 'inngest.process-confession-resend';
 const logger = Logger.byName(SERVICE_NAME);

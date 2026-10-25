@@ -1,6 +1,6 @@
 import { array, boolean, type InferOutput, object, picklist } from 'valibot';
 
-import { Snowflake } from './snowflake';
+import { Snowflake } from './snowflake.ts';
 
 export const enum AllowedMentionType {
   Roles = 'roles',

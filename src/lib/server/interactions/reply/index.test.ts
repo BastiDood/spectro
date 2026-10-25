@@ -1,7 +1,7 @@
-import { ConfessionDestinationType } from '#lib/server/interactions/confession-context.js';
+import { ConfessionDestinationType } from '#lib/server/interactions/confession-context.ts';
 import { describe, expect, it } from 'vitest';
-import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
-import { MessageFlags } from '#lib/server/models/discord/message/base.js';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.ts';
+import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
 
 import { handleReplyModal } from '.';
 

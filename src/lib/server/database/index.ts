@@ -1,16 +1,17 @@
 import process from 'node:process';
 
 import { aliasedTable, and, eq, sql } from 'drizzle-orm';
-import { AssertionError, assertSingle, UnreachableCodeError } from '#lib/server/assert.js';
-import type { Attachment } from '#lib/server/models/discord/attachment/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
-import { normalizeDiscordAttachmentUrl } from '#lib/url/discord.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { AssertionError, assertSingle, UnreachableCodeError } from '#lib/server/assert.ts';
+import type { Attachment } from '#lib/server/models/discord/attachment/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
+import { normalizeDiscordAttachmentUrl } from '#lib/url/discord.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
 import { POSTGRES_DATABASE_URL, SPECTRO_DATABASE_DRIVER } from '$app/env/private';
 
-import * as schema from './models';
-import { UnexpectedRowCountDatabaseError } from './errors';
+import { UnexpectedRowCountDatabaseError } from './errors.ts';
+
+import * as schema from './models/index.ts';
 
 const SERVICE_NAME = 'database';
 const logger = Logger.byName(SERVICE_NAME);

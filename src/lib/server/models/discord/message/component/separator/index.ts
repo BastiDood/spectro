@@ -1,4 +1,4 @@
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 
 export const enum SeparatorSpacing {
   Small = 1,

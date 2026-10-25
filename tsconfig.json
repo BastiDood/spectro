@@ -1,9 +1,9 @@
 {
   "extends": "$app/tsconfig",
+  "include": ["src", "*.ts"],
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
   },
-  "include": ["src", "vite.config.js", "drizzle.config.js"],
 }

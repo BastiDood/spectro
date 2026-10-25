@@ -1,15 +1,15 @@
-import * as schema from '#lib/server/database/models/index.js';
+import * as schema from '#lib/server/database/models/index.ts';
 import { aliasedTable, and, eq, sql } from 'drizzle-orm';
-import { AssertionError, assertOptional, assertSingle } from '#lib/server/assert.js';
+import { AssertionError, assertOptional, assertSingle } from '#lib/server/assert.ts';
 import {
   type InsertableAttachment,
   type Interface,
   insertConfession,
   resolveApprovedChannelThread,
   type Transaction,
-} from '#lib/server/database/index.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
-import { UnexpectedRowCountDatabaseError } from '#lib/server/database/errors.js';
+} from '#lib/server/database/index.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
+import { UnexpectedRowCountDatabaseError } from '#lib/server/database/errors.ts';
 
 const SERVICE_NAME = 'inngest.process-confession-submission.query';
 const tracer = Tracer.byName(SERVICE_NAME);

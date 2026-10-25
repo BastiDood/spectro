@@ -1,6 +1,6 @@
 import { strictEqual } from 'node:assert/strict';
 
-import * as schema from '#lib/server/database/models/index.js';
+import * as schema from '#lib/server/database/models/index.ts';
 import {
   ConfessionChannel,
   createConfessionPayload,
@@ -8,17 +8,17 @@ import {
   getConfessionErrorMessage,
   getThreadCreationErrorMessage,
   LogPayloadType,
-} from '#lib/server/confession/index.js';
-import { db, resolveApprovedChannelThread } from '#lib/server/database/index.js';
-import { DiscordClient } from '#lib/server/api/discord.js';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
+} from '#lib/server/confession/index.ts';
+import { db, resolveApprovedChannelThread } from '#lib/server/database/index.ts';
+import { DiscordClient } from '#lib/server/api/discord.ts';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
 import { eq } from 'drizzle-orm';
-import { inngest } from '#lib/server/inngest/client/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
-import { MessageFlags } from '#lib/server/models/discord/message/base.js';
+import { inngest } from '#lib/server/inngest/client/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
+import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
 import { NonRetriableError } from 'inngest';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
-import { UnreachableCodeError } from '#lib/server/assert.js';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
+import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 import {
   AlreadyApprovedApprovalError,
@@ -30,9 +30,9 @@ import {
   serializeDeletedLogConfession,
   serializeLoadedApprovedConfession,
   UnavailableApprovedThreadDestinationError,
-} from './state';
-import { ConfessionVerdict, ConfessionVerdictEvent } from './schema';
-import { loadApprovedConfession, loadVerdictConfession } from './query';
+} from './state.ts';
+import { ConfessionVerdict, ConfessionVerdictEvent } from './schema.ts';
+import { loadApprovedConfession, loadVerdictConfession } from './query.ts';
 
 const SERVICE_NAME = 'inngest.process-confession-verdict';
 const logger = Logger.byName(SERVICE_NAME);

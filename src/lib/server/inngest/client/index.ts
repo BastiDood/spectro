@@ -3,7 +3,7 @@ import { Inngest } from 'inngest';
 
 import { version } from '$app/env';
 
-import { InngestLogger } from './logger';
+import { InngestLogger } from './logger.ts';
 
 const logger = new InngestLogger({});
 

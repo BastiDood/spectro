@@ -1,7 +1,7 @@
-import type { MessageComponentButton } from '#lib/server/models/discord/message/component/button/index.js';
-import type { MessageComponentTextDisplay } from '#lib/server/models/discord/message/component/text-display/index.js';
-import type { MessageComponentThumbnail } from '#lib/server/models/discord/message/component/thumbnail/index.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import type { MessageComponentButton } from '#lib/server/models/discord/message/component/button/index.ts';
+import type { MessageComponentTextDisplay } from '#lib/server/models/discord/message/component/text-display/index.ts';
+import type { MessageComponentThumbnail } from '#lib/server/models/discord/message/component/thumbnail/index.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 
 /**
  * Outbound type for section accessory.

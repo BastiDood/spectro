@@ -1,10 +1,10 @@
 import { type InferOutput, literal, object, variant } from 'valibot';
 
-import { InteractionBase, InteractionType } from '#lib/server/models/discord/interaction/base.js';
+import { InteractionBase, InteractionType } from '#lib/server/models/discord/interaction/base.ts';
 
-import { InteractionDataButton } from './button';
-import { InteractionDataSnowflakeSelect } from './snowflake-select';
-import { InteractionDataStringSelect } from './string-select';
+import { InteractionDataButton } from './button/index.ts';
+import { InteractionDataSnowflakeSelect } from './snowflake-select/index.ts';
+import { InteractionDataStringSelect } from './string-select/index.ts';
 
 /**
  * Inbound schema for message component interactions.

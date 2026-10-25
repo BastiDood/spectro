@@ -3,7 +3,7 @@ import { type InferOutput, literal, number, object, pipe, safeInteger } from 'va
 import {
   InteractionApplicationCommandChatInputOptionBase,
   InteractionApplicationCommandChatInputOptionType,
-} from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.js';
+} from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.ts';
 
 export const InteractionApplicationCommandChatInputOptionInteger = object({
   ...InteractionApplicationCommandChatInputOptionBase.entries,

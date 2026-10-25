@@ -5,12 +5,12 @@ import {
   ChannelType,
   type CreatePublicThread,
   type CreatePublicThreadFromMessage,
-} from '#lib/server/models/discord/channel.js';
-import { type CreateMessage, Message } from '#lib/server/models/discord/message/index.js';
-import { DiscordError, DiscordErrorResponse } from '#lib/server/models/discord/errors.js';
+} from '#lib/server/models/discord/channel.ts';
+import { type CreateMessage, Message } from '#lib/server/models/discord/message/index.ts';
+import { DiscordError, DiscordErrorResponse } from '#lib/server/models/discord/errors.ts';
 import { parse } from 'valibot';
-import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
 import { DISCORD_BOT_TOKEN } from '$app/env/private';
 

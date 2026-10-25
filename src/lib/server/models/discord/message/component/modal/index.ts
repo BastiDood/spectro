@@ -3,11 +3,11 @@ import { array, type InferOutput, maxLength, pipe, variant } from 'valibot';
 import {
   type CreateMessageComponentLabel,
   MessageComponentLabel,
-} from '#lib/server/models/discord/message/component/label/index.js';
+} from '#lib/server/models/discord/message/component/label/index.ts';
 import {
   type CreateMessageComponentTextDisplay,
   MessageComponentTextDisplay,
-} from '#lib/server/models/discord/message/component/text-display/index.js';
+} from '#lib/server/models/discord/message/component/text-display/index.ts';
 
 /**
  * Top-level modal component (inbound).

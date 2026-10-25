@@ -1,26 +1,26 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { assertDefined, assertOptional, UnreachableCodeError } from '#lib/server/assert.js';
+import { assertDefined, assertOptional, UnreachableCodeError } from '#lib/server/assert.ts';
 import {
   ATTACH_FILES,
   MANAGE_THREADS,
   SEND_MESSAGES,
   SEND_MESSAGES_IN_THREADS,
-} from '#lib/server/models/discord/permission.js';
-import type { Attachment } from '#lib/server/models/discord/attachment/index.js';
+} from '#lib/server/models/discord/permission.ts';
+import type { Attachment } from '#lib/server/models/discord/attachment/index.ts';
 import {
   ConfessionSubmitEvent,
   ConfessionSubmitMode,
-} from '#lib/server/inngest/functions/process-confession-submission/schema.js';
-import { hasAllFlags } from '#lib/bits.js';
-import { inngest } from '#lib/server/inngest/client/index.js';
-import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.js';
-import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
-import { MessageFlags } from '#lib/server/models/discord/message/base.js';
-import type { ModalComponents } from '#lib/server/models/discord/message/component/modal/index.js';
-import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+} from '#lib/server/inngest/functions/process-confession-submission/schema.ts';
+import { hasAllFlags } from '#lib/bits.ts';
+import { inngest } from '#lib/server/inngest/client/index.ts';
+import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.ts';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
+import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
+import type { ModalComponents } from '#lib/server/models/discord/message/component/modal/index.ts';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
 const SERVICE_NAME = 'webhook.interaction.confess-submit';
 const tracer = Tracer.byName(SERVICE_NAME);

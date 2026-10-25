@@ -1,6 +1,6 @@
 import { boolean, type InferOutput, nullish, object, optional, picklist, string } from 'valibot';
 
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 /** @see https://discord.com/developers/docs/resources/channel#channel-object-channel-types */
 export const enum ChannelType {

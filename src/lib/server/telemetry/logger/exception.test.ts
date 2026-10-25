@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { serializeErrorToException } from './exception';
+import { serializeErrorToException } from './exception.ts';
 
 class CharacterizedError extends Error {
   readonly requestId = 'request-1';

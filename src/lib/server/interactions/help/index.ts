@@ -1,14 +1,14 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { APP_WEBSITE } from '#lib/server/constants.js';
-import type { CreateMessage } from '#lib/server/models/discord/message/index.js';
-import { InteractionApplicationCommandChatInputOption } from '#lib/server/models/discord/interaction/application-command/chat-input/option/index.js';
-import type { MessageComponent } from '#lib/server/models/discord/message/component/index.js';
-import { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
-import { MessageFlags } from '#lib/server/models/discord/message/base.js';
-import { parsePublic } from '#lib/server/interactions/response-visibility.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { APP_WEBSITE } from '#lib/server/constants.ts';
+import type { CreateMessage } from '#lib/server/models/discord/message/index.ts';
+import { InteractionApplicationCommandChatInputOption } from '#lib/server/models/discord/interaction/application-command/chat-input/option/index.ts';
+import type { MessageComponent } from '#lib/server/models/discord/message/component/index.ts';
+import { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
+import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
+import { parsePublic } from '#lib/server/interactions/response-visibility.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
 const SERVICE_NAME = 'webhook.interaction.help';
 const tracer = Tracer.byName(SERVICE_NAME);

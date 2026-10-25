@@ -1,40 +1,40 @@
 import assert, { strictEqual } from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 
-import { type Channel, ChannelType } from '#lib/server/models/discord/channel.js';
+import { type Channel, ChannelType } from '#lib/server/models/discord/channel.ts';
 import { error } from '@sveltejs/kit';
-import { handleApproval } from '#lib/server/interactions/approval/index.js';
-import { handleConfess } from '#lib/server/interactions/confess/index.js';
-import { handleHelp } from '#lib/server/interactions/help/index.js';
-import { handleInfo } from '#lib/server/interactions/info/index.js';
-import { handleLockdown } from '#lib/server/interactions/lockdown/index.js';
-import { handleModalSubmit } from '#lib/server/interactions/confess/submit.js';
-import { handleReplyModal } from '#lib/server/interactions/reply/index.js';
-import { handleResend } from '#lib/server/interactions/resend/index.js';
-import { handleSetup } from '#lib/server/interactions/setup/index.js';
-import { handleThread } from '#lib/server/interactions/thread/index.js';
-import { handleThreadReplyModal } from '#lib/server/interactions/thread-reply/index.js';
-import { hasAllFlags } from '#lib/bits.js';
-import { Interaction } from '#lib/server/models/discord/interaction/index.js';
-import { InteractionApplicationCommandType } from '#lib/server/models/discord/interaction/application-command/base.js';
-import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.js';
-import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
-import { InteractionType } from '#lib/server/models/discord/interaction/base.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
-import { MANAGE_CHANNELS, MANAGE_MESSAGES } from '#lib/server/models/discord/permission.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import { handleApproval } from '#lib/server/interactions/approval/index.ts';
+import { handleConfess } from '#lib/server/interactions/confess/index.ts';
+import { handleHelp } from '#lib/server/interactions/help/index.ts';
+import { handleInfo } from '#lib/server/interactions/info/index.ts';
+import { handleLockdown } from '#lib/server/interactions/lockdown/index.ts';
+import { handleModalSubmit } from '#lib/server/interactions/confess/submit.ts';
+import { handleReplyModal } from '#lib/server/interactions/reply/index.ts';
+import { handleResend } from '#lib/server/interactions/resend/index.ts';
+import { handleSetup } from '#lib/server/interactions/setup/index.ts';
+import { handleThread } from '#lib/server/interactions/thread/index.ts';
+import { handleThreadReplyModal } from '#lib/server/interactions/thread-reply/index.ts';
+import { hasAllFlags } from '#lib/bits.ts';
+import { Interaction } from '#lib/server/models/discord/interaction/index.ts';
+import { InteractionApplicationCommandType } from '#lib/server/models/discord/interaction/application-command/base.ts';
+import type { InteractionResponse } from '#lib/server/models/discord/interaction-response/index.ts';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.ts';
+import { InteractionType } from '#lib/server/models/discord/interaction/base.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
+import { MANAGE_CHANNELS, MANAGE_MESSAGES } from '#lib/server/models/discord/permission.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 import { parse } from 'valibot';
 import {
   resolveConfessionChannelId,
   resolveConfessionDestination,
-} from '#lib/server/interactions/confession-context.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+} from '#lib/server/interactions/confession-context.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 import {
   UnexpectedApplicationCommandChatInputNameError,
   UnexpectedApplicationCommandMessageNameError,
   UnexpectedApplicationCommandTypeError,
-} from '#lib/server/interactions/errors.js';
-import { UnreachableCodeError } from '#lib/server/assert.js';
+} from '#lib/server/interactions/errors.ts';
+import { UnreachableCodeError } from '#lib/server/assert.ts';
 import { verifyAsync } from '@noble/ed25519';
 
 import { DISCORD_PUBLIC_KEY } from '$app/env/private';

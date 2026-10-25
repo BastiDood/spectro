@@ -1,7 +1,7 @@
-import type { InteractionApplicationCommandChatInputOptionType } from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.js';
-import type { InteractionApplicationCommandType } from '#lib/server/models/discord/interaction/application-command/base.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
-import type { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.js';
+import type { InteractionApplicationCommandChatInputOptionType } from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.ts';
+import type { InteractionApplicationCommandType } from '#lib/server/models/discord/interaction/application-command/base.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
+import type { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.ts';
 
 const SERVICE_NAME = 'webhook.interaction.error';
 const logger = Logger.byName(SERVICE_NAME);

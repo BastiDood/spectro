@@ -1,4 +1,4 @@
-import type { SerializedAttachment } from '#lib/server/confession/index.js';
+import type { SerializedAttachment } from '#lib/server/confession/index.ts';
 
 export interface SerializedConfessionForResend {
   confessionId: string;

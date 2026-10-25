@@ -3,8 +3,8 @@ import { type InferOutput, literal, object } from 'valibot';
 import {
   InteractionApplicationCommandBase,
   InteractionApplicationCommandType,
-} from '#lib/server/models/discord/interaction/application-command/base.js';
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+} from '#lib/server/models/discord/interaction/application-command/base.ts';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 export const InteractionApplicationCommandMessage = object({
   ...InteractionApplicationCommandBase.entries,

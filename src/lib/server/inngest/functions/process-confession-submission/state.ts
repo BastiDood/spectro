@@ -1,12 +1,12 @@
 import type {
   InsertableAttachment,
   PersistableDurableAttachment,
-} from '#lib/server/database/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+} from '#lib/server/database/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { NonRetriableError } from 'inngest';
-import type { SerializedAttachment } from '#lib/server/confession/index.js';
+import type { SerializedAttachment } from '#lib/server/confession/index.ts';
 
-import type { loadConfessionSubmissionChannel } from './query';
+import type { loadConfessionSubmissionChannel } from './query.ts';
 
 const SERVICE_NAME = 'inngest.process-confession-submission.state';
 const logger = Logger.byName(SERVICE_NAME);

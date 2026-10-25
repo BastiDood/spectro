@@ -1,22 +1,22 @@
-import { AllowedMentionType } from '#lib/server/models/discord/allowed-mentions.js';
-import { APP_ICON_URL, Color } from '#lib/server/constants.js';
-import type { CreateMessage } from '#lib/server/models/discord/message/index.js';
-import { DiscordErrorCode } from '#lib/server/models/discord/errors.js';
+import { AllowedMentionType } from '#lib/server/models/discord/allowed-mentions.ts';
+import { APP_ICON_URL, Color } from '#lib/server/constants.ts';
+import type { CreateMessage } from '#lib/server/models/discord/message/index.ts';
+import { DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
 import {
   type Embed,
   type EmbedField,
   type EmbedImage,
   EmbedType,
-} from '#lib/server/models/discord/embed.js';
-import type { InteractionResponseModal } from '#lib/server/models/discord/interaction-response/modal/index.js';
-import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.js';
-import { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.js';
-import { MessageComponentTextInputStyle } from '#lib/server/models/discord/message/component/text-input/index.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
-import { MessageFlags } from '#lib/server/models/discord/message/base.js';
-import { MessageReferenceType } from '#lib/server/models/discord/message/reference/base.js';
-import type { Snowflake } from '#lib/server/models/discord/snowflake.js';
-import { UnreachableCodeError } from '#lib/server/assert.js';
+} from '#lib/server/models/discord/embed.ts';
+import type { InteractionResponseModal } from '#lib/server/models/discord/interaction-response/modal/index.ts';
+import { InteractionResponseType } from '#lib/server/models/discord/interaction-response/base.ts';
+import { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.ts';
+import { MessageComponentTextInputStyle } from '#lib/server/models/discord/message/component/text-input/index.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
+import { MessageFlags } from '#lib/server/models/discord/message/base.ts';
+import { MessageReferenceType } from '#lib/server/models/discord/message/reference/base.ts';
+import type { Snowflake } from '#lib/server/models/discord/snowflake.ts';
+import { UnreachableCodeError } from '#lib/server/assert.ts';
 
 interface CreateConfessionModalOptions {
   channelId: Snowflake;

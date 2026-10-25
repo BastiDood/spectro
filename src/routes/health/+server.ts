@@ -1,4 +1,4 @@
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 
 const logger = Logger.byName('health');
 

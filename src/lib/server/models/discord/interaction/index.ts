@@ -1,9 +1,9 @@
 import { type InferOutput, variant } from 'valibot';
 
-import { InteractionApplicationCommand } from './application-command';
-import { InteractionMessageComponent } from './message-component';
-import { InteractionModalSubmit } from './modal-submit';
-import { InteractionPing } from './ping';
+import { InteractionApplicationCommand } from './application-command/index.ts';
+import { InteractionMessageComponent } from './message-component/index.ts';
+import { InteractionModalSubmit } from './modal-submit/index.ts';
+import { InteractionPing } from './ping/index.ts';
 
 /**
  * Inbound schema for all Discord interactions.

@@ -1,7 +1,7 @@
-import { AssertionError } from '#lib/server/assert.js';
+import { AssertionError } from '#lib/server/assert.ts';
 import { describe, expect, it } from 'vitest';
 
-import { type DurableAttachmentMessage, extractDurableAttachmentMetadata } from './durable';
+import { type DurableAttachmentMessage, extractDurableAttachmentMetadata } from './durable.ts';
 
 const baseMessage = {
   id: '987654321987654321',

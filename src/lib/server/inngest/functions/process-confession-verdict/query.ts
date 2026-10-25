@@ -1,10 +1,10 @@
-import * as schema from '#lib/server/database/models/index.js';
+import * as schema from '#lib/server/database/models/index.ts';
 import { aliasedTable, eq } from 'drizzle-orm';
-import { AssertionError, assertOptional, assertSingle } from '#lib/server/assert.js';
-import type { Interface, Transaction } from '#lib/server/database/index.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { AssertionError, assertOptional, assertSingle } from '#lib/server/assert.ts';
+import type { Interface, Transaction } from '#lib/server/database/index.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
-import type { ApprovedConfessionState, ConfessionVerdictConfessionState } from './state';
+import type { ApprovedConfessionState, ConfessionVerdictConfessionState } from './state.ts';
 
 const SERVICE_NAME = 'inngest.process-confession-verdict.query';
 const tracer = Tracer.byName(SERVICE_NAME);

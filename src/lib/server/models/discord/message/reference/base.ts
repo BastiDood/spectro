@@ -1,6 +1,6 @@
 import { boolean, type InferOutput, object, optional } from 'valibot';
 
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 export const enum MessageReferenceType {
   Default = 0,

@@ -4,7 +4,7 @@ import {
   DiscordAttachmentCdnNamespace,
   normalizeDiscordAttachmentUrl,
   parseDiscordAttachmentCdnUrl,
-} from './discord';
+} from './discord.ts';
 
 describe('parseDiscordAttachmentCdnUrl', () => {
   it('parses signed Discord attachment CDN URLs', () => {

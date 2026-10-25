@@ -1,6 +1,6 @@
 import { type InferOutput, literal, object } from 'valibot';
 
-import { InteractionBase, InteractionType } from '#lib/server/models/discord/interaction/base.js';
+import { InteractionBase, InteractionType } from '#lib/server/models/discord/interaction/base.ts';
 
 export const InteractionPing = object({
   ...InteractionBase.entries,

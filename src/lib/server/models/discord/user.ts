@@ -1,6 +1,6 @@
 import { type InferOutput, nullable, object, string } from 'valibot';
 
-import { Snowflake } from './snowflake';
+import { Snowflake } from './snowflake.ts';
 
 export const User = object({
   id: Snowflake,

@@ -8,7 +8,7 @@ import {
 
 import { version } from '$app/env';
 
-import { serializeErrorToException } from './exception';
+import { serializeErrorToException } from './exception.ts';
 
 export class Logger {
   #logger: OTelLogger;

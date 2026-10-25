@@ -3,12 +3,12 @@ import { array, type InferOutput, object, picklist, variant } from 'valibot';
 import {
   InteractionApplicationCommandChatInputOptionBase,
   InteractionApplicationCommandChatInputOptionType,
-} from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.js';
-import { InteractionApplicationCommandChatInputOptionBoolean } from '#lib/server/models/discord/interaction/application-command/chat-input/option/boolean/index.js';
-import { InteractionApplicationCommandChatInputOptionInteger } from '#lib/server/models/discord/interaction/application-command/chat-input/option/integer/index.js';
-import { InteractionApplicationCommandChatInputOptionNumber } from '#lib/server/models/discord/interaction/application-command/chat-input/option/number/index.js';
-import { InteractionApplicationCommandChatInputOptionSnowflake } from '#lib/server/models/discord/interaction/application-command/chat-input/option/snowflake/index.js';
-import { InteractionApplicationCommandChatInputOptionString } from '#lib/server/models/discord/interaction/application-command/chat-input/option/string/index.js';
+} from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.ts';
+import { InteractionApplicationCommandChatInputOptionBoolean } from '#lib/server/models/discord/interaction/application-command/chat-input/option/boolean/index.ts';
+import { InteractionApplicationCommandChatInputOptionInteger } from '#lib/server/models/discord/interaction/application-command/chat-input/option/integer/index.ts';
+import { InteractionApplicationCommandChatInputOptionNumber } from '#lib/server/models/discord/interaction/application-command/chat-input/option/number/index.ts';
+import { InteractionApplicationCommandChatInputOptionSnowflake } from '#lib/server/models/discord/interaction/application-command/chat-input/option/snowflake/index.ts';
+import { InteractionApplicationCommandChatInputOptionString } from '#lib/server/models/discord/interaction/application-command/chat-input/option/string/index.ts';
 
 export const InteractionApplicationCommandChatInputOptionSubCommand = object({
   ...InteractionApplicationCommandChatInputOptionBase.entries,

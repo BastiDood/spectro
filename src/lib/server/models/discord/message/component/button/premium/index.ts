@@ -1,6 +1,6 @@
-import type { Emoji } from '#lib/server/models/discord/message/component/emoji.js';
-import { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import type { Emoji } from '#lib/server/models/discord/message/component/emoji.ts';
+import { MessageComponentButtonStyle } from '#lib/server/models/discord/message/component/button/base.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 
 /**
  * Outbound interface for a premium button (used for SKU purchases).

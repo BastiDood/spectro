@@ -1,7 +1,7 @@
 import { array, type InferOutput, literal, object, optional, string } from 'valibot';
 
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 /**
  * Inbound schema for FileUpload - only fields actually accessed on modal submit.

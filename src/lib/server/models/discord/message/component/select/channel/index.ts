@@ -9,9 +9,9 @@ import {
   safeInteger,
 } from 'valibot';
 
-import { MessageComponentSelectBase } from '#lib/server/models/discord/message/component/select/base.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { MessageComponentSelectBase } from '#lib/server/models/discord/message/component/select/base.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 /**
  * Default value for a channel select menu.

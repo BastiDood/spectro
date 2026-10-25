@@ -1,4 +1,4 @@
-import { ORIGIN } from '#lib/env.js';
+import { ORIGIN } from '#lib/env.ts';
 
 export const prerender = true;
 

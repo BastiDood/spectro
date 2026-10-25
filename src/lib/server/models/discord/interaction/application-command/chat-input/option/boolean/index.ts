@@ -3,7 +3,7 @@ import { boolean, type InferOutput, literal, object } from 'valibot';
 import {
   InteractionApplicationCommandChatInputOptionBase,
   InteractionApplicationCommandChatInputOptionType,
-} from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.js';
+} from '#lib/server/models/discord/interaction/application-command/chat-input/option/base.ts';
 
 export const InteractionApplicationCommandChatInputOptionBoolean = object({
   ...InteractionApplicationCommandChatInputOptionBase.entries,

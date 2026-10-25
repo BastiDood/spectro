@@ -6,7 +6,7 @@ import {
   downloadDiscordAttachment,
   MissingBodyError,
   MissingContentLengthHeaderError,
-} from './download';
+} from './download.ts';
 
 function createChunk(size: number) {
   return new Uint8Array(size);

@@ -1,6 +1,6 @@
 import { boolean, type InferOutput, nullable, object, optional, string } from 'valibot';
 
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 export const Emoji = object({
   id: optional(nullable(Snowflake)),

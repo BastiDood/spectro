@@ -9,8 +9,8 @@ import {
   transform,
 } from 'valibot';
 
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
-import { User } from '#lib/server/models/discord/user.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
+import { User } from '#lib/server/models/discord/user.ts';
 
 export const GuildMember = object({
   user: optional(User),

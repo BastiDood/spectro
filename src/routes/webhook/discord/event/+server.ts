@@ -2,17 +2,17 @@ import { strictEqual } from 'node:assert/strict';
 
 import { ATTR_ENDUSER_ID } from '@opentelemetry/semantic-conventions/incubating';
 import { error } from '@sveltejs/kit';
-import { handleApplicationAuthorized } from '#lib/server/events/application-authorized.js';
+import { handleApplicationAuthorized } from '#lib/server/events/application-authorized.ts';
 import {
   IntegrationType,
   Webhook,
   WebhookEventType,
   WebhookType,
-} from '#lib/server/models/discord/event/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+} from '#lib/server/models/discord/event/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { parse } from 'valibot';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
-import { UnreachableCodeError } from '#lib/server/assert.js';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
+import { UnreachableCodeError } from '#lib/server/assert.ts';
 import { verifyAsync } from '@noble/ed25519';
 
 import { DISCORD_PUBLIC_KEY } from '$app/env/private';

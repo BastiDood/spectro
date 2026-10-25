@@ -1,12 +1,12 @@
-import { db, disableConfessionChannel } from '#lib/server/database/index.js';
-import { DiscordClient } from '#lib/server/api/discord.js';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
-import { inngest } from '#lib/server/inngest/client/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { db, disableConfessionChannel } from '#lib/server/database/index.ts';
+import { DiscordClient } from '#lib/server/api/discord.ts';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
+import { inngest } from '#lib/server/inngest/client/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { NonRetriableError } from 'inngest';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
-import { ChannelLockdownEvent } from './schema';
+import { ChannelLockdownEvent } from './schema.ts';
 
 const SERVICE_NAME = 'inngest.process-channel-lockdown';
 const logger = Logger.byName(SERVICE_NAME);

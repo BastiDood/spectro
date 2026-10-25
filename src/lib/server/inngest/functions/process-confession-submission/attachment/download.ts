@@ -2,9 +2,9 @@ import {
   ATTR_HTTP_RESPONSE_HEADER,
   ATTR_HTTP_RESPONSE_STATUS_CODE,
 } from '@opentelemetry/semantic-conventions';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 import { NonRetriableError } from 'inngest';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
 const SERVICE_NAME = 'inngest.process-confession-submission.download';
 const logger = Logger.byName(SERVICE_NAME);

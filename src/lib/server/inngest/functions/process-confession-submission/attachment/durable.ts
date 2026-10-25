@@ -1,8 +1,8 @@
 import assert, { strictEqual } from 'node:assert/strict';
 
-import { assertOptional } from '#lib/server/assert.js';
-import { DiscordAttachmentCdnNamespace, parseDiscordAttachmentCdnUrl } from '#lib/url/discord.js';
-import type { Message } from '#lib/server/models/discord/message/index.js';
+import { assertOptional } from '#lib/server/assert.ts';
+import { DiscordAttachmentCdnNamespace, parseDiscordAttachmentCdnUrl } from '#lib/url/discord.ts';
+import type { Message } from '#lib/server/models/discord/message/index.ts';
 
 export interface DurableAttachmentMetadata {
   id: string;

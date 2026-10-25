@@ -1,4 +1,4 @@
-import { ChannelType } from '#lib/server/models/discord/channel.js';
+import { ChannelType } from '#lib/server/models/discord/channel.ts';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -6,7 +6,7 @@ import {
   resolveConfessionChannelId,
   resolveConfessionDestination,
   UnsupportedConfessionChannelError,
-} from './confession-context';
+} from './confession-context.ts';
 
 describe('resolveConfessionChannelId', () => {
   it('uses the text channel as the configured confession channel', () => {

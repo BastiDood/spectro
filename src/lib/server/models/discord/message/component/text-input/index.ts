@@ -1,6 +1,6 @@
 import { type InferOutput, literal, object, optional, string } from 'valibot';
 
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 
 export const enum MessageComponentTextInputStyle {
   Short = 1,

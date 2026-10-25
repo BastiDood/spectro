@@ -13,8 +13,8 @@ import {
   string,
 } from 'valibot';
 
-import { Timestamp } from '#lib/server/models/discord/timestamp.js';
-import { Url } from '#lib/server/models/discord/embed/url.js';
+import { Timestamp } from '#lib/server/models/discord/timestamp.ts';
+import { Url } from '#lib/server/models/discord/embed/url.ts';
 
 export const enum EmbedType {
   Rich = 'rich',

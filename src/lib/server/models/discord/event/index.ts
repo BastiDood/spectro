@@ -1,10 +1,10 @@
 import { array, type InferOutput, literal, object, string, variant } from 'valibot';
 
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
-import { Timestamp } from '#lib/server/models/discord/timestamp.js';
-import { User } from '#lib/server/models/discord/user.js';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
+import { Timestamp } from '#lib/server/models/discord/timestamp.ts';
+import { User } from '#lib/server/models/discord/user.ts';
 
-import { Guild } from './guild';
+import { Guild } from './guild.ts';
 
 const BaseWebhook = object({
   version: literal(1),

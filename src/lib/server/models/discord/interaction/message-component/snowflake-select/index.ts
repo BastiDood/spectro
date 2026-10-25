@@ -1,7 +1,7 @@
 import { array, type InferOutput, object, picklist, string } from 'valibot';
 
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
-import { Snowflake } from '#lib/server/models/discord/snowflake.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
+import { Snowflake } from '#lib/server/models/discord/snowflake.ts';
 
 /**
  * Inbound schema for snowflake select interaction data (user, role, mentionable, channel).

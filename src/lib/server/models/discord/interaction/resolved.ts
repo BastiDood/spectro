@@ -1,9 +1,9 @@
-import { Attachment } from '#lib/server/models/discord/attachment/index.js';
-import { Channel } from '#lib/server/models/discord/channel.js';
-import { GuildMember } from '#lib/server/models/discord/interaction/guild-member.js';
+import { Attachment } from '#lib/server/models/discord/attachment/index.ts';
+import { Channel } from '#lib/server/models/discord/channel.ts';
+import { GuildMember } from '#lib/server/models/discord/interaction/guild-member.ts';
 import { type InferOutput, object, partial, record, string } from 'valibot';
-import { Message } from '#lib/server/models/discord/message/index.js';
-import { User } from '#lib/server/models/discord/user.js';
+import { Message } from '#lib/server/models/discord/message/index.ts';
+import { User } from '#lib/server/models/discord/user.ts';
 
 export const Resolved = partial(
   object({

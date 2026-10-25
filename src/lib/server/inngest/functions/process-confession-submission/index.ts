@@ -5,21 +5,21 @@ import {
   getConfessionErrorMessage,
   getThreadCreationErrorMessage,
   LogPayloadType,
-} from '#lib/server/confession/index.js';
+} from '#lib/server/confession/index.ts';
 import {
   db,
   resetLogChannel,
   resolveApprovedChannelThread,
   upsertDurableAttachmentData,
-} from '#lib/server/database/index.js';
-import { DiscordClient } from '#lib/server/api/discord.js';
-import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.js';
-import { inngest } from '#lib/server/inngest/client/index.js';
-import { Logger } from '#lib/server/telemetry/logger/index.js';
-import type { Message } from '#lib/server/models/discord/message/index.js';
+} from '#lib/server/database/index.ts';
+import { DiscordClient } from '#lib/server/api/discord.ts';
+import { DiscordError, DiscordErrorCode } from '#lib/server/models/discord/errors.ts';
+import { inngest } from '#lib/server/inngest/client/index.ts';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
+import type { Message } from '#lib/server/models/discord/message/index.ts';
 import { NonRetriableError } from 'inngest';
-import { parseDiscordAttachmentCdnUrl } from '#lib/url/discord.js';
-import { Tracer } from '#lib/server/telemetry/tracer.js';
+import { parseDiscordAttachmentCdnUrl } from '#lib/url/discord.ts';
+import { Tracer } from '#lib/server/telemetry/tracer.ts';
 
 import {
   assertConfessionSubmissionChannel,
@@ -30,16 +30,16 @@ import {
   type SerializedConfessionForProcess,
   serializeDurableAttachment,
   serializeRequestedAttachment,
-} from './state';
-import { ConfessionSubmitEvent, ConfessionSubmitMode } from './schema';
+} from './state.ts';
+import { ConfessionSubmitEvent, ConfessionSubmitMode } from './schema.ts';
 import {
   createConfessionSubmission,
   loadApprovedThreadTitle,
   loadConfessionSubmissionChannel,
-} from './query';
+} from './query.ts';
 
-import { downloadDiscordAttachment } from './attachment/download';
-import { extractDurableAttachmentMetadata } from './attachment/durable';
+import { downloadDiscordAttachment } from './attachment/download.ts';
+import { extractDurableAttachmentMetadata } from './attachment/durable.ts';
 
 const SERVICE_NAME = 'inngest.process-confession-submission';
 const logger = Logger.byName(SERVICE_NAME);

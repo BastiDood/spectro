@@ -1,10 +1,10 @@
-import type { MessageComponentActionRowButtons } from '#lib/server/models/discord/message/component/action-row/index.js';
-import type { MessageComponentFile } from '#lib/server/models/discord/message/component/file/index.js';
-import type { MessageComponentMediaGallery } from '#lib/server/models/discord/message/component/media-gallery/index.js';
-import type { MessageComponentSection } from '#lib/server/models/discord/message/component/section/index.js';
-import type { MessageComponentSeparator } from '#lib/server/models/discord/message/component/separator/index.js';
-import type { MessageComponentTextDisplay } from '#lib/server/models/discord/message/component/text-display/index.js';
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import type { MessageComponentActionRowButtons } from '#lib/server/models/discord/message/component/action-row/index.ts';
+import type { MessageComponentFile } from '#lib/server/models/discord/message/component/file/index.ts';
+import type { MessageComponentMediaGallery } from '#lib/server/models/discord/message/component/media-gallery/index.ts';
+import type { MessageComponentSection } from '#lib/server/models/discord/message/component/section/index.ts';
+import type { MessageComponentSeparator } from '#lib/server/models/discord/message/component/separator/index.ts';
+import type { MessageComponentTextDisplay } from '#lib/server/models/discord/message/component/text-display/index.ts';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 
 /**
  * Outbound type for child components that can be placed inside a Container.

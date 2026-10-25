@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import profile from '#lib/brand/logotype/logotype-dark-transparent.svg';
 </script>
 

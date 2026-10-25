@@ -1,6 +1,6 @@
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace';
-import { inngest } from '#lib/server/inngest/client/index.js';
+import { inngest } from '#lib/server/inngest/client/index.ts';
 import { InngestSpanProcessor } from 'inngest/experimental';
 import { type InstrumentationOptionOrName, registerOTel } from '@vercel/otel';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';

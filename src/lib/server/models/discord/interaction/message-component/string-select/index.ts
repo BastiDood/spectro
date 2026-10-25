@@ -1,6 +1,6 @@
 import { array, type InferOutput, literal, object, string } from 'valibot';
 
-import { MessageComponentType } from '#lib/server/models/discord/message/component/base.js';
+import { MessageComponentType } from '#lib/server/models/discord/message/component/base.ts';
 
 /**
  * Inbound schema for string select interaction data.

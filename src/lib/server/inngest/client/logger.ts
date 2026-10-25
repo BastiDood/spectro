@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import type { AnyValue, AnyValueMap } from '@opentelemetry/api-logs';
 
-import { Logger } from '#lib/server/telemetry/logger/index.js';
+import { Logger } from '#lib/server/telemetry/logger/index.ts';
 
 const logger = Logger.byName('inngest');
 
