@@ -2,9 +2,14 @@ allowBuilds:
   esbuild: true
   protobufjs: false
 
+autoDedupe: true
+
 catalogPrune: true
 
 engineStrict: true
+
+lockfile:
+  includeResolutionSettings: true
 
 minimumReleaseAgeStrict: true
 
@@ -29,6 +34,8 @@ overrides:
   'svelte-eslint-parser@1.10.0>eslint-visitor-keys': ^5.0.1
   'svelte-eslint-parser@1.10.0>espree': ^11.2.0
   'vitest@4.1.12>es-module-lexer': ^3.0.2
+
+saveTypes: true
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
