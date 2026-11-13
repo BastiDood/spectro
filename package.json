@@ -59,8 +59,8 @@
     "@bastidood/eslint-plugin-imsort": "^0.12.0",
     "@eslint/css": "^2.0.1",
     "@eslint/js": "^10.0.1",
-    "@html-eslint/eslint-plugin": "^0.67.0",
-    "@html-eslint/eslint-plugin-svelte": "^0.67.0",
+    "@html-eslint/eslint-plugin": "^0.68.0",
+    "@html-eslint/eslint-plugin-svelte": "^0.68.0",
     "@sveltejs/adapter-vercel": "^7.0.1",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
@@ -82,7 +82,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
     "vite": "^8.3.5",
-    "vitest": "^4.1.12"
+    "vitest": "^5.1.0"
   },
   "imports": {
     "#lib/*": "./src/lib/*"

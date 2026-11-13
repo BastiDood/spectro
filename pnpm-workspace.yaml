@@ -1,6 +1,5 @@
 allowBuilds:
   esbuild: true
-  protobufjs: false
 
 autoDedupe: true
 
@@ -15,7 +14,7 @@ minimumReleaseAgeStrict: true
 
 overrides:
   '@eslint-community/eslint-utils@4.10.1>eslint-visitor-keys': ^5.0.1
-  '@html-eslint/eslint-plugin@0.67.0>@eslint/plugin-kit': ^0.7.3
+  '@html-eslint/eslint-plugin@0.68.0>@eslint/plugin-kit': ^0.7.3
   '@opentelemetry/instrumentation-pg@0.76.0>@types/pg': ^8.23.1
   '@tailwindcss/typography@0.5.20>postcss-selector-parser': ^7.1.7
   'css-tree@3.2.1>mdn-data': ^2.37.2
@@ -32,11 +31,11 @@ overrides:
   'svelte-eslint-parser@1.10.1>eslint-scope': ^9.1.2
   'svelte-eslint-parser@1.10.1>eslint-visitor-keys': ^5.0.1
   'svelte-eslint-parser@1.10.1>espree': ^11.2.0
-  'vitest@4.1.12>es-module-lexer': ^3.0.2
 
 saveTypes: true
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - chokidar@4.0.3
-  - ts-api-utils@2.3.0
+
+trustPolicyExcludePrune: true
