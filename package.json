@@ -44,7 +44,7 @@
     "svelte": "^5.57.2",
     "valibot": "^1.5.0"
   },
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.20.0",
   "engines": {
     "node": "26.x"
   },

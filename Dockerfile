@@ -1,6 +1,6 @@
-# syntax=docker/dockerfile:1.28.0
+# syntax=docker/dockerfile:1.29.0
 
-FROM ghcr.io/pnpm/pnpm:12.15.0 AS base
+FROM ghcr.io/pnpm/pnpm:12.20.0 AS base
 
 WORKDIR /app
 
