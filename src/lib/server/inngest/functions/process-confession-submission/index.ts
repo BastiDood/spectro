@@ -130,7 +130,7 @@ export const processConfessionSubmission = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected original interaction response edit',
-                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      'spectro.inngest.confession_submission.interaction_response.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -301,7 +301,7 @@ export const processConfessionSubmission = inngest.createFunction(
                   case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
                     logger.warn(
                       `Recovered Discord thread creation failure code ${error.code}.`,
-                      'spectro.inngest.confession_submission.thread_creation_failure_recovered',
+                      'spectro.inngest.confession_submission.thread_creation_failure_recovered.exception',
                       { 'spectro.discord.error.code': error.code },
                       error,
                     );
@@ -324,7 +324,7 @@ export const processConfessionSubmission = inngest.createFunction(
                   case DiscordErrorCode.MaxActiveThreadsReached:
                     logger.warn(
                       `Recovered Discord thread creation failure code ${error.code}.`,
-                      'spectro.inngest.confession_submission.thread_creation_failure_recovered',
+                      'spectro.inngest.confession_submission.thread_creation_failure_recovered.exception',
                       { 'spectro.discord.error.code': error.code },
                       error,
                     );
@@ -371,7 +371,7 @@ export const processConfessionSubmission = inngest.createFunction(
                       );
                       logger.error(
                         'Discord rejected original interaction response edit',
-                        'spectro.inngest.confession_submission.interaction_response_exception',
+                        'spectro.inngest.confession_submission.interaction_response.exception',
                         {
                           'spectro.discord.error.code': cause.code,
                         },
@@ -458,7 +458,7 @@ export const processConfessionSubmission = inngest.createFunction(
                     );
                     logger.error(
                       'Discord nonce validation failed while processing confession submission',
-                      'spectro.inngest.confession_submission.discord_message_exception',
+                      'spectro.inngest.confession_submission.discord_message.exception',
                       {
                         'spectro.discord.error.code': error.code,
                       },
@@ -469,7 +469,7 @@ export const processConfessionSubmission = inngest.createFunction(
                   case DiscordErrorCode.UnknownChannel:
                     logger.warn(
                       `Recovered Discord log-channel failure code ${error.code}.`,
-                      'spectro.inngest.confession_submission.log_channel_failure_recovered',
+                      'spectro.inngest.confession_submission.log_channel_failure_recovered.exception',
                       { 'spectro.discord.error.code': error.code },
                       error,
                     );
@@ -489,7 +489,7 @@ export const processConfessionSubmission = inngest.createFunction(
                   case DiscordErrorCode.MissingPermissions:
                     logger.warn(
                       `Recovered Discord log-message failure code ${error.code}.`,
-                      'spectro.inngest.confession_submission.log_message_failure_recovered',
+                      'spectro.inngest.confession_submission.log_message_failure_recovered.exception',
                       { 'spectro.discord.error.code': error.code },
                       error,
                     );
@@ -563,7 +563,7 @@ export const processConfessionSubmission = inngest.createFunction(
                   );
                   logger.error(
                     'Discord nonce validation failed while processing confession submission',
-                    'spectro.inngest.confession_submission.discord_message_exception',
+                    'spectro.inngest.confession_submission.discord_message.exception',
                     {
                       'spectro.discord.error.code': error.code,
                     },
@@ -574,7 +574,7 @@ export const processConfessionSubmission = inngest.createFunction(
                 case DiscordErrorCode.UnknownChannel:
                   logger.warn(
                     `Recovered Discord log-channel failure code ${error.code}.`,
-                    'spectro.inngest.confession_submission.log_channel_failure_recovered',
+                    'spectro.inngest.confession_submission.log_channel_failure_recovered.exception',
                     { 'spectro.discord.error.code': error.code },
                     error,
                   );
@@ -594,7 +594,7 @@ export const processConfessionSubmission = inngest.createFunction(
                 case DiscordErrorCode.MissingPermissions:
                   logger.warn(
                     `Recovered Discord log-message failure code ${error.code}.`,
-                    'spectro.inngest.confession_submission.log_message_failure_recovered',
+                    'spectro.inngest.confession_submission.log_message_failure_recovered.exception',
                     { 'spectro.discord.error.code': error.code },
                     error,
                   );
@@ -679,7 +679,7 @@ export const processConfessionSubmission = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected original interaction response edit',
-                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      'spectro.inngest.confession_submission.interaction_response.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -742,7 +742,7 @@ export const processConfessionSubmission = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected original interaction response edit',
-                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      'spectro.inngest.confession_submission.interaction_response.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -794,7 +794,7 @@ export const processConfessionSubmission = inngest.createFunction(
                   );
                   logger.error(
                     'Discord nonce validation failed while processing confession submission',
-                    'spectro.inngest.confession_submission.discord_message_exception',
+                    'spectro.inngest.confession_submission.discord_message.exception',
                     {
                       'spectro.discord.error.code': error.code,
                     },
@@ -807,7 +807,7 @@ export const processConfessionSubmission = inngest.createFunction(
                 case DiscordErrorCode.MissingPermissions:
                   logger.warn(
                     `Recovered Discord publish failure code ${error.code}.`,
-                    'spectro.inngest.confession_submission.publish_failure_recovered',
+                    'spectro.inngest.confession_submission.publish_failure_recovered.exception',
                     { 'spectro.discord.error.code': error.code },
                     error,
                   );
@@ -855,7 +855,7 @@ export const processConfessionSubmission = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected original interaction response edit',
-                      'spectro.inngest.confession_submission.interaction_response_exception',
+                      'spectro.inngest.confession_submission.interaction_response.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },

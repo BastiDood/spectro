@@ -16,7 +16,7 @@ export class UnexpectedApplicationCommandChatInputNameError extends Error {
     const error = new UnexpectedApplicationCommandChatInputNameError(commandName);
     logger.error(
       error.message,
-      'spectro.discord.interaction.command_chat_input.unexpected',
+      'spectro.discord.interaction.command_chat_input.unexpected.exception',
       { 'spectro.discord.command.name': error.commandName },
       error,
     );
@@ -34,7 +34,7 @@ export class UnexpectedApplicationCommandMessageNameError extends Error {
     const error = new UnexpectedApplicationCommandMessageNameError(commandName);
     logger.error(
       error.message,
-      'spectro.discord.interaction.command_message.unexpected',
+      'spectro.discord.interaction.command_message.unexpected.exception',
       { 'spectro.discord.command.name': error.commandName },
       error,
     );
@@ -52,7 +52,7 @@ export class UnexpectedApplicationCommandTypeError extends Error {
     const error = new UnexpectedApplicationCommandTypeError(commandType);
     logger.error(
       error.message,
-      'spectro.discord.interaction.command_type.unexpected',
+      'spectro.discord.interaction.command_type.unexpected.exception',
       { 'spectro.discord.command.type': error.commandType },
       error,
     );
@@ -70,7 +70,7 @@ export class UnexpectedSetupArgumentError extends Error {
     const error = new UnexpectedSetupArgumentError(argumentName);
     logger.error(
       error.message,
-      'spectro.discord.interaction.setup_argument.unexpected',
+      'spectro.discord.interaction.setup_argument.unexpected.exception',
       { 'spectro.discord.setup_argument.name': error.argumentName },
       error,
     );
@@ -88,7 +88,7 @@ export class UnexpectedSetupOptionTypeError extends Error {
     const error = new UnexpectedSetupOptionTypeError(optionType);
     logger.error(
       error.message,
-      'spectro.discord.interaction.command_option_type.unexpected',
+      'spectro.discord.interaction.command_option_type.unexpected.exception',
       { 'spectro.discord.command_option.type': error.optionType },
       error,
     );
@@ -106,7 +106,7 @@ export class UnexpectedDiscordErrorCode extends Error {
     const error = new UnexpectedDiscordErrorCode(code);
     logger.error(
       error.message,
-      'spectro.discord.interaction.discord_error_code.unexpected',
+      'spectro.discord.interaction.discord_error_code.unexpected.exception',
       { 'spectro.discord.error.code': error.code },
       error,
     );
@@ -124,7 +124,7 @@ export class UnexpectedMessageComponentButtonStyle extends Error {
     const error = new UnexpectedMessageComponentButtonStyle(style);
     logger.error(
       error.message,
-      'spectro.discord.interaction.message_component_button_style.unexpected',
+      'spectro.discord.interaction.message_component_button_style.unexpected.exception',
       { 'spectro.discord.message_component_button.style': error.style },
       error,
     );
@@ -142,7 +142,7 @@ export class MalformedCustomIdFormat extends Error {
     const error = new MalformedCustomIdFormat(key);
     logger.error(
       error.message,
-      'spectro.discord.interaction.custom_id.malformed',
+      'spectro.discord.interaction.custom_id.malformed.exception',
       { 'spectro.discord.custom_id.key': error.key },
       error,
     );

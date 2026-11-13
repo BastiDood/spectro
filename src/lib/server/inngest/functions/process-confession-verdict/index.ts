@@ -132,7 +132,7 @@ async function submitConfessionVerdict(
     if (error instanceof ConfessionVerdictError) {
       logger.warn(
         'Confession verdict failure returned to the moderator',
-        'spectro.inngest.confession_verdict.failure_recovered',
+        'spectro.inngest.confession_verdict.failure_recovered.exception',
         void 0,
         error,
       );
@@ -199,7 +199,7 @@ export const processConfessionVerdict = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected verdict failure follow-up',
-                      'spectro.inngest.confession_verdict.failure_followup_exception',
+                      'spectro.inngest.confession_verdict.failure_followup.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -253,7 +253,7 @@ export const processConfessionVerdict = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected rejection log message edit',
-                      'spectro.inngest.confession_verdict.log_message_exception',
+                      'spectro.inngest.confession_verdict.log_message.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -323,7 +323,7 @@ export const processConfessionVerdict = inngest.createFunction(
                     case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
                       logger.warn(
                         `Recovered Discord thread creation failure code ${error.code}.`,
-                        'spectro.inngest.confession_verdict.thread_creation_failure_recovered',
+                        'spectro.inngest.confession_verdict.thread_creation_failure_recovered.exception',
                         { 'spectro.discord.error.code': error.code },
                         error,
                       );
@@ -346,7 +346,7 @@ export const processConfessionVerdict = inngest.createFunction(
                     case DiscordErrorCode.MaxActiveThreadsReached:
                       logger.warn(
                         `Recovered Discord thread creation failure code ${error.code}.`,
-                        'spectro.inngest.confession_verdict.thread_creation_failure_recovered',
+                        'spectro.inngest.confession_verdict.thread_creation_failure_recovered.exception',
                         { 'spectro.discord.error.code': error.code },
                         error,
                       );
@@ -442,7 +442,7 @@ export const processConfessionVerdict = inngest.createFunction(
                     );
                     logger.error(
                       'Discord nonce validation failed while processing confession verdict',
-                      'spectro.inngest.confession_verdict.discord_message_exception',
+                      'spectro.inngest.confession_verdict.discord_message.exception',
                       {
                         'spectro.discord.error.code': error.code,
                       },
@@ -455,7 +455,7 @@ export const processConfessionVerdict = inngest.createFunction(
                   case DiscordErrorCode.MissingPermissions:
                     logger.warn(
                       `Recovered Discord publish failure code ${error.code}.`,
-                      'spectro.inngest.confession_verdict.discord_message_failure_recovered',
+                      'spectro.inngest.confession_verdict.discord_message_failure_recovered.exception',
                       { 'spectro.discord.error.code': error.code },
                       error,
                     );
@@ -508,7 +508,7 @@ export const processConfessionVerdict = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected approval log message edit',
-                      'spectro.inngest.confession_verdict.log_message_exception',
+                      'spectro.inngest.confession_verdict.log_message.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -564,7 +564,7 @@ export const processConfessionVerdict = inngest.createFunction(
                   );
                   logger.error(
                     'Discord rejected failed approval log message edit',
-                    'spectro.inngest.confession_verdict.log_message_exception',
+                    'spectro.inngest.confession_verdict.log_message.exception',
                     {
                       'spectro.discord.error.code': cause.code,
                     },
@@ -608,7 +608,7 @@ export const processConfessionVerdict = inngest.createFunction(
                 );
                 logger.error(
                   'Discord rejected approval failure follow-up',
-                  'spectro.inngest.confession_verdict.failure_followup_exception',
+                  'spectro.inngest.confession_verdict.failure_followup.exception',
                   {
                     'spectro.discord.error.code': cause.code,
                   },

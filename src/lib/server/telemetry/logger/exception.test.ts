@@ -101,9 +101,7 @@ describe('serializeErrorToException', () => {
       );
 
     const error = new CharacterizedError('OuterError', 'Outer failed', 'outer stack', cause);
-    const exception = serializeErrorToException(error);
-    if (typeof exception === 'string') throw new TypeError('expected a structured exception');
-    const { stack } = exception;
+    const { stack } = serializeErrorToException(error);
 
     expect(stack).toContain('cause 15 stack');
     expect(stack).not.toContain('cause 16 stack');

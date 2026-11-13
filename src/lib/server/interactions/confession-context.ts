@@ -46,7 +46,7 @@ export class UnsupportedConfessionChannelError extends Error {
     const error = new UnsupportedConfessionChannelError(channelType);
     logger.error(
       error.message,
-      'spectro.discord.interaction.confession_channel.unsupported',
+      'spectro.discord.interaction.confession_channel.unsupported.exception',
       { 'spectro.discord.channel.type': error.channelType },
       error,
     );

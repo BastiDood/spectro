@@ -103,7 +103,7 @@ export const processChannelSetup = inngest.createFunction(
                   );
                   logger.error(
                     'Discord rejected original interaction response edit',
-                    'spectro.inngest.channel_setup.interaction_response_exception',
+                    'spectro.inngest.channel_setup.interaction_response.exception',
                     { 'spectro.discord.error.code': cause.code },
                     wrapped,
                   );

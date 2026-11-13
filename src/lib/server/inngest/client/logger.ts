@@ -100,7 +100,7 @@ export class InngestLogger {
 
     logger[severity](
       strings.length === 0 ? 'Inngest emitted a log' : strings.join('\n\n'),
-      'spectro.inngest.log',
+      typeof error === 'undefined' ? 'spectro.inngest.log' : 'spectro.inngest.log.exception',
       attributes,
       error,
     );

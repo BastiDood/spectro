@@ -11,11 +11,11 @@ export class UnexpectedRowCountDatabaseError extends Error {
   static throwNew(count?: number): never {
     const error = new UnexpectedRowCountDatabaseError(count);
     if (typeof count === 'undefined')
-      logger.error(error.message, 'spectro.database.row_count_unexpected', void 0, error);
+      logger.error(error.message, 'spectro.database.row_count_unexpected.exception', void 0, error);
     else
       logger.error(
         error.message,
-        'spectro.database.row_count_unexpected',
+        'spectro.database.row_count_unexpected.exception',
         {
           'spectro.database.affected_row_count': count,
         },

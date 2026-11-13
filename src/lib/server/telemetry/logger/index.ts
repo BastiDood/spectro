@@ -5,6 +5,11 @@ import {
   logs,
   SeverityNumber,
 } from '@opentelemetry/api-logs';
+import {
+  ATTR_EXCEPTION_MESSAGE,
+  ATTR_EXCEPTION_STACKTRACE,
+  ATTR_EXCEPTION_TYPE,
+} from '@opentelemetry/semantic-conventions';
 
 import { version } from '$app/env';
 
@@ -30,11 +35,21 @@ export class Logger {
   ) {
     const logRecord: LogRecord = {
       severityNumber,
+      severityText: SeverityNumber[severityNumber],
       body,
       eventName,
       attributes,
     };
-    if (typeof error !== 'undefined') logRecord.exception = serializeErrorToException(error);
+    if (typeof error !== 'undefined') {
+      // The logger bundled by @vercel/otel reads exception attributes directly.
+      const { name, message, stack } = serializeErrorToException(error);
+      logRecord.attributes = {
+        ...attributes,
+        [ATTR_EXCEPTION_TYPE]: name,
+        [ATTR_EXCEPTION_MESSAGE]: message,
+      };
+      if (typeof stack !== 'undefined') logRecord.attributes[ATTR_EXCEPTION_STACKTRACE] = stack;
+    }
     return logRecord;
   }
 

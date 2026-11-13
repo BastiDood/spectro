@@ -47,7 +47,7 @@ class ReplyChannelMismatchError extends ReplyModalError {
     const error = new ReplyChannelMismatchError(channelId, targetChannelId);
     logger.error(
       error.message,
-      'spectro.discord.interaction.reply_modal.channel_mismatch',
+      'spectro.discord.interaction.reply_modal.channel_mismatch.exception',
       {
         'spectro.discord.channel.id': error.channelId,
         'spectro.discord.target_channel.id': error.targetChannelId,
@@ -77,7 +77,7 @@ class MissingReplyPermissionError extends ReplyModalError {
     const error = new MissingReplyPermissionError(type, message);
     logger.error(
       error.message,
-      'spectro.discord.interaction.reply_modal.permission_missing',
+      'spectro.discord.interaction.reply_modal.permission_missing.exception',
       { 'spectro.discord.permission.type': error.type },
       error,
     );
@@ -153,7 +153,7 @@ export function handleReplyModal(
     if (error instanceof ReplyModalError) {
       logger.warn(
         'Reply modal failure returned to the user',
-        'spectro.discord.interaction.reply_modal.failure_recovered',
+        'spectro.discord.interaction.reply_modal.failure_recovered.exception',
         void 0,
         error,
       );

@@ -15,7 +15,7 @@ export class MissingVerdictDispatchConfessionError extends NonRetriableError {
     const error = new MissingVerdictDispatchConfessionError(internalId);
     logger.error(
       error.message,
-      'spectro.inngest.confession_verdict.dispatch_confession_missing',
+      'spectro.inngest.confession_verdict.dispatch_confession_missing.exception',
       { 'spectro.confession.internal.id': error.internalId },
       error,
     );
@@ -33,7 +33,7 @@ export class UnavailableApprovedThreadDestinationError extends NonRetriableError
     const error = new UnavailableApprovedThreadDestinationError(confessionId);
     logger.error(
       error.message,
-      'spectro.inngest.confession_verdict.approved_thread_destination_unavailable',
+      'spectro.inngest.confession_verdict.approved_thread_destination_unavailable.exception',
       { 'spectro.confession.id': error.confessionId },
       error,
     );
@@ -62,7 +62,7 @@ export class DisabledChannelConfessError extends ConfessionVerdictError {
     const error = new DisabledChannelConfessError(disabledAt);
     logger.error(
       error.message,
-      'spectro.inngest.confession_verdict.channel_disabled',
+      'spectro.inngest.confession_verdict.channel_disabled.exception',
       {
         'spectro.channel.disabled_at': error.disabledAt,
       },
@@ -86,7 +86,7 @@ export class AlreadyApprovedApprovalError extends ConfessionVerdictError {
     const error = new AlreadyApprovedApprovalError(approvedAt);
     logger.error(
       error.message,
-      'spectro.inngest.confession_verdict.already_approved',
+      'spectro.inngest.confession_verdict.already_approved.exception',
       {
         'spectro.confession.approved_at': error.approvedAt,
       },
@@ -108,7 +108,7 @@ export class MissingDurableAttachmentApprovalError extends ConfessionVerdictErro
     const error = new MissingDurableAttachmentApprovalError();
     logger.error(
       error.message,
-      'spectro.inngest.confession_verdict.durable_attachment_missing',
+      'spectro.inngest.confession_verdict.durable_attachment_missing.exception',
       void 0,
       error,
     );

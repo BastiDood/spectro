@@ -21,7 +21,7 @@ export class BadDownloadResponseError extends Error {
     const error = new BadDownloadResponseError();
     logger.error(
       error.message,
-      'spectro.inngest.confession_submission.attachment_download_failed',
+      'spectro.inngest.confession_submission.attachment_download_failed.exception',
       void 0,
       error,
     );
@@ -39,7 +39,7 @@ export class MissingBodyError extends NonRetriableError {
     const error = new MissingBodyError();
     logger.error(
       error.message,
-      'spectro.inngest.confession_submission.attachment_body_missing',
+      'spectro.inngest.confession_submission.attachment_body_missing.exception',
       void 0,
       error,
     );
@@ -63,14 +63,14 @@ export class MissingContentLengthHeaderError extends NonRetriableError {
     if (typeof boundedContentLength === 'undefined')
       logger.error(
         error.message,
-        'spectro.inngest.confession_submission.attachment_content_length_missing',
+        'spectro.inngest.confession_submission.attachment_content_length_missing.exception',
         void 0,
         error,
       );
     else
       logger.error(
         error.message,
-        'spectro.inngest.confession_submission.attachment_content_length_malformed',
+        'spectro.inngest.confession_submission.attachment_content_length_malformed.exception',
         { 'spectro.attachment.content_length': boundedContentLength },
         error,
       );
@@ -91,7 +91,7 @@ export class AttachmentTooLargeError extends NonRetriableError {
     const error = new AttachmentTooLargeError(contentLength, maxBytes);
     logger.error(
       error.message,
-      'spectro.inngest.confession_submission.attachment_too_large',
+      'spectro.inngest.confession_submission.attachment_too_large.exception',
       {
         'spectro.attachment.maximum_size_bytes': maxBytes,
         'spectro.attachment.content_length_bytes': contentLength,

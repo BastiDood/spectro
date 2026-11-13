@@ -21,7 +21,7 @@ export class InvalidSubmissionChannelStateError extends NonRetriableError {
     const error = new InvalidSubmissionChannelStateError(channelId);
     logger.error(
       error.message,
-      'spectro.inngest.confession_submission.channel_invalid',
+      'spectro.inngest.confession_submission.channel_invalid.exception',
       { 'spectro.channel.id': error.channelId },
       error,
     );
@@ -39,7 +39,7 @@ export class InvalidUploadedAttachmentStateError extends NonRetriableError {
     const error = new InvalidUploadedAttachmentStateError(attachmentId);
     logger.error(
       error.message,
-      'spectro.inngest.confession_submission.uploaded_attachment_invalid',
+      'spectro.inngest.confession_submission.uploaded_attachment_invalid.exception',
       { 'spectro.attachment.id': error.attachmentId },
       error,
     );

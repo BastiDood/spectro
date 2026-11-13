@@ -47,7 +47,7 @@ class ThreadReplyChannelMismatchError extends ThreadReplyModalError {
     const error = new ThreadReplyChannelMismatchError(channelId, targetChannelId);
     logger.error(
       error.message,
-      'spectro.discord.interaction.thread_reply_modal.channel_mismatch',
+      'spectro.discord.interaction.thread_reply_modal.channel_mismatch.exception',
       {
         'spectro.discord.channel.id': error.channelId,
         'spectro.discord.target_channel.id': error.targetChannelId,
@@ -89,7 +89,7 @@ class MissingThreadReplyPermissionError extends ThreadReplyModalError {
     const error = new MissingThreadReplyPermissionError(type, message);
     logger.error(
       error.message,
-      'spectro.discord.interaction.thread_reply_modal.permission_missing',
+      'spectro.discord.interaction.thread_reply_modal.permission_missing.exception',
       { 'spectro.discord.permission.type': error.type },
       error,
     );
@@ -107,7 +107,7 @@ class RecursiveThreadReplyError extends ThreadReplyModalError {
     const error = new RecursiveThreadReplyError();
     logger.error(
       error.message,
-      'spectro.discord.interaction.thread_reply_modal.recursive',
+      'spectro.discord.interaction.thread_reply_modal.recursive.exception',
       void 0,
       error,
     );
@@ -183,7 +183,7 @@ export function handleThreadReplyModal(
     if (error instanceof ThreadReplyModalError) {
       logger.warn(
         'Thread reply modal failure returned to the user',
-        'spectro.discord.interaction.thread_reply_modal.failure_recovered',
+        'spectro.discord.interaction.thread_reply_modal.failure_recovered.exception',
         void 0,
         error,
       );

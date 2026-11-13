@@ -89,7 +89,7 @@ export const processConfessionResend = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected original interaction response edit',
-                      'spectro.inngest.confession_resend.interaction_response_exception',
+                      'spectro.inngest.confession_resend.interaction_response.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -139,7 +139,7 @@ export const processConfessionResend = inngest.createFunction(
                   );
                   logger.error(
                     'Discord nonce validation failed while resending confession',
-                    'spectro.inngest.confession_resend.discord_message_exception',
+                    'spectro.inngest.confession_resend.discord_message.exception',
                     {
                       'spectro.discord.error.code': error.code,
                     },
@@ -150,7 +150,7 @@ export const processConfessionResend = inngest.createFunction(
                 case DiscordErrorCode.UnknownChannel:
                   logger.warn(
                     `Recovered Discord log-channel failure code ${error.code}.`,
-                    'spectro.inngest.confession_resend.log_channel_failure_recovered',
+                    'spectro.inngest.confession_resend.log_channel_failure_recovered.exception',
                     { 'spectro.discord.error.code': error.code },
                     error,
                   );
@@ -167,7 +167,7 @@ export const processConfessionResend = inngest.createFunction(
                 case DiscordErrorCode.MissingPermissions:
                   logger.warn(
                     `Recovered Discord log-message failure code ${error.code}.`,
-                    'spectro.inngest.confession_resend.log_message_failure_recovered',
+                    'spectro.inngest.confession_resend.log_message_failure_recovered.exception',
                     { 'spectro.discord.error.code': error.code },
                     error,
                   );
@@ -232,7 +232,7 @@ export const processConfessionResend = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected original interaction response edit',
-                      'spectro.inngest.confession_resend.interaction_response_exception',
+                      'spectro.inngest.confession_resend.interaction_response.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },
@@ -279,7 +279,7 @@ export const processConfessionResend = inngest.createFunction(
                   );
                   logger.error(
                     'Discord nonce validation failed while resending confession',
-                    'spectro.inngest.confession_resend.discord_message_exception',
+                    'spectro.inngest.confession_resend.discord_message.exception',
                     {
                       'spectro.discord.error.code': error.code,
                     },
@@ -292,7 +292,7 @@ export const processConfessionResend = inngest.createFunction(
                 case DiscordErrorCode.MissingPermissions:
                   logger.warn(
                     `Recovered Discord publish failure code ${error.code}.`,
-                    'spectro.inngest.confession_resend.publish_failure_recovered',
+                    'spectro.inngest.confession_resend.publish_failure_recovered.exception',
                     { 'spectro.discord.error.code': error.code },
                     error,
                   );
@@ -340,7 +340,7 @@ export const processConfessionResend = inngest.createFunction(
                     );
                     logger.error(
                       'Discord rejected original interaction response edit',
-                      'spectro.inngest.confession_resend.interaction_response_exception',
+                      'spectro.inngest.confession_resend.interaction_response.exception',
                       {
                         'spectro.discord.error.code': cause.code,
                       },

@@ -1,5 +1,3 @@
-import type { Exception } from '@opentelemetry/api';
-
 export interface ErrorWithCode extends Error {
   code?: string | number | undefined;
 }
@@ -18,7 +16,7 @@ function* traverseErrorCauseChain(error: Error) {
   }
 }
 
-export function serializeErrorToException(error: ErrorWithCode): Exception {
+export function serializeErrorToException(error: ErrorWithCode) {
   const causeStack: string[] = [];
 
   for (const currentError of traverseErrorCauseChain(error).take(16))
@@ -26,7 +24,7 @@ export function serializeErrorToException(error: ErrorWithCode): Exception {
     if (typeof currentError.stack !== 'undefined') causeStack.push(currentError.stack);
 
   const { name, message, code } = error;
-  const exception: Exception = { name, message, code };
-  if (causeStack.length > 0) exception.stack = causeStack.join('\n\n');
-  return exception;
+  return causeStack.length === 0
+    ? { name, message, code }
+    : { name, message, code, stack: causeStack.join('\n\n') };
 }
