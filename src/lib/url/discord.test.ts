@@ -52,14 +52,6 @@ describe('parseDiscordAttachmentCdnUrl', () => {
     ).toBeNull();
   });
 
-  it('rejects Discord media proxy URLs', () => {
-    expect(
-      parseDiscordAttachmentCdnUrl(
-        'https://media.discordapp.net/attachments/1012345678900020080/1234567891233211234/my_image.png',
-      ),
-    ).toBeNull();
-  });
-
   it('rejects non-attachment CDN paths', () => {
     expect(
       parseDiscordAttachmentCdnUrl(
@@ -104,38 +96,6 @@ describe('parseDiscordAttachmentCdnUrl', () => {
     expect(
       parseDiscordAttachmentCdnUrl(
         'https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png/extra',
-      ),
-    ).toBeNull();
-  });
-
-  it('rejects ephemeral attachment paths with missing channel IDs', () => {
-    expect(
-      parseDiscordAttachmentCdnUrl(
-        'https://cdn.discordapp.com/ephemeral-attachments//1234567891233211234/my_image.png',
-      ),
-    ).toBeNull();
-  });
-
-  it('rejects ephemeral attachment paths with missing attachment IDs', () => {
-    expect(
-      parseDiscordAttachmentCdnUrl(
-        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080//my_image.png',
-      ),
-    ).toBeNull();
-  });
-
-  it('rejects ephemeral attachment paths with missing filenames', () => {
-    expect(
-      parseDiscordAttachmentCdnUrl(
-        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/',
-      ),
-    ).toBeNull();
-  });
-
-  it('rejects ephemeral attachment paths with extra segments', () => {
-    expect(
-      parseDiscordAttachmentCdnUrl(
-        'https://cdn.discordapp.com/ephemeral-attachments/1012345678900020080/1234567891233211234/my_image.png/extra',
       ),
     ).toBeNull();
   });

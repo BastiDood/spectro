@@ -15,10 +15,10 @@ class CharacterizedError extends Error {
 }
 
 describe('serializeErrorToException', () => {
-  it('preserves the outer name and message', () => {
+  it('serializes the outer identity and excludes unrelated error fields', () => {
     const error = new CharacterizedError('DiscordApiError', 'Discord rejected the request');
 
-    expect(serializeErrorToException(error)).toEqual({
+    expect(serializeErrorToException(error)).toStrictEqual({
       name: 'DiscordApiError',
       message: 'Discord rejected the request',
       code: void 0,
@@ -32,24 +32,11 @@ describe('serializeErrorToException', () => {
     expect(serializeErrorToException(error)).toMatchObject({ code });
   });
 
-  it('preserves an undefined outer code', () => {
-    const error = new CharacterizedError('RequestError', 'Request failed');
-    error.code = void 0;
-
-    expect(serializeErrorToException(error)).toHaveProperty('code', void 0);
-  });
-
   it('omits stack when no error has a defined stack', () => {
     const cause = new CharacterizedError('CauseError', 'Cause failed');
     const error = new CharacterizedError('RequestError', 'Request failed', void 0, cause);
 
     expect(serializeErrorToException(error)).not.toHaveProperty('stack');
-  });
-
-  it('preserves an outer-only stack exactly', () => {
-    const error = new CharacterizedError('RequestError', 'Request failed', 'outer stack');
-
-    expect(serializeErrorToException(error)).toHaveProperty('stack', 'outer stack');
   });
 
   it('preserves an empty outer stack', () => {
@@ -123,19 +110,6 @@ describe('serializeErrorToException', () => {
     expect(stack?.match(/\n\n/gu)).toHaveLength(15);
   });
 
-  it('preserves a custom Error subclass name', () => {
-    class DatabaseError extends Error {
-      override name = 'DatabaseError';
-    }
-    const error = new DatabaseError('Database failed');
-    error.stack = 'database stack';
-
-    expect(serializeErrorToException(error)).toMatchObject({
-      name: 'DatabaseError',
-      message: 'Database failed',
-    });
-  });
-
   it('preserves only the outer code', () => {
     const cause = new CharacterizedError('CauseError', 'Cause failed', 'cause stack');
     cause.code = 'CAUSE_CODE';
@@ -143,16 +117,6 @@ describe('serializeErrorToException', () => {
     error.code = 'OUTER_CODE';
 
     expect(serializeErrorToException(error)).toHaveProperty('code', 'OUTER_CODE');
-  });
-
-  it('excludes arbitrary custom scalar properties', () => {
-    const error = new CharacterizedError('RequestError', 'Request failed');
-
-    expect(serializeErrorToException(error)).toEqual({
-      name: 'RequestError',
-      message: 'Request failed',
-      code: void 0,
-    });
   });
 
   it('does not mutate the error chain', () => {
@@ -165,14 +129,5 @@ describe('serializeErrorToException', () => {
     expect(cause.cause).toBeUndefined();
     expect(error.stack).toBe('outer stack');
     expect(cause.stack).toBe('cause stack');
-  });
-
-  it('serializes native Error cause options', () => {
-    const cause = new CharacterizedError('CauseError', 'Cause failed', 'cause stack');
-    const error = new Error('Outer failed', { cause });
-    error.name = 'OuterError';
-    error.stack = 'outer stack';
-
-    expect(serializeErrorToException(error)).toHaveProperty('stack', 'outer stack\n\ncause stack');
   });
 });

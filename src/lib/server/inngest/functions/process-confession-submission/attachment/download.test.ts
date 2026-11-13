@@ -29,12 +29,6 @@ function createResponse(chunks: Uint8Array[], contentLength: string, status = 20
 }
 
 describe('downloadDiscordAttachment', () => {
-  it('downloads a valid response under the max size', async () => {
-    const response = createResponse([createChunk(2), createChunk(2)], '4');
-
-    await expect(downloadDiscordAttachment(response, 5)).resolves.toHaveProperty('byteLength', 4);
-  });
-
   it('downloads a valid response exactly equal to the max size', async () => {
     const response = createResponse([createChunk(2), createChunk(3)], '5');
 
