@@ -371,45 +371,7 @@ export const processConfessionResend = inngest.createFunction(
           name: 'Delete Original Interaction Response',
         },
         async () => {
-          try {
-            await DiscordClient.deleteOriginalInteractionResponse(applicationId, interactionToken);
-          } catch (cause) {
-            if (cause instanceof DiscordError)
-              switch (parseDiscordErrorCode(cause.code)) {
-                case DiscordErrorCode.UnknownWebhook: {
-                  logger.warn(
-                    'Original interaction response webhook is already gone',
-                    'spectro.inngest.confession_resend.interaction_response_missing',
-                    {
-                      'spectro.discord.error.code': cause.code,
-                    },
-                    cause,
-                  );
-                  return;
-                }
-                case DiscordErrorCode.InvalidWebhookToken: {
-                  logger.error(
-                    'Discord rejected original interaction response deletion',
-                    'spectro.inngest.confession_resend.interaction_response_exception',
-                    {
-                      'spectro.discord.error.code': cause.code,
-                    },
-                    cause,
-                  );
-                  throw cause;
-                }
-                case DiscordErrorCode.InvalidFormBody:
-                case DiscordErrorCode.MaxActiveThreadsReached:
-                case DiscordErrorCode.MissingAccess:
-                case DiscordErrorCode.MissingPermissions:
-                case DiscordErrorCode.ThreadAlreadyCreatedForMessage:
-                case DiscordErrorCode.ThreadLocked:
-                case DiscordErrorCode.UnknownChannel:
-                case null:
-                  break;
-              }
-            throw cause;
-          }
+          await DiscordClient.deleteOriginalInteractionResponse(applicationId, interactionToken);
         },
       );
     });

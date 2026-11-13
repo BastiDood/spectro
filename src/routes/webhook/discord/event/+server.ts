@@ -1,6 +1,6 @@
 import { strictEqual } from 'node:assert/strict';
 
-import { ATTR_ENDUSER_ID } from '@opentelemetry/semantic-conventions/incubating';
+import { ATTR_ENDUSER_ID } from '@opentelemetry/semantic-conventions/incubating'; // Incubating: preserves the `enduser.id` log attribute.
 import { error } from '@sveltejs/kit';
 import { handleApplicationAuthorized } from '#lib/server/events/application-authorized.ts';
 import {

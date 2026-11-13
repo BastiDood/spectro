@@ -1,10 +1,5 @@
 import { check, type InferOutput, number, object, pipe, safeInteger, string } from 'valibot';
 
-import { Logger } from '#lib/server/telemetry/logger/index.ts';
-
-const SERVICE_NAME = 'models.discord.errors';
-const logger = Logger.byName(SERVICE_NAME);
-
 export const enum DiscordErrorCode {
   UnknownChannel = 10003,
   UnknownWebhook = 10015,
@@ -55,16 +50,5 @@ export class DiscordError extends Error {
   ) {
     super(`Discord returned error code ${code}: ${message}`);
     this.name = 'DiscordError';
-  }
-
-  static throwNew(code: number, message: string): never {
-    const error = new DiscordError(code, message);
-    logger.error(
-      `Discord returned error code ${error.code}.`,
-      'spectro.discord.api.response_rejected',
-      { 'spectro.discord.error.code': error.code },
-      error,
-    );
-    throw error;
   }
 }
