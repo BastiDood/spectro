@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
       },
       tailwind(),
       sveltekit({
-        adapter: adapter({ regions: ['iad1'], runtime: 'nodejs24.x', memory: 128 }),
+        adapter: adapter({ regions: ['iad1'], runtime: 'nodejs26.x', memory: 128 }),
         paths: { origin },
         tracing: { server: true },
       }),

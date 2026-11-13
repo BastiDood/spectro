@@ -45,10 +45,13 @@
     "valibot": "^1.5.0"
   },
   "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": "26.x"
+  },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "24.x",
+      "version": "26.x",
       "onFail": "download"
     }
   },
